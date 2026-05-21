@@ -1,5 +1,8 @@
 <template>
   <div class="briefing-banner">
+    <!-- Ambient corner glow -->
+    <span class="briefing-banner__glow radial-glow" aria-hidden="true" />
+
     <!-- No briefing: CTA state -->
     <div v-if="!briefing" class="briefing-banner__cta">
       <div class="briefing-banner__cta-text">
@@ -16,7 +19,10 @@
     <template v-else>
       <!-- Banner header: greeting + collapse toggle -->
       <div class="briefing-banner__header">
-        <p class="briefing-banner__greeting">{{ briefing.greeting }}</p>
+        <div class="briefing-banner__greeting-group">
+          <span class="briefing-banner__ai-avatar" aria-hidden="true" />
+          <p class="briefing-banner__greeting">{{ briefing.greeting }}</p>
+        </div>
 
         <button
           class="briefing-banner__toggle"
@@ -34,30 +40,30 @@
         <div class="briefing-banner__stats">
           <!-- Overdue count -->
           <span
-            v-if="briefing.overdueCount > 0"
+            v-if="briefing.overdueTasks?.length > 0"
             class="briefing-banner__stat briefing-banner__stat--overdue"
           >
-            {{ briefing.overdueCount }} {{ t('tasks.overdue') }}
+            {{ briefing.overdueTasks.length }} {{ t('tasks.overdue') }}
           </span>
 
           <!-- Due today count -->
           <span
-            v-if="briefing.dueTodayCount > 0"
+            v-if="briefing.dueTodayTasks?.length > 0"
             class="briefing-banner__stat briefing-banner__stat--today"
           >
-            {{ briefing.dueTodayCount }} {{ t('briefing.dueToday') }}
+            {{ briefing.dueTodayTasks.length }} {{ t('briefing.dueToday') }}
           </span>
 
           <!-- Streak -->
-          <span v-if="briefing.streak" class="briefing-banner__stat briefing-banner__stat--streak">
+          <span v-if="briefing.streak?.current" class="briefing-banner__stat briefing-banner__stat--streak">
             <FireIcon class="briefing-banner__streak-icon" />
-            {{ briefing.streak }} {{ t('briefing.streak') }}
+            {{ briefing.streak.current }} {{ t('briefing.streak') }}
           </span>
         </div>
 
         <!-- Nudge message -->
-        <p v-if="briefing.nudge" class="briefing-banner__nudge">
-          {{ briefing.nudge }}
+        <p v-if="briefing.nudgeMessage" class="briefing-banner__nudge">
+          {{ briefing.nudgeMessage }}
         </p>
 
         <!-- View full briefing link -->
@@ -114,10 +120,19 @@ export default {
 <style lang="scss" scoped>
 // ── Block ──
 .briefing-banner {
-  @apply rounded-glass border border-white/10 backdrop-blur-glass shadow-glass;
+  @apply relative overflow-hidden rounded-glass border border-white/10 backdrop-blur-glass shadow-glass;
   @apply border-l-4 px-4 py-3;
-  background: rgba(255, 255, 255, 0.03);
+  background: linear-gradient(135deg, rgba(27, 158, 158, 0.07) 0%, rgba(232, 67, 147, 0.045) 100%);
   border-left-color: theme('colors.primary.500');
+
+  // ── Ambient corner glow ──
+  &__glow {
+    --glow-color: rgba(27, 158, 158, 0.10);
+    width: 160px;
+    height: 160px;
+    top: -80px;
+    right: -50px;
+  }
 
   // ── CTA state ──
   &__cta {
@@ -144,7 +159,17 @@ export default {
 
   // ── Header ──
   &__header {
-    @apply flex items-start justify-between gap-3;
+    @apply relative flex items-start justify-between gap-3;
+  }
+
+  &__greeting-group {
+    @apply flex items-center gap-2 min-w-0;
+  }
+
+  &__ai-avatar {
+    @apply w-5 h-5 rounded-full flex-shrink-0;
+    background: linear-gradient(135deg, #1b9e9e 0%, #e84393 100%);
+    box-shadow: 0 0 10px rgba(27, 158, 158, 0.35);
   }
 
   &__greeting {
@@ -166,7 +191,7 @@ export default {
 
   // ── Body ──
   &__body {
-    @apply mt-2.5 flex flex-col gap-2;
+    @apply relative mt-2.5 flex flex-col gap-2;
   }
 
   // ── Stats row ──

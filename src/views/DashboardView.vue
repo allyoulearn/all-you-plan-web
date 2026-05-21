@@ -3,6 +3,9 @@
     <!-- Page heading -->
     <h1 class="dashboard-view__title">{{ t('dashboard.title') }}</h1>
 
+    <!-- Stats row -->
+    <StatsRow :briefing="briefingsStore.todayBriefing" />
+
     <!-- Briefing banner -->
     <BriefingBanner
       class="dashboard-view__briefing"
@@ -34,10 +37,11 @@ import { useTasksStore } from '@/stores/tasks.store'
 import { useBriefingsStore } from '@/stores/briefings.store'
 import BriefingBanner from '@/components/dashboard/BriefingBanner.vue'
 import EisenhowerMatrix from '@/components/dashboard/EisenhowerMatrix.vue'
+import StatsRow from '@/components/dashboard/StatsRow.vue'
 
 export default {
   name: 'DashboardView',
-  components: { BriefingBanner, EisenhowerMatrix },
+  components: { BriefingBanner, EisenhowerMatrix, StatsRow },
   setup() {
     const { t } = useI18n()
     const tasksStore = useTasksStore()
@@ -93,7 +97,7 @@ export default {
 
   // ── Title ──
   &__title {
-    @apply text-xl font-bold text-primary-400 m-0;
+    @apply text-2xl font-semibold text-white m-0;
   }
 
   // ── Briefing banner ──

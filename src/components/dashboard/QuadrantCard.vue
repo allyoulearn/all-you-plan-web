@@ -1,7 +1,10 @@
 <template>
   <GlassCard class="quadrant-card">
-    <!-- Colored top accent border -->
-    <div class="quadrant-card__accent" :style="{ background: config.color }" />
+    <!-- Gradient top accent bar -->
+    <div
+      class="quadrant-card__accent surface-accent"
+      :style="{ '--accent-color': config.color }"
+    />
 
     <!-- Header: label + task count -->
     <div class="quadrant-card__header">
@@ -10,7 +13,10 @@
         <p class="quadrant-card__desc">{{ config.desc }}</p>
       </div>
 
-      <span class="quadrant-card__count" :style="{ color: config.color }">
+      <span
+        class="quadrant-card__count"
+        :style="{ color: config.color, backgroundColor: config.color + '22' }"
+      >
         {{ tasks.length }}
       </span>
     </div>
@@ -167,9 +173,9 @@ $transition: 150ms ease;
   @apply flex flex-col overflow-hidden relative;
   min-height: 200px;
 
-  // ── Accent border ──
+  // ── Accent bar (height + gradient supplied by .surface-accent) ──
   &__accent {
-    @apply w-full h-1 flex-shrink-0;
+    @apply w-full flex-shrink-0;
   }
 
   // ── Header ──
@@ -190,7 +196,8 @@ $transition: 150ms ease;
   }
 
   &__count {
-    @apply text-lg font-bold leading-none flex-shrink-0;
+    @apply flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full;
+    @apply text-sm font-bold font-mono leading-none;
   }
 
   // ── Task list ──
