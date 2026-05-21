@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background-dark text-secondary-100 font-sans antialiased;
+  }
+
+  body.light {
+    @apply bg-background-light text-secondary-900;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/5 border-2 border-white/10 rounded-glass backdrop-blur-glass shadow-glass;
+  }
+
+  .glass:hover {
+    @apply shadow-glass-hover;
+  }
+
+  .dark .glass {
+    @apply bg-[rgba(27,158,158,0.07)] border-white/10;
+  }
+
+  .light .glass {
+    @apply bg-[rgba(27,158,158,0.04)] border-black/8;
+  }
+
+  .glass-elevated {
+    @apply bg-[rgba(27,158,158,0.12)] border-2 border-white/10 rounded-glass backdrop-blur-glass shadow-modal;
+  }
+}
