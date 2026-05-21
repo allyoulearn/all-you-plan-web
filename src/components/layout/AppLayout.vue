@@ -55,13 +55,11 @@ export default {
   @apply flex min-h-screen;
 
   &__sidebar-wrapper {
-    @apply hidden lg:flex lg:w-64 flex-col flex-shrink-0 border-r border-white/10;
-    background: rgba(27, 158, 158, 0.04);
-    backdrop-filter: blur(16px);
+    @apply hidden lg:flex lg:w-64 flex-col flex-shrink-0;
   }
 
   &__overlay {
-    @apply fixed inset-0 z-30 bg-black/50 lg:hidden;
+    @apply fixed inset-0 z-30 bg-black/40 backdrop-blur-sm lg:hidden;
   }
 
   &__sidebar-mobile {

@@ -54,7 +54,7 @@
           >
             <span
               class="app-sidebar__space-dot"
-              :style="{ background: space.color || '#3ec4c4' }"
+              :style="{ background: space.color || '#3ec4c4', color: space.color || '#3ec4c4' }"
             />
             <span class="app-sidebar__space-name">{{ space.name }}</span>
             <span v-if="space.taskCount" class="app-sidebar__space-count">
@@ -147,9 +147,8 @@ export default {
 
 <style lang="scss" scoped>
 .app-sidebar {
-  @apply flex flex-col h-full overflow-y-auto;
-  background: rgba(27, 158, 158, 0.04);
-  backdrop-filter: blur(16px);
+  @apply flex flex-col h-full overflow-y-auto border-r border-white/10;
+  background: linear-gradient(180deg, #0d1526 0%, #091018 100%);
 
   &__brand {
     @apply px-5 py-5 border-b border-white/10;
@@ -172,7 +171,7 @@ export default {
   }
 
   &__nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm font-medium
+    @apply relative flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm font-medium
            text-secondary-300 no-underline transition-all duration-150;
 
     &:hover {
@@ -180,8 +179,14 @@ export default {
     }
 
     &--active {
-      @apply text-primary-400;
-      background: rgba(27, 158, 158, 0.15);
+      @apply text-primary-300;
+      background: rgba(27, 158, 158, 0.12);
+
+      &::before {
+        content: '';
+        @apply absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full;
+        background: theme('colors.primary.400');
+      }
     }
   }
 
@@ -219,6 +224,10 @@ export default {
 
     &:hover {
       @apply bg-white/5 text-secondary-200;
+
+      .app-sidebar__space-dot {
+        box-shadow: 0 0 8px currentColor;
+      }
     }
 
     &--active {
@@ -227,7 +236,7 @@ export default {
   }
 
   &__space-dot {
-    @apply w-2.5 h-2.5 rounded-full flex-shrink-0;
+    @apply w-2.5 h-2.5 rounded-full flex-shrink-0 transition-shadow duration-150;
   }
 
   &__space-name {
@@ -250,6 +259,7 @@ export default {
     @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-primary-300 flex-shrink-0;
     background: rgba(27, 158, 158, 0.3);
     border: 1px solid rgba(27, 158, 158, 0.4);
+    box-shadow: 0 0 0 3px rgba(27, 158, 158, 0.12);
   }
 
   &__user-info {
@@ -271,7 +281,11 @@ export default {
   }
 
   &__logout-icon {
-    @apply w-4 h-4 flex-shrink-0;
+    @apply w-4 h-4 flex-shrink-0 opacity-60 transition-opacity duration-150;
+  }
+
+  &__logout:hover &__logout-icon {
+    @apply opacity-100;
   }
 }
 </style>
