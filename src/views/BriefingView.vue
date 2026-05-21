@@ -312,7 +312,7 @@ export default {
   // ── Nudge ──
   &__nudge {
     @apply text-sm text-secondary-400 m-0 px-4 py-3;
-    @apply border border-white/10 rounded-glass bg-white/3;
+    @apply border border-white/10 rounded-glass bg-white/[0.03];
     @apply italic;
   }
 

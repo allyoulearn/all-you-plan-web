@@ -256,7 +256,7 @@ export default {
     color-scheme: dark;
 
     &:focus {
-      @apply border-primary-400/50 bg-white/8;
+      @apply border-primary-400/50 bg-white/[0.08];
     }
 
     &--short {

@@ -1,72 +1,24 @@
+@import '@fontsource/instrument-sans/400.css';
+@import '@fontsource/instrument-sans/500.css';
+@import '@fontsource/instrument-sans/600.css';
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html, body { margin: 0; padding: 0; }
   body {
-    @apply text-secondary-100 font-sans antialiased bg-app-base;
-    background-attachment: fixed;
-    min-height: 100vh;
-  }
-
-  body.light {
-    @apply bg-background-light text-secondary-900;
-    background-image: none;
-  }
-
-  /* Standardised keyboard-focus ring for form controls. Phase 4 removes the
-     broken `rgba(var(--color-primary-400-rgb), ...)` focus rules in
-     QuickAddFab and TaskSlideOver so this rule supplies their focus styling. */
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible {
-    outline: none;
-    border-color: rgba(27, 158, 158, 0.5);
-    box-shadow: 0 0 0 1px rgba(27, 158, 158, 0.3);
-  }
-}
-
-@layer components {
-  .glass {
-    @apply bg-white/5 border-2 border-white/10 rounded-glass backdrop-blur-glass shadow-glass;
-  }
-
-  .glass:hover {
-    @apply shadow-glass-hover;
-  }
-
-  .dark .glass {
-    @apply bg-[rgba(27,158,158,0.07)] border-white/10;
-  }
-
-  .light .glass {
-    @apply bg-[rgba(27,158,158,0.04)] border-black/10;
-  }
-
-  .glass-elevated {
-    @apply bg-[rgba(27,158,158,0.12)] border-2 border-white/10 rounded-glass backdrop-blur-glass shadow-modal;
-  }
-
-  /* Floating tier: modals, slide-overs, the AI panel (Plan 2). */
-  .surface-floating {
-    @apply border border-white/10 rounded-glass shadow-floating;
-    background: rgba(13, 26, 45, 0.94);
-    backdrop-filter: blur(24px);
-  }
-}
-
-@layer utilities {
-  /* 2px gradient accent bar. Set --accent-color on the element. */
-  .surface-accent {
-    height: 2px;
-    background: linear-gradient(90deg, var(--accent-color, #1b9e9e) 0%, transparent 85%);
-  }
-
-  /* Ambient radial glow. Set --glow-color; size with width/height; position via parent. */
-  .radial-glow {
-    position: absolute;
-    pointer-events: none;
-    border-radius: 9999px;
-    background: radial-gradient(circle, var(--glow-color, rgba(27, 158, 158, 0.12)) 0%, transparent 70%);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.35;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 }
