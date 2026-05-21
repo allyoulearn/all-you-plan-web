@@ -26,7 +26,7 @@
   }
 
   .light .glass {
-    @apply bg-[rgba(27,158,158,0.04)] border-black/8;
+    @apply bg-[rgba(27,158,158,0.04)] border-black/10;
   }
 
   .glass-elevated {

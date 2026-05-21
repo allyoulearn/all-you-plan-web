@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "briefing": "Briefing",
+    "settings": "Settings",
+    "spaces": "Spaces"
+  },
+  "auth": {
+    "login": "Sign in",
+    "register": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full name",
+    "loginCta": "Sign in",
+    "registerCta": "Create account",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "matrix": "Eisenhower Matrix",
+    "do": "Do",
+    "schedule": "Schedule",
+    "delegate": "Delegate",
+    "drop": "Drop",
+    "doDesc": "Urgent & Important",
+    "scheduleDesc": "Important, not urgent",
+    "delegateDesc": "Urgent, not important",
+    "dropDesc": "Neither"
+  },
+  "tasks": {
+    "addTask": "Add task",
+    "quickAdd": "Quick add",
+    "title": "Title",
+    "description": "Description",
+    "quadrant": "Quadrant",
+    "dueDate": "Due date",
+    "effort": "Effort (min)",
+    "complete": "Complete",
+    "snooze": "Snooze",
+    "delete": "Delete",
+    "subtasks": "Subtasks",
+    "noTasks": "No tasks yet",
+    "overdue": "Overdue"
+  },
+  "briefing": {
+    "title": "Today's Briefing",
+    "generate": "Refresh briefing",
+    "focusOrder": "Suggested focus order",
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "shifts": "Suggested changes",
+    "streak": "Streak"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "theme": "Theme",
+    "darkMode": "Dark mode",
+    "language": "Language",
+    "timezone": "Timezone",
+    "briefingTime": "Briefing time",
+    "quietHours": "Quiet hours",
+    "nudgeFrequency": "Nudge frequency",
+    "save": "Save",
+    "logout": "Sign out"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "error": "Something went wrong"
+  }
+}
