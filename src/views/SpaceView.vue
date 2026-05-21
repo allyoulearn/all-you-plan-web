@@ -263,7 +263,7 @@ export default {
   }
 
   &__title {
-    @apply text-xl font-bold text-secondary-50 m-0 flex-1 min-w-0 truncate;
+    @apply text-2xl font-semibold text-white m-0 flex-1 min-w-0 truncate;
   }
 
   &__task-count {
@@ -320,10 +320,12 @@ export default {
   // ── Empty state ──
   &__empty {
     @apply flex flex-col items-center justify-center gap-3 py-20 text-secondary-500;
+    @apply border border-white/10 rounded-glass;
+    background: rgba(255, 255, 255, 0.02);
   }
 
   &__empty-icon {
-    @apply w-10 h-10 opacity-40;
+    @apply w-12 h-12 opacity-40 text-primary-400;
   }
 
   &__empty-text {

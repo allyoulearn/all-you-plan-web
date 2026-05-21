@@ -3,7 +3,7 @@
     <!-- Color dot -->
     <span
       class="space-card__dot"
-      :style="{ background: space.color || '#3ec4c4' }"
+      :style="{ background: space.color || '#3ec4c4', color: space.color || '#3ec4c4' }"
     />
 
     <!-- Icon if set -->
@@ -51,15 +51,20 @@ export default {
   &:hover {
     @apply border-white/20;
     background: rgba(255, 255, 255, 0.06);
+    transform: translateX(2px);
 
     .space-card__chevron {
       @apply opacity-100;
+    }
+
+    .space-card__dot {
+      box-shadow: 0 0 8px currentColor;
     }
   }
 
   // ── Color dot ──
   &__dot {
-    @apply w-3 h-3 rounded-full flex-shrink-0;
+    @apply w-3 h-3 rounded-full flex-shrink-0 transition-shadow duration-150;
   }
 
   // ── Icon (emoji-free: only shown if API returns a text glyph) ──
