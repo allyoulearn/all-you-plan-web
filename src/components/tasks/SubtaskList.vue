@@ -1,7 +1,12 @@
 <template>
   <div class="subtask-list">
     <!-- Subtask items -->
-    <ul v-if="subtasks && subtasks.length > 0" class="subtask-list__items">
+    <TransitionGroup
+      v-if="subtasks && subtasks.length > 0"
+      tag="ul"
+      name="subtask"
+      class="subtask-list__items"
+    >
       <li
         v-for="subtask in subtasks"
         :key="subtask.id"
@@ -21,7 +26,7 @@
         <!-- Title -->
         <span class="subtask-list__title">{{ subtask.title }}</span>
       </li>
-    </ul>
+    </TransitionGroup>
 
     <!-- Add subtask input -->
     <div class="subtask-list__add">
@@ -121,7 +126,8 @@ export default {
 
     &--done {
       .subtask-list__title {
-        @apply line-through text-secondary-600;
+        @apply text-secondary-600;
+        background-size: 100% 1px;
       }
     }
   }
@@ -132,7 +138,8 @@ export default {
     @apply flex items-center justify-center transition-all duration-150;
 
     &:hover {
-      @apply border-white/40 bg-white/8;
+      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.08);
     }
 
     &--checked {
@@ -151,6 +158,11 @@ export default {
   // ── Title ──
   &__title {
     @apply text-sm text-secondary-200 leading-snug flex-1 min-w-0;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 60%;
+    background-size: 0% 1px;
+    transition: background-size 0.2s ease, color 0.2s ease;
   }
 
   // ── Add row ──
@@ -170,5 +182,16 @@ export default {
       @apply placeholder-secondary-500;
     }
   }
+}
+
+// ── Add/remove transitions for subtask items ──
+.subtask-enter-active,
+.subtask-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.subtask-enter-from,
+.subtask-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 </style>

@@ -1,5 +1,8 @@
 <template>
   <div class="quick-add-fab">
+    <!-- Ambient glow behind the button -->
+    <span class="quick-add-fab__glow" aria-hidden="true" />
+
     <!-- FAB button -->
     <button
       class="quick-add-fab__btn"
@@ -271,6 +274,14 @@ export default {
   &__icon {
     @apply w-7 h-7;
   }
+
+  &__glow {
+    @apply absolute rounded-full pointer-events-none;
+    width: 56px;
+    height: 56px;
+    background: radial-gradient(circle, rgba(27, 158, 158, 0.45) 0%, transparent 70%);
+    animation: glowPulse 2.4s ease-in-out infinite;
+  }
 }
 
 // ── Backdrop ──
@@ -334,7 +345,7 @@ export default {
     @apply transition-all duration-150;
 
     &:focus {
-      @apply border-primary-400/50 bg-white/8;
+      background: rgba(255, 255, 255, 0.08);
     }
 
     &--title {
@@ -430,5 +441,10 @@ export default {
 .scale-up-leave-to {
   transform: scale(0.95) translateY(8px);
   opacity: 0;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.12); }
 }
 </style>

@@ -22,6 +22,11 @@
           <XMarkIcon class="slide-over__close-icon" />
         </button>
 
+        <!-- Auto-save indicator -->
+        <Transition name="fade">
+          <span v-if="savedVisible" class="slide-over__saved">{{ t('common.saved') }}</span>
+        </Transition>
+
         <template v-if="task">
           <!-- AI suggestion banner -->
           <div
@@ -77,6 +82,10 @@
                   :style="localTask.quadrant === key ? { background: cfg.color, borderColor: cfg.color } : {}"
                   @click="selectQuadrant(key)"
                 >
+                  <CheckIcon
+                    v-if="localTask.quadrant === key"
+                    class="slide-over__quadrant-check"
+                  />
                   {{ cfg.label }}
                 </button>
               </div>
@@ -170,13 +179,13 @@
 <script>
 import { ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { XMarkIcon, SparklesIcon } from '@heroicons/vue/24/outline'
+import { XMarkIcon, SparklesIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import { QUADRANT_CONFIG } from '@/utils/quadrantColors'
 import SubtaskList from './SubtaskList.vue'
 
 export default {
   name: 'TaskSlideOver',
-  components: { XMarkIcon, SparklesIcon, SubtaskList },
+  components: { XMarkIcon, SparklesIcon, CheckIcon, SubtaskList },
   props: {
     /** Task object to display and edit, or null when closed */
     task: {
@@ -209,6 +218,9 @@ export default {
 
     /** Reference to the title textarea for auto-focus */
     const titleRef = ref(null)
+
+    /** Briefly true after an auto-save completes, drives the "Saved" pill. */
+    const savedVisible = ref(false)
 
     /** Debounce timer handle */
     let saveTimer = null
@@ -316,10 +328,14 @@ export default {
       emitSave()
     }
 
-    /** Build diff and emit save with updated fields */
+    /** Build diff and emit save with updated fields; flash the "Saved" pill. */
     function emitSave() {
       if (!props.task) return
       emit('save', { ...localTask.value })
+      savedVisible.value = true
+      setTimeout(() => {
+        savedVisible.value = false
+      }, 1500)
     }
 
     /** Emit delete with the task id */
@@ -366,6 +382,7 @@ export default {
       showSnooze,
       snoozeDate,
       titleRef,
+      savedVisible,
       quadrantLabel,
       scheduleSave,
       handleClose,
@@ -412,6 +429,14 @@ export default {
 
   &__close-icon {
     @apply w-4 h-4;
+  }
+
+  // ── Auto-save indicator ──
+  &__saved {
+    @apply absolute top-5 right-16 z-10 px-2 py-0.5 rounded-full;
+    @apply text-xs font-medium text-primary-200;
+    background: rgba(27, 158, 158, 0.18);
+    border: 1px solid rgba(27, 158, 158, 0.3);
   }
 
   // ── AI suggestion banner ──
@@ -489,7 +514,7 @@ export default {
 
   // ── Divider ──
   &__divider {
-    @apply border-t border-white/8 my-0;
+    @apply border-t border-white/10 my-0;
   }
 
   // ── Field wrapper ──
@@ -508,7 +533,7 @@ export default {
     @apply transition-all duration-150;
 
     &:focus {
-      @apply border-primary-400/50 bg-white/8;
+      background: rgba(255, 255, 255, 0.08);
     }
 
     &--short {
@@ -525,7 +550,7 @@ export default {
   }
 
   &__quadrant-chip {
-    @apply px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer;
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer;
     @apply border border-white/10 bg-white/5 text-secondary-400;
     @apply transition-all duration-150;
 
@@ -538,6 +563,10 @@ export default {
     }
   }
 
+  &__quadrant-check {
+    @apply w-3 h-3;
+  }
+
   // ── Recurrence ──
   &__recurrence {
     @apply text-sm text-secondary-400 m-0;
@@ -545,7 +574,7 @@ export default {
 
   // ── Bottom actions ──
   &__actions {
-    @apply flex items-center gap-2 px-5 py-4 border-t border-white/8 flex-shrink-0;
+    @apply flex items-center gap-2 px-5 py-4 border-t border-white/10 flex-shrink-0;
   }
 
   &__btn {
@@ -579,8 +608,9 @@ export default {
 
   // ── Snooze date picker ──
   &__snooze {
-    @apply flex items-center gap-3 px-5 py-3 border-t border-white/8 flex-shrink-0;
-    @apply bg-white/3;
+    @apply flex items-center gap-3 px-5 py-3 border-t flex-shrink-0;
+    border-top-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
   }
 
   // ── Empty state ──

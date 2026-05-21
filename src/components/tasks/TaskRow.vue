@@ -1,12 +1,22 @@
 <template>
-  <li class="task-row" @click="handleSelect">
+  <li
+    class="task-row"
+    :class="{ 'task-row--completing': completing }"
+    @click="handleSelect"
+  >
     <!-- Checkbox for quick completion -->
     <button
       class="task-row__checkbox"
       :aria-label="t('tasks.complete')"
       :class="{ 'task-row__checkbox--checked': checked }"
+      :style="checked ? { background: quadrantColor, borderColor: quadrantColor } : {}"
       @click.stop="handleComplete"
     >
+      <span
+        v-if="checked"
+        class="task-row__ripple"
+        :style="{ background: quadrantColor }"
+      />
       <CheckIcon v-if="checked" class="task-row__check-icon task-row__check-icon--bounce" />
       <CheckIcon v-else class="task-row__check-icon" />
     </button>
@@ -39,6 +49,7 @@
         <!-- Subtask progress -->
         <span
           v-if="subtaskProgress !== null"
+          :key="subtaskProgress"
           class="task-row__subtasks"
         >
           {{ subtaskProgress }}
@@ -55,6 +66,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckIcon, ClockIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
+import { QUADRANT_CONFIG } from '@/utils/quadrantColors'
 import QuadrantBadge from '@/components/common/QuadrantBadge.vue'
 
 export default {
@@ -71,17 +83,17 @@ export default {
   setup(props, { emit }) {
     const { t } = useI18n()
 
-    // ── State ──
-
-    /** Tracks the optimistic checked state for the bounce animation */
+    /** Optimistic checked state, drives the fill + ripple animation. */
     const checked = ref(false)
 
-    // ── Computed ──
+    /** True while the row plays its fade-out before emitting complete. */
+    const completing = ref(false)
 
-    /**
-     * Returns relative due date label including overdue indicator.
-     * @returns {string}
-     */
+    /** Quadrant colour used for the checkbox fill and ripple. */
+    const quadrantColor = computed(
+      () => QUADRANT_CONFIG[props.task.quadrant]?.color ?? '#1b9e9e'
+    )
+
     const formattedDue = computed(() => {
       if (!props.task.dueDate) return ''
       const due = new Date(props.task.dueDate)
@@ -98,10 +110,6 @@ export default {
       return due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     })
 
-    /**
-     * Returns CSS modifier class for the due date label.
-     * @returns {string}
-     */
     const dueDateClass = computed(() => {
       if (!props.task.dueDate) return ''
       const due = new Date(props.task.dueDate)
@@ -115,39 +123,36 @@ export default {
       return ''
     })
 
-    /**
-     * Returns "done/total" string if task has subtasks, null otherwise.
-     * @returns {string|null}
-     */
     const subtaskProgress = computed(() => {
       const subtasks = props.task.subtasks
       if (!subtasks || subtasks.length === 0) return null
-      const done = subtasks.filter(s => s.completed).length
+      const done = subtasks.filter((s) => s.completed).length
       return `${done}/${subtasks.length}`
     })
 
-    // ── Handlers ──
-
-    /**
-     * Emit select event with the full task object.
-     */
+    /** Emit select with the full task object. */
     function handleSelect() {
       emit('select', props.task)
     }
 
     /**
-     * Optimistically set checked, trigger bounce animation, then emit complete.
+     * Optimistically fill the checkbox, play the ripple, fade the row,
+     * then emit complete after a 1s delay so the user can see the result.
      */
     function handleComplete() {
+      if (checked.value) return
       checked.value = true
+      completing.value = true
       setTimeout(() => {
         emit('complete', props.task.id)
-      }, 300)
+      }, 1000)
     }
 
     return {
       t,
       checked,
+      completing,
+      quadrantColor,
       formattedDue,
       dueDateClass,
       subtaskProgress,
@@ -162,8 +167,13 @@ export default {
 // ── Block ──
 .task-row {
   @apply flex items-center gap-3 px-3 py-2.5 cursor-pointer;
-  @apply border-b border-white/5 transition-colors duration-150;
+  @apply border-b border-white/5;
   @apply list-none;
+  transition: background-color 0.15s ease, opacity 0.3s ease;
+
+  &--completing {
+    @apply opacity-50 pointer-events-none;
+  }
 
   &:last-child {
     @apply border-b-0;
@@ -179,16 +189,18 @@ export default {
 
   // ── Checkbox ──
   &__checkbox {
-    @apply flex-shrink-0 w-5 h-5 rounded-full border border-white/20 bg-transparent cursor-pointer;
-    @apply flex items-center justify-center transition-all duration-150;
+    @apply relative flex-shrink-0 w-5 h-5 rounded-full border border-white/20 bg-transparent cursor-pointer;
+    @apply flex items-center justify-center transition-all duration-150 overflow-visible;
 
     &:hover {
       @apply border-white/50 bg-white/10;
     }
+  }
 
-    &--checked {
-      @apply border-primary-400 bg-primary-500/20;
-    }
+  // ── Completion ripple ──
+  &__ripple {
+    @apply absolute inset-0 rounded-full pointer-events-none;
+    animation: ripple 0.5s ease-out;
   }
 
   &__check-icon {
@@ -250,6 +262,7 @@ export default {
   // ── Subtask progress ──
   &__subtasks {
     @apply text-xs text-secondary-500 font-mono;
+    animation: numberFlip 0.3s ease-out;
   }
 
   // ── Chevron ──
@@ -263,5 +276,15 @@ export default {
   0%   { transform: scale(0); }
   50%  { transform: scale(1.2); }
   100% { transform: scale(1); }
+}
+
+@keyframes ripple {
+  0%   { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes numberFlip {
+  0%   { transform: translateY(-45%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 </style>
