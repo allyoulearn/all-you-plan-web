@@ -147,8 +147,7 @@ export default {
 
 <style lang="scss" scoped>
 .app-sidebar {
-  @apply flex flex-col h-full overflow-y-auto border-r border-white/10;
-  background: linear-gradient(180deg, #0d1526 0%, #091018 100%);
+  @apply flex flex-col h-full overflow-y-auto border-r border-white/10 bg-app-sidebar;
 
   &__brand {
     @apply px-5 py-5 border-b border-white/10;

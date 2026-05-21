@@ -40,6 +40,7 @@ export default {
   transform: translateY(8px);
   opacity: 0;
 }
+/* Leave is fade-only by design; only the entering page slides up. */
 .page-leave-to {
   opacity: 0;
 }

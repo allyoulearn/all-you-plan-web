@@ -58,7 +58,11 @@ export default {
       return name ? name.charAt(0).toUpperCase() : '?'
     })
 
-    /** Wiggle the bell once whenever the unread nudge count increases. */
+    /**
+     * Wiggle the bell once whenever the unread nudge count increases.
+     * Note: if the user already has unread nudges, this also fires once when
+     * the initial fetchNudges() resolves (0 -> N) — an intentional attention cue.
+     */
     watch(
       () => nudgesStore.unreadCount,
       (next, prev) => {
@@ -162,7 +166,7 @@ export default {
 }
 
 @keyframes bellWiggle {
-  0%, 100% { transform: rotate(0); }
+  0%, 100% { transform: rotate(0deg); }
   20%      { transform: rotate(-12deg); }
   40%      { transform: rotate(10deg); }
   60%      { transform: rotate(-6deg); }
