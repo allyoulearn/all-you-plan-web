@@ -9,6 +9,8 @@ const routes = [
     children: [
       { path: 'login', name: 'Login', component: () => import('@/views/auth/LoginView.vue'), meta: { title: 'Login' } },
       { path: 'register', name: 'Register', component: () => import('@/views/auth/RegisterView.vue'), meta: { title: 'Register' } },
+      { path: 'forgot-password', name: 'ForgotPassword', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { title: 'Forgot Password' } },
+      { path: 'reset-password', name: 'ResetPassword', component: () => import('@/views/auth/ResetPasswordView.vue'), meta: { title: 'Reset Password' } },
     ],
   },
   {

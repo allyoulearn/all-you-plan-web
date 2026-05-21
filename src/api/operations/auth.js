@@ -102,3 +102,33 @@ export const UPDATE_PROFILE = gql`
     }
   }
 `
+
+export const FORGOT_PASSWORD = gql`
+  mutation ForgotPassword($email: String!) {
+    forgotPassword(email: $email)
+  }
+`
+
+export const RESET_PASSWORD = gql`
+  ${USER_FRAGMENT}
+  mutation ResetPassword($token: String!, $newPassword: String!) {
+    resetPassword(token: $token, newPassword: $newPassword) {
+      accessToken
+      user {
+        ...UserFields
+      }
+    }
+  }
+`
+
+export const GOOGLE_LOGIN = gql`
+  ${USER_FRAGMENT}
+  mutation GoogleLogin($idToken: String!) {
+    googleLogin(idToken: $idToken) {
+      accessToken
+      user {
+        ...UserFields
+      }
+    }
+  }
+`

@@ -14,7 +14,22 @@
     "loginCta": "Sign in",
     "registerCta": "Create account",
     "noAccount": "Don't have an account?",
-    "hasAccount": "Already have an account?"
+    "hasAccount": "Already have an account?",
+    "forgotPassword": "Forgot password?",
+    "forgotPasswordTitle": "Reset your password",
+    "forgotPasswordDesc": "Enter your email and we'll send you reset instructions.",
+    "forgotPasswordCta": "Send reset link",
+    "forgotPasswordSuccess": "If an account exists with that email, we've sent reset instructions.",
+    "backToLogin": "Back to sign in",
+    "resetPasswordTitle": "Set a new password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "resetPasswordCta": "Set new password",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordWeak": "Password must be at least 8 characters and include uppercase, lowercase, and a digit.",
+    "resetTokenInvalid": "This reset link is invalid or has expired.",
+    "orContinueWith": "or continue with",
+    "continueWithGoogle": "Continue with Google"
   },
   "dashboard": {
     "title": "Dashboard",

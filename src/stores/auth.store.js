@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apolloClient, setAccessToken, refreshAccessToken } from '@/api/apollo'
-import { LOGIN, REGISTER, LOGOUT, ME, UPDATE_PROFILE } from '@/api/operations'
+import { LOGIN, REGISTER, LOGOUT, ME, UPDATE_PROFILE, FORGOT_PASSWORD, RESET_PASSWORD, GOOGLE_LOGIN } from '@/api/operations'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('ayp_user') || 'null'))
@@ -82,9 +82,51 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('ayp_user', JSON.stringify(data.updateProfile))
   }
 
+  async function forgotPassword(email) {
+    loading.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: FORGOT_PASSWORD,
+        variables: { email },
+      })
+      return data.forgotPassword
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function resetPassword(token, newPassword) {
+    loading.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: RESET_PASSWORD,
+        variables: { token, newPassword },
+      })
+      setAuth(data.resetPassword)
+      return data.resetPassword
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function googleLogin(idToken) {
+    loading.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: GOOGLE_LOGIN,
+        variables: { idToken },
+      })
+      setAuth(data.googleLogin)
+      return data.googleLogin
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     user, accessToken, loading,
     isAuthenticated, userName,
-    setAuth, clearAuth, login, register, logout, tryRestoreSession, updateProfile,
+    setAuth, clearAuth, login, register, logout, tryRestoreSession,
+    updateProfile, forgotPassword, resetPassword, googleLogin,
   }
 })
