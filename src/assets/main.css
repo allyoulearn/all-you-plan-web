@@ -4,8 +4,7 @@
 
 @layer base {
   body {
-    @apply text-secondary-100 font-sans antialiased;
-    background: linear-gradient(180deg, #0c1424 0%, #0a1018 100%);
+    @apply text-secondary-100 font-sans antialiased bg-app-base;
     background-attachment: fixed;
     min-height: 100vh;
   }
@@ -15,9 +14,9 @@
     background-image: none;
   }
 
-  /* Standardised focus ring for all form controls.
-     Replaces ad-hoc per-component focus borders, including the previously
-     broken `rgba(var(--color-primary-400-rgb), ...)` references. */
+  /* Standardised keyboard-focus ring for form controls. Phase 4 removes the
+     broken `rgba(var(--color-primary-400-rgb), ...)` focus rules in
+     QuickAddFab and TaskSlideOver so this rule supplies their focus styling. */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
