@@ -170,7 +170,7 @@ $transition: 150ms ease;
 
 // ── Block ──
 .quadrant-card {
-  @apply flex flex-col overflow-hidden relative;
+  @apply flex flex-col relative;
   min-height: 200px;
 
   // ── Accent bar (height + gradient supplied by .surface-accent) ──
