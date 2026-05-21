@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import { useAuthStore } from './stores/auth.store'
+import { initTheme } from './composables/useTheme.js'
 import './assets/tokens.css'
 import './assets/main.css'
 
@@ -19,6 +20,7 @@ async function bootstrap() {
     await authStore.tryRestoreSession()
   }
 
+  initTheme()
   app.use(router)
   app.mount('#app')
 }
