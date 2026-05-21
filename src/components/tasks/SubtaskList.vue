@@ -189,9 +189,15 @@ export default {
 .subtask-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
+.subtask-leave-active {
+  position: absolute;
+}
 .subtask-enter-from,
 .subtask-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+.subtask-move {
+  transition: transform 0.15s ease;
 }
 </style>

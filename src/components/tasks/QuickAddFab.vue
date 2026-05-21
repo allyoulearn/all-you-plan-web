@@ -277,6 +277,8 @@ export default {
 
   &__glow {
     @apply absolute rounded-full pointer-events-none;
+    top: 0;
+    left: 0;
     width: 56px;
     height: 56px;
     background: radial-gradient(circle, rgba(27, 158, 158, 0.45) 0%, transparent 70%);

@@ -225,6 +225,9 @@ export default {
     /** Debounce timer handle */
     let saveTimer = null
 
+    /** Handle for the "Saved" pill auto-hide timer. */
+    let savedTimer = null
+
     // ── Watchers ──
 
     /**
@@ -263,6 +266,7 @@ export default {
         }
         if (!val) {
           clearTimeout(saveTimer)
+          clearTimeout(savedTimer)
         }
       }
     )
@@ -333,7 +337,8 @@ export default {
       if (!props.task) return
       emit('save', { ...localTask.value })
       savedVisible.value = true
-      setTimeout(() => {
+      clearTimeout(savedTimer)
+      savedTimer = setTimeout(() => {
         savedVisible.value = false
       }, 1500)
     }

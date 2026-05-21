@@ -63,7 +63,7 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckIcon, ClockIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
 import { QUADRANT_CONFIG } from '@/utils/quadrantColors'
@@ -88,6 +88,9 @@ export default {
 
     /** True while the row plays its fade-out before emitting complete. */
     const completing = ref(false)
+
+    /** Handle for the pre-emit completion delay timer. */
+    let completeTimer = null
 
     /** Quadrant colour used for the checkbox fill and ripple. */
     const quadrantColor = computed(
@@ -143,10 +146,14 @@ export default {
       if (checked.value) return
       checked.value = true
       completing.value = true
-      setTimeout(() => {
+      completeTimer = setTimeout(() => {
         emit('complete', props.task.id)
       }, 1000)
     }
+
+    onBeforeUnmount(() => {
+      clearTimeout(completeTimer)
+    })
 
     return {
       t,
