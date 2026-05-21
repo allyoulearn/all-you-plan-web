@@ -873,7 +873,7 @@ describe('Checkbox', () => {
 describe('ProgressBar', () => {
   it('clamps the fill width to 0-100%', () => {
     const wrapper = mount(ProgressBar, { props: { value: 1.5 } })
-    expect(wrapper.find('div > div').attributes('style')).toContain('width: 100%')
+    expect(wrapper.find('.bg-accent').attributes('style')).toContain('width: 100%')
   })
 })
 ```
