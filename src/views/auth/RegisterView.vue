@@ -1,30 +1,37 @@
 <template>
-  <div class="register-view">
-    <h2 class="text-xl font-semibold text-secondary-100 mb-4">{{ t('auth.register') }}</h2>
+  <div>
+    <h2 class="mb-6 font-serif text-[22px] text-ink">
+      Create your <em>account.</em>
+    </h2>
+
     <form @submit.prevent="handleRegister" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">{{ t('auth.name') }}</label>
-        <input v-model="name" type="text" required
-          class="register-view__input" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">{{ t('auth.email') }}</label>
-        <input v-model="email" type="email" required
-          class="register-view__input" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">{{ t('auth.password') }}</label>
-        <input v-model="password" type="password" required
-          class="register-view__input" />
-      </div>
-      <p v-if="error" class="text-danger text-sm">{{ error }}</p>
-      <button type="submit" :disabled="loading"
-        class="register-view__btn">
+      <TextField
+        v-model="name"
+        type="text"
+        :label="t('auth.name')"
+      />
+
+      <TextField
+        v-model="email"
+        type="email"
+        :label="t('auth.email')"
+      />
+
+      <TextField
+        v-model="password"
+        type="password"
+        :label="t('auth.password')"
+      />
+
+      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
+
+      <Button variant="accent" type="submit" :disabled="loading" size="md" class="w-full justify-center">
         {{ loading ? t('common.loading') : t('auth.registerCta') }}
-      </button>
-      <p class="text-center text-sm text-secondary-400">
+      </Button>
+
+      <p class="text-center text-sm text-muted">
         {{ t('auth.hasAccount') }}
-        <router-link to="/auth/login" class="text-primary-400 hover:underline">
+        <router-link to="/auth/login" class="text-accent hover:underline">
           {{ t('auth.loginCta') }}
         </router-link>
       </p>
@@ -37,9 +44,12 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
+import TextField from '@/components/ui/TextField.vue'
+import Button from '@/components/ui/Button.vue'
 
 export default {
   name: 'RegisterView',
+  components: { TextField, Button },
   setup() {
     const { t } = useI18n()
     const router = useRouter()
@@ -71,18 +81,3 @@ export default {
   },
 }
 </script>
-
-<style lang="scss" scoped>
-.register-view {
-  &__input {
-    @apply w-full px-4 py-3 rounded-input border-2 border-white/10 bg-white/5 text-secondary-100;
-    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
-    @apply placeholder:text-secondary-500;
-  }
-
-  &__btn {
-    @apply w-full py-3 rounded-btn font-semibold text-white bg-primary-500;
-    @apply hover:bg-primary-600 disabled:opacity-50 transition-colors;
-  }
-}
-</style>

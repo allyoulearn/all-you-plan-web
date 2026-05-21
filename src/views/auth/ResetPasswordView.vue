@@ -1,13 +1,15 @@
 <template>
-  <div class="reset-password-view">
+  <div>
     <!-- Heading -->
-    <h2 class="text-xl font-semibold text-secondary-100 mb-6">{{ t('auth.resetPasswordTitle') }}</h2>
+    <h2 class="mb-6 font-serif text-[22px] text-ink">
+      Reset your <em>password.</em>
+    </h2>
 
     <!-- Token missing / invalid error state -->
-    <div v-if="!token" class="reset-password-view__error-state">
-      <p class="text-danger-500 text-sm mb-4">{{ t('auth.resetTokenInvalid') }}</p>
+    <div v-if="!token" class="space-y-3 text-center">
+      <p class="text-sm text-bad">{{ t('auth.resetTokenInvalid') }}</p>
 
-      <router-link to="/auth/forgot-password" class="text-primary-400 hover:underline text-sm">
+      <router-link to="/auth/forgot-password" class="text-sm text-accent hover:underline">
         {{ t('auth.forgotPasswordCta') }}
       </router-link>
     </div>
@@ -15,65 +17,51 @@
     <!-- Reset form -->
     <form v-else @submit.prevent="handleSubmit" class="space-y-4">
       <!-- New password field -->
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">
-          {{ t('auth.newPassword') }}
-        </label>
-
-        <input
-          v-model="newPassword"
-          type="password"
-          required
-          autocomplete="new-password"
-          class="reset-password-view__input"
-        />
-      </div>
+      <TextField
+        v-model="newPassword"
+        type="password"
+        :label="t('auth.newPassword')"
+        autocomplete="new-password"
+      />
 
       <!-- Confirm password field -->
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">
-          {{ t('auth.confirmPassword') }}
-        </label>
+      <TextField
+        v-model="confirmPassword"
+        type="password"
+        :label="t('auth.confirmPassword')"
+        autocomplete="new-password"
+      />
 
-        <input
-          v-model="confirmPassword"
-          type="password"
-          required
-          autocomplete="new-password"
-          class="reset-password-view__input"
-        />
-      </div>
-
-      <!-- Password strength hint -->
-      <ul class="reset-password-view__hints">
-        <li :class="['reset-password-view__hint', hints.length ? 'reset-password-view__hint--met' : '']">
+      <!-- Password strength hints -->
+      <ul class="flex flex-wrap gap-x-3 gap-y-1">
+        <li :class="['text-xs transition-colors', hints.length ? 'text-ok' : 'text-muted']">
           8+ characters
         </li>
 
-        <li :class="['reset-password-view__hint', hints.upper ? 'reset-password-view__hint--met' : '']">
+        <li :class="['text-xs transition-colors', hints.upper ? 'text-ok' : 'text-muted']">
           Uppercase letter
         </li>
 
-        <li :class="['reset-password-view__hint', hints.lower ? 'reset-password-view__hint--met' : '']">
+        <li :class="['text-xs transition-colors', hints.lower ? 'text-ok' : 'text-muted']">
           Lowercase letter
         </li>
 
-        <li :class="['reset-password-view__hint', hints.digit ? 'reset-password-view__hint--met' : '']">
+        <li :class="['text-xs transition-colors', hints.digit ? 'text-ok' : 'text-muted']">
           Number
         </li>
       </ul>
 
       <!-- Error message -->
-      <p v-if="error" class="text-danger-500 text-sm">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
 
       <!-- Submit button -->
-      <button type="submit" :disabled="loading || !isPasswordValid" class="reset-password-view__btn">
+      <Button variant="accent" type="submit" :disabled="loading || !isPasswordValid" size="md" class="w-full justify-center">
         {{ loading ? t('common.loading') : t('auth.resetPasswordCta') }}
-      </button>
+      </Button>
 
       <!-- Back to login link -->
-      <p class="text-center text-sm text-secondary-400">
-        <router-link to="/auth/login" class="text-primary-400 hover:underline">
+      <p class="text-center text-sm text-muted">
+        <router-link to="/auth/login" class="text-accent hover:underline">
           {{ t('auth.backToLogin') }}
         </router-link>
       </p>
@@ -86,9 +74,12 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
+import TextField from '@/components/ui/TextField.vue'
+import Button from '@/components/ui/Button.vue'
 
 export default {
   name: 'ResetPasswordView',
+  components: { TextField, Button },
   setup() {
     const { t } = useI18n()
     const route = useRoute()
@@ -162,39 +153,3 @@ export default {
   },
 }
 </script>
-
-<style lang="scss" scoped>
-// ── Block ──
-.reset-password-view {
-  // ── Input ──
-  &__input {
-    @apply w-full px-4 py-3 rounded-input border-2 border-white/10 bg-white/5 text-secondary-100;
-    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
-    @apply placeholder:text-secondary-500;
-  }
-
-  // ── Submit button ──
-  &__btn {
-    @apply w-full py-3 rounded-btn font-semibold text-white bg-primary-500;
-    @apply hover:bg-primary-600 disabled:opacity-50 transition-colors;
-  }
-
-  // ── Error state (missing token) ──
-  &__error-state {
-    @apply text-center space-y-3;
-  }
-
-  // ── Password hints ──
-  &__hints {
-    @apply flex flex-wrap gap-x-3 gap-y-1;
-  }
-
-  &__hint {
-    @apply text-xs text-secondary-500 transition-colors;
-
-    &--met {
-      @apply text-success-500;
-    }
-  }
-}
-</style>

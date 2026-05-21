@@ -1,54 +1,47 @@
 <template>
-  <div class="login-view">
+  <div>
     <!-- Heading -->
-    <h2 class="text-xl font-semibold text-secondary-100 mb-4">{{ t('auth.login') }}</h2>
+    <h2 class="mb-6 font-serif text-[22px] text-ink">
+      Welcome <em>back.</em>
+    </h2>
 
     <!-- Login form -->
     <form @submit.prevent="handleLogin" class="space-y-4">
       <!-- Email field -->
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">{{ t('auth.email') }}</label>
-
-        <input
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-          class="login-view__input"
-        />
-      </div>
+      <TextField
+        v-model="email"
+        type="email"
+        :label="t('auth.email')"
+        autocomplete="email"
+      />
 
       <!-- Password field + forgot link -->
       <div>
-        <div class="login-view__password-header">
-          <label class="block text-sm font-medium text-secondary-300">{{ t('auth.password') }}</label>
-
-          <router-link to="/auth/forgot-password" class="login-view__forgot-link">
+        <div class="mb-1.5 flex items-center justify-between">
+          <span class="text-[12px] font-medium text-muted">{{ t('auth.password') }}</span>
+          <router-link to="/auth/forgot-password" class="text-xs text-accent hover:underline">
             {{ t('auth.forgotPassword') }}
           </router-link>
         </div>
-
-        <input
+        <TextField
           v-model="password"
           type="password"
-          required
           autocomplete="current-password"
-          class="login-view__input mt-1"
         />
       </div>
 
       <!-- Error message -->
-      <p v-if="error" class="text-danger-500 text-sm">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
 
       <!-- Submit button -->
-      <button type="submit" :disabled="loading" class="login-view__btn">
+      <Button variant="accent" type="submit" :disabled="loading" size="md" class="w-full justify-center">
         {{ loading ? t('common.loading') : t('auth.loginCta') }}
-      </button>
+      </Button>
 
       <!-- Register link -->
-      <p class="text-center text-sm text-secondary-400">
+      <p class="text-center text-sm text-muted">
         {{ t('auth.noAccount') }}
-        <router-link to="/auth/register" class="text-primary-400 hover:underline">
+        <router-link to="/auth/register" class="text-accent hover:underline">
           {{ t('auth.registerCta') }}
         </router-link>
       </p>
@@ -57,15 +50,17 @@
     <!-- Google sign-in section (only rendered when client ID is configured) -->
     <template v-if="googleClientId">
       <!-- Divider -->
-      <div class="login-view__divider">
-        <span class="login-view__divider-label">{{ t('auth.orContinueWith') }}</span>
+      <div class="relative my-5 flex items-center">
+        <div class="flex-1 border-t border-rule-soft"></div>
+        <span class="shrink-0 px-3 text-xs text-muted">{{ t('auth.orContinueWith') }}</span>
+        <div class="flex-1 border-t border-rule-soft"></div>
       </div>
 
       <!-- Google button container -->
-      <div ref="googleBtnRef" class="login-view__google-btn"></div>
+      <div ref="googleBtnRef" class="flex justify-center"></div>
 
       <!-- Google sign-in error -->
-      <p v-if="googleError" class="text-danger-500 text-sm text-center mt-2">{{ googleError }}</p>
+      <p v-if="googleError" class="mt-2 text-center text-sm text-bad">{{ googleError }}</p>
     </template>
   </div>
 </template>
@@ -75,9 +70,12 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
+import TextField from '@/components/ui/TextField.vue'
+import Button from '@/components/ui/Button.vue'
 
 export default {
   name: 'LoginView',
+  components: { TextField, Button },
   setup() {
     const { t } = useI18n()
     const router = useRouter()
@@ -189,50 +187,3 @@ export default {
   },
 }
 </script>
-
-<style lang="scss" scoped>
-// ── Block ──
-.login-view {
-  // ── Input ──
-  &__input {
-    @apply w-full px-4 py-3 rounded-input border-2 border-white/10 bg-white/5 text-secondary-100;
-    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
-    @apply placeholder:text-secondary-500;
-  }
-
-  // ── Password row (label + forgot link) ──
-  &__password-header {
-    @apply flex items-center justify-between;
-  }
-
-  &__forgot-link {
-    @apply text-xs text-primary-400 hover:underline;
-  }
-
-  // ── Submit button ──
-  &__btn {
-    @apply w-full py-3 rounded-btn font-semibold text-white bg-primary-500;
-    @apply hover:bg-primary-600 disabled:opacity-50 transition-colors;
-  }
-
-  // ── Divider ──
-  &__divider {
-    @apply relative flex items-center my-5;
-
-    &::before,
-    &::after {
-      content: '';
-      @apply flex-1 border-t border-white/10;
-    }
-  }
-
-  &__divider-label {
-    @apply px-3 text-xs text-secondary-500 shrink-0;
-  }
-
-  // ── Google button container ──
-  &__google-btn {
-    @apply flex justify-center;
-  }
-}
-</style>

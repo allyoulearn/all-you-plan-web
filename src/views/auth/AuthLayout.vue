@@ -1,8 +1,12 @@
 <template>
-  <div class="auth-layout">
-    <div class="auth-layout__card glass-elevated">
-      <h1 class="text-2xl font-bold text-primary-400 text-center mb-6">All You Plan</h1>
-      <router-view />
+  <div class="grid min-h-screen place-items-center bg-paper px-4">
+    <div class="w-full max-w-md">
+      <p class="mb-6 text-center font-serif text-[28px] italic text-ink">
+        all you <em>plan</em>
+      </p>
+      <div class="rounded-md border border-rule-soft bg-paper-2 p-8 shadow-sm">
+        <slot />
+      </div>
     </div>
   </div>
 </template>
@@ -10,13 +14,3 @@
 <script>
 export default { name: 'AuthLayout' }
 </script>
-
-<style lang="scss" scoped>
-.auth-layout {
-  @apply flex items-center justify-center min-h-screen p-4;
-
-  &__card {
-    @apply w-full max-w-md p-8;
-  }
-}
-</style>

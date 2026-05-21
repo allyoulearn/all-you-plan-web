@@ -1,15 +1,17 @@
 <template>
-  <div class="forgot-password-view">
+  <div>
     <!-- Heading -->
-    <h2 class="text-xl font-semibold text-secondary-100 mb-2">{{ t('auth.forgotPasswordTitle') }}</h2>
+    <h2 class="mb-2 font-serif text-[22px] text-ink">
+      Forgot your <em>password?</em>
+    </h2>
 
-    <p class="text-sm text-secondary-400 mb-6">{{ t('auth.forgotPasswordDesc') }}</p>
+    <p class="mb-6 text-sm text-muted">{{ t('auth.forgotPasswordDesc') }}</p>
 
     <!-- Success state -->
-    <div v-if="sent" class="forgot-password-view__success">
-      <p class="text-sm text-secondary-200">{{ t('auth.forgotPasswordSuccess') }}</p>
+    <div v-if="sent" class="space-y-4 text-center">
+      <p class="text-sm text-ink">{{ t('auth.forgotPasswordSuccess') }}</p>
 
-      <router-link to="/auth/login" class="forgot-password-view__back-link">
+      <router-link to="/auth/login" class="text-sm text-accent hover:underline">
         {{ t('auth.backToLogin') }}
       </router-link>
     </div>
@@ -17,29 +19,24 @@
     <!-- Form -->
     <form v-else @submit.prevent="handleSubmit" class="space-y-4">
       <!-- Email field -->
-      <div>
-        <label class="block text-sm font-medium text-secondary-300 mb-1">{{ t('auth.email') }}</label>
-
-        <input
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-          class="forgot-password-view__input"
-        />
-      </div>
+      <TextField
+        v-model="email"
+        type="email"
+        :label="t('auth.email')"
+        autocomplete="email"
+      />
 
       <!-- Error message -->
-      <p v-if="error" class="text-danger-500 text-sm">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
 
       <!-- Submit button -->
-      <button type="submit" :disabled="loading" class="forgot-password-view__btn">
+      <Button variant="accent" type="submit" :disabled="loading" size="md" class="w-full justify-center">
         {{ loading ? t('common.loading') : t('auth.forgotPasswordCta') }}
-      </button>
+      </Button>
 
       <!-- Back to login link -->
-      <p class="text-center text-sm text-secondary-400">
-        <router-link to="/auth/login" class="text-primary-400 hover:underline">
+      <p class="text-center text-sm text-muted">
+        <router-link to="/auth/login" class="text-accent hover:underline">
           {{ t('auth.backToLogin') }}
         </router-link>
       </p>
@@ -51,9 +48,12 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
+import TextField from '@/components/ui/TextField.vue'
+import Button from '@/components/ui/Button.vue'
 
 export default {
   name: 'ForgotPasswordView',
+  components: { TextField, Button },
   setup() {
     const { t } = useI18n()
     const authStore = useAuthStore()
@@ -96,30 +96,3 @@ export default {
   },
 }
 </script>
-
-<style lang="scss" scoped>
-// ── Block ──
-.forgot-password-view {
-  // ── Input ──
-  &__input {
-    @apply w-full px-4 py-3 rounded-input border-2 border-white/10 bg-white/5 text-secondary-100;
-    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
-    @apply placeholder:text-secondary-500;
-  }
-
-  // ── Submit button ──
-  &__btn {
-    @apply w-full py-3 rounded-btn font-semibold text-white bg-primary-500;
-    @apply hover:bg-primary-600 disabled:opacity-50 transition-colors;
-  }
-
-  // ── Success state ──
-  &__success {
-    @apply space-y-4 text-center;
-  }
-
-  &__back-link {
-    @apply text-primary-400 hover:underline text-sm;
-  }
-}
-</style>
