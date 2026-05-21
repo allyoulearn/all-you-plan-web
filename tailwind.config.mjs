@@ -57,7 +57,6 @@ export default {
         'glow-accent': '0 0 20px rgba(232, 67, 147, 0.2)',
         modal: '0 20px 60px -12px rgba(0, 0, 0, 0.4)',
         floating: '0 16px 50px -12px rgba(0, 0, 0, 0.55), 0 0 28px rgba(27, 158, 158, 0.07)',
-        'ambient-glow': '0 0 36px rgba(27, 158, 158, 0.10)',
       },
       backdropBlur: {
         glass: '16px',
