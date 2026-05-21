@@ -46,12 +46,18 @@ export default {
         btn: '14px',
         input: '10px',
       },
+      backgroundImage: {
+        'app-base': 'linear-gradient(180deg, #0c1424 0%, #0a1018 100%)',
+        'app-sidebar': 'linear-gradient(180deg, #0d1526 0%, #091018 100%)',
+      },
       boxShadow: {
         glass: '0 4px 24px rgba(0, 0, 0, 0.2)',
         'glass-hover': '0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
         glow: '0 0 20px rgba(27, 158, 158, 0.2)',
         'glow-accent': '0 0 20px rgba(232, 67, 147, 0.2)',
         modal: '0 20px 60px -12px rgba(0, 0, 0, 0.4)',
+        floating: '0 16px 50px -12px rgba(0, 0, 0, 0.55), 0 0 28px rgba(27, 158, 158, 0.07)',
+        'ambient-glow': '0 0 36px rgba(27, 158, 158, 0.10)',
       },
       backdropBlur: {
         glass: '16px',
@@ -61,6 +67,9 @@ export default {
         'slide-up': 'slideUp 0.2s ease-out',
         'fade-in': 'fadeIn 0.2s ease-out',
         'glow-pulse': 'glowPulse 2s ease-in-out infinite',
+        ripple: 'ripple 0.5s ease-out',
+        'message-in': 'messageIn 0.3s ease-out',
+        'number-flip': 'numberFlip 0.3s ease-out',
       },
       keyframes: {
         checkBounce: {
@@ -79,6 +88,18 @@ export default {
         glowPulse: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.6' },
+        },
+        ripple: {
+          '0%': { transform: 'scale(0)', opacity: '0.5' },
+          '100%': { transform: 'scale(2.4)', opacity: '0' },
+        },
+        messageIn: {
+          '0%': { transform: 'translateY(6px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        numberFlip: {
+          '0%': { transform: 'translateY(-45%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
         },
       },
     },

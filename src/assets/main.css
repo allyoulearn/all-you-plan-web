@@ -4,11 +4,26 @@
 
 @layer base {
   body {
-    @apply bg-background-dark text-secondary-100 font-sans antialiased;
+    @apply text-secondary-100 font-sans antialiased;
+    background: linear-gradient(180deg, #0c1424 0%, #0a1018 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 
   body.light {
     @apply bg-background-light text-secondary-900;
+    background-image: none;
+  }
+
+  /* Standardised focus ring for all form controls.
+     Replaces ad-hoc per-component focus borders, including the previously
+     broken `rgba(var(--color-primary-400-rgb), ...)` references. */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: rgba(27, 158, 158, 0.5);
+    box-shadow: 0 0 0 1px rgba(27, 158, 158, 0.3);
   }
 }
 
@@ -31,5 +46,28 @@
 
   .glass-elevated {
     @apply bg-[rgba(27,158,158,0.12)] border-2 border-white/10 rounded-glass backdrop-blur-glass shadow-modal;
+  }
+
+  /* Floating tier: modals, slide-overs, the AI panel (Plan 2). */
+  .surface-floating {
+    @apply border border-white/10 rounded-glass shadow-floating;
+    background: rgba(13, 26, 45, 0.94);
+    backdrop-filter: blur(24px);
+  }
+}
+
+@layer utilities {
+  /* 2px gradient accent bar. Set --accent-color on the element. */
+  .surface-accent {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-color, #1b9e9e) 0%, transparent 85%);
+  }
+
+  /* Ambient radial glow. Set --glow-color; size with width/height; position via parent. */
+  .radial-glow {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 9999px;
+    background: radial-gradient(circle, var(--glow-color, rgba(27, 158, 158, 0.12)) 0%, transparent 70%);
   }
 }
