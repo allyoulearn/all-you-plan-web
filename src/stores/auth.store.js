@@ -1,0 +1,90 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { apolloClient, setAccessToken, refreshAccessToken } from '@/api/apollo'
+import { LOGIN, REGISTER, LOGOUT, ME, UPDATE_PROFILE } from '@/api/operations'
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref(JSON.parse(localStorage.getItem('ayp_user') || 'null'))
+  const accessToken = ref(null)
+  const loading = ref(false)
+
+  const isAuthenticated = computed(() => !!accessToken.value)
+  const userName = computed(() => user.value?.name || '')
+
+  function setAuth(payload) {
+    accessToken.value = payload.accessToken
+    setAccessToken(payload.accessToken)
+    user.value = payload.user
+    localStorage.setItem('ayp_user', JSON.stringify(payload.user))
+  }
+
+  function clearAuth() {
+    accessToken.value = null
+    setAccessToken(null)
+    user.value = null
+    localStorage.removeItem('ayp_user')
+  }
+
+  async function login(email, password) {
+    loading.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: LOGIN,
+        variables: { email, password },
+      })
+      setAuth(data.login)
+      return data.login
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function register(email, password, name) {
+    loading.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: REGISTER,
+        variables: { email, password, name },
+      })
+      setAuth(data.register)
+      return data.register
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function logout() {
+    try {
+      await apolloClient.mutate({ mutation: LOGOUT })
+    } catch {
+      // Ignore errors on logout
+    }
+    clearAuth()
+  }
+
+  async function tryRestoreSession() {
+    try {
+      const result = await refreshAccessToken()
+      setAuth(result)
+      return true
+    } catch {
+      clearAuth()
+      return false
+    }
+  }
+
+  async function updateProfile(updates) {
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_PROFILE,
+      variables: updates,
+    })
+    user.value = data.updateProfile
+    localStorage.setItem('ayp_user', JSON.stringify(data.updateProfile))
+  }
+
+  return {
+    user, accessToken, loading,
+    isAuthenticated, userName,
+    setAuth, clearAuth, login, register, logout, tryRestoreSession, updateProfile,
+  }
+})
