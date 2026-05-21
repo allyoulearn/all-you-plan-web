@@ -3,9 +3,9 @@ import PlaceholderScreen from '@/components/PlaceholderScreen.vue'
 </script>
 <template>
   <PlaceholderScreen
-    eyebrow="System · Settings"
-    title="Tune the"
-    emphasis="experience."
-    note="Settings arrive in sub-project 7."
+    eyebrow="Workspaces · Today"
+    title="A quiet"
+    emphasis="full day."
+    note="The Today timeline arrives in sub-project 2."
   />
 </template>
