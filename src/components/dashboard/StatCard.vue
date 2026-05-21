@@ -31,7 +31,7 @@ export default {
 <style lang="scss" scoped>
 .stat-card {
   @apply flex items-center gap-3 px-4 py-3 rounded-glass border;
-  @apply border-white/10 transition-all duration-150;
+  @apply border-white/10;
   background: rgba(255, 255, 255, 0.03);
 
   &--danger {

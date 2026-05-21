@@ -8,6 +8,7 @@
       :width="size"
       :height="size"
       :viewBox="`0 0 ${size} ${size}`"
+      aria-hidden="true"
     >
       <circle
         class="progress-ring__track"
