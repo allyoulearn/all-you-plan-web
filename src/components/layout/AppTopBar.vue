@@ -45,7 +45,7 @@ export default {
 
     /** Today's date formatted as a human-readable string */
     const today = computed(() =>
-      new Date().toLocaleDateString('en-US', {
+      new Date().toLocaleDateString(undefined, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',

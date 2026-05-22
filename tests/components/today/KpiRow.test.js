@@ -46,4 +46,56 @@ describe('KpiRow', () => {
     const wrapper = mount(KpiRow, { props: { kpis: { ...fakeKpis, focusMinutes: 45 } } })
     expect(wrapper.text()).toContain('0h 45m')
   })
+
+  it('renders the kpi-row container class', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: fakeKpis } })
+    expect(wrapper.find('.kpi-row').exists()).toBe(true)
+  })
+
+  it('renders four tile elements (one per KPI)', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: fakeKpis } })
+    // Each KpiTile renders a .kpi-tile element
+    const tiles = wrapper.findAll('.kpi-tile')
+    expect(tiles).toHaveLength(4)
+  })
+
+  it('shows streak unit label "days"', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: fakeKpis } })
+    expect(wrapper.text()).toContain('days')
+  })
+
+  it('shows today unit label "complete"', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: fakeKpis } })
+    expect(wrapper.text()).toContain('complete')
+  })
+
+  it('shows projects unit label "active"', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: fakeKpis } })
+    expect(wrapper.text()).toContain('active')
+  })
+
+  it('shows focus unit label "logged"', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: fakeKpis } })
+    expect(wrapper.text()).toContain('logged')
+  })
+
+  it('handles exactly 0 focus minutes', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: { ...fakeKpis, focusMinutes: 0 } } })
+    expect(wrapper.text()).toContain('0h 0m')
+  })
+
+  it('handles exactly 60 focus minutes as 1h 0m', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: { ...fakeKpis, focusMinutes: 60 } } })
+    expect(wrapper.text()).toContain('1h 0m')
+  })
+
+  it('handles zero streak', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: { ...fakeKpis, streak: 0 } } })
+    expect(wrapper.text()).toContain('0')
+  })
+
+  it('handles zero todayDone with non-zero todayTotal', () => {
+    const wrapper = mount(KpiRow, { props: { kpis: { ...fakeKpis, todayDone: 0, todayTotal: 5 } } })
+    expect(wrapper.text()).toContain('0/5')
+  })
 })

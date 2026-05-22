@@ -32,12 +32,12 @@ export default {
   @apply grid h-screen overflow-hidden bg-paper;
   grid-template-columns: 232px 1fr 360px;
 
-  @media (min-width: 1024px) {
-    grid-template-columns: 64px 1fr 280px;
+  @media (max-width: 1280px) {
+    grid-template-columns: 200px 1fr 320px;
   }
 
-  @media (min-width: 1280px) {
-    grid-template-columns: 200px 1fr 320px;
+  @media (max-width: 960px) {
+    grid-template-columns: 64px 1fr 280px;
   }
 
   &__main {

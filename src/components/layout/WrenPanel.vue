@@ -49,6 +49,7 @@
       <button
         v-for="prompt in QUICK_PROMPTS"
         :key="prompt"
+        type="button"
         class="wren-panel__chip"
         @click="fillFromChip(prompt)"
       >
@@ -62,11 +63,13 @@
         <input
           v-model="draft"
           placeholder="Tell Wren anything…"
+          aria-label="Message to Wren"
           class="wren-panel__input"
           @keydown="handleKeydown"
         />
 
         <button
+          type="button"
           class="wren-panel__send"
           :disabled="!draft.trim() || store.sending"
           aria-label="Send message"

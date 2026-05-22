@@ -10,9 +10,9 @@
 
     <nav class="app-sidebar__nav">
       <div v-for="group in navGroups" :key="group.label">
-        <p class="app-sidebar__group-label">
+        <h3 class="app-sidebar__group-label">
           {{ group.label }}
-        </p>
+        </h3>
 
         <RouterLink
           v-for="item in group.items"
