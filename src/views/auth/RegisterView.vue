@@ -1,12 +1,12 @@
 <template>
   <div>
-    <h2 class="mb-6 font-serif text-[22px] text-ink">
+    <h2 class="register-view__heading">
       Create your <em>
         account.
       </em>
     </h2>
 
-    <form class="space-y-4" @submit.prevent="handleRegister">
+    <form class="register-view__form" @submit.prevent="handleRegister">
       <TextField
         v-model="name"
         type="text"
@@ -25,7 +25,7 @@
         :label="t('auth.password')"
       />
 
-      <p v-if="error" class="text-sm text-bad">
+      <p v-if="error" class="register-view__error">
         {{ error }}
       </p>
 
@@ -34,14 +34,14 @@
         type="submit"
         :disabled="loading"
         size="md"
-        class="w-full justify-center"
+        class="register-view__submit"
       >
         {{ loading ? t('common.loading') : t('auth.registerCta') }}
       </Button>
 
-      <p class="text-center text-sm text-muted">
+      <p class="register-view__footer">
         {{ t('auth.hasAccount') }}
-        <router-link to="/auth/login" class="text-accent hover:underline">
+        <router-link to="/auth/login" class="register-view__login-link">
           {{ t('auth.loginCta') }}
         </router-link>
       </p>
@@ -49,34 +49,86 @@
   </div>
 </template>
 
-<script setup>
+<script>
+/** RegisterView — new-user registration form that creates an account and redirects to the dashboard. */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '@/stores/auth.store'
+import { useAuthStore } from '@/stores/auth.store.js'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
-const { t } = useI18n()
-const router = useRouter()
-const authStore = useAuthStore()
+export default {
+  name: 'RegisterView',
+  components: { TextField, Button },
+  setup() {
+    // -- State --
+    const { t } = useI18n()
+    const router = useRouter()
+    const authStore = useAuthStore()
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const error = ref('')
-const loading = ref(false)
+    const name = ref('')
+    const email = ref('')
+    const password = ref('')
+    const error = ref('')
+    const loading = ref(false)
 
-async function handleRegister() {
-  error.value = ''
-  loading.value = true
-  try {
-    await authStore.register(email.value, password.value, name.value)
-    router.push('/')
-  } catch (err) {
-    error.value = err?.graphQLErrors?.[0]?.message || 'Registration failed'
-  } finally {
-    loading.value = false
-  }
+    return {
+      t,
+      name,
+      email,
+      password,
+      error,
+      loading,
+      handleRegister,
+    }
+
+    // -- Function definitions --
+
+    /**
+     * Submit the registration form.
+     * Redirects to the dashboard on success.
+     */
+    async function handleRegister() {
+      error.value = ''
+      loading.value = true
+      try {
+        await authStore.register(email.value, password.value, name.value)
+        router.push('/')
+      } catch (err) {
+        error.value = err?.graphQLErrors?.[0]?.message || 'Registration failed'
+      } finally {
+        loading.value = false
+      }
+    }
+  },
 }
 </script>
+
+<style lang="scss" scoped>
+.register-view {
+  &__heading {
+    @apply mb-6 font-serif text-[22px] text-ink;
+  }
+
+  &__form {
+    @apply space-y-4;
+  }
+
+  &__error {
+    @apply text-sm text-bad;
+  }
+
+  &__submit {
+    @apply w-full justify-center;
+  }
+
+  &__footer {
+    @apply text-center text-sm text-muted;
+  }
+
+  &__login-link {
+    @apply text-accent hover:underline;
+  }
+}
+</style>
