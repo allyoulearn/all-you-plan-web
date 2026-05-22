@@ -67,7 +67,7 @@ async function refreshAccessToken() {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
-      query: 'mutation { refreshToken { accessToken user { id email name timezone briefingTime quietHoursStart quietHoursEnd nudgeFrequency preferences { theme language defaultSpaceId } streak { current best lastCompletionDate } } } }',
+      query: 'mutation { refreshToken { accessToken user { id email name timezone streak { current best lastCompletionDate } settings { theme mode density coachPersonality checkIns stalledNudgeDays journalVisibility } } } }',
     }),
   })
   const json = await res.json()
@@ -85,9 +85,6 @@ export const apolloClient = new ApolloClient({
   cache: new InMemoryCache({
     typePolicies: {
       Task: { keyFields: ['id'] },
-      Space: { keyFields: ['id'] },
-      AIBriefing: { keyFields: ['id'] },
-      Nudge: { keyFields: ['id'] },
     },
   }),
   defaultOptions: {

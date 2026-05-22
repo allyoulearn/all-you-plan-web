@@ -1,4 +1,4 @@
-import gql from 'graphql-tag'
+import { gql } from '@apollo/client/core'
 
 const USER_FRAGMENT = gql`
   fragment UserFields on User {
@@ -6,22 +6,20 @@ const USER_FRAGMENT = gql`
     email
     name
     timezone
-    briefingTime
-    quietHoursStart
-    quietHoursEnd
-    nudgeFrequency
-    preferences {
-      theme
-      language
-      defaultSpaceId
-    }
     streak {
       current
       best
       lastCompletionDate
     }
-    createdAt
-    updatedAt
+    settings {
+      theme
+      mode
+      density
+      coachPersonality
+      checkIns
+      stalledNudgeDays
+      journalVisibility
+    }
   }
 `
 
@@ -81,22 +79,10 @@ export const UPDATE_PROFILE = gql`
   mutation UpdateProfile(
     $name: String
     $timezone: String
-    $briefingTime: String
-    $quietHoursStart: String
-    $quietHoursEnd: String
-    $nudgeFrequency: NudgeFrequency
-    $theme: Theme
-    $language: String
   ) {
     updateProfile(
       name: $name
       timezone: $timezone
-      briefingTime: $briefingTime
-      quietHoursStart: $quietHoursStart
-      quietHoursEnd: $quietHoursEnd
-      nudgeFrequency: $nudgeFrequency
-      theme: $theme
-      language: $language
     ) {
       ...UserFields
     }
@@ -113,18 +99,6 @@ export const RESET_PASSWORD = gql`
   ${USER_FRAGMENT}
   mutation ResetPassword($token: String!, $newPassword: String!) {
     resetPassword(token: $token, newPassword: $newPassword) {
-      accessToken
-      user {
-        ...UserFields
-      }
-    }
-  }
-`
-
-export const GOOGLE_LOGIN = gql`
-  ${USER_FRAGMENT}
-  mutation GoogleLogin($idToken: String!) {
-    googleLogin(idToken: $idToken) {
       accessToken
       user {
         ...UserFields
