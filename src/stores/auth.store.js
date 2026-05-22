@@ -82,6 +82,16 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('ayp_user', JSON.stringify(data.updateProfile))
   }
 
+  async function updateSettings(partial) {
+    const current = user.value?.settings ?? {}
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_PROFILE,
+      variables: { settings: { ...current, ...partial } },
+    })
+    user.value = data.updateProfile
+    localStorage.setItem('ayp_user', JSON.stringify(data.updateProfile))
+  }
+
   async function forgotPassword(email) {
     loading.value = true
     try {
@@ -113,6 +123,6 @@ export const useAuthStore = defineStore('auth', () => {
     user, accessToken, loading,
     isAuthenticated, userName,
     setAuth, clearAuth, login, register, logout, tryRestoreSession,
-    updateProfile, forgotPassword, resetPassword,
+    updateProfile, updateSettings, forgotPassword, resetPassword,
   }
 })

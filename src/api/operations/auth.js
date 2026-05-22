@@ -79,10 +79,12 @@ export const UPDATE_PROFILE = gql`
   mutation UpdateProfile(
     $name: String
     $timezone: String
+    $settings: UpdateSettingsInput
   ) {
     updateProfile(
       name: $name
       timezone: $timezone
+      settings: $settings
     ) {
       ...UserFields
     }
