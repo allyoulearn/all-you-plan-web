@@ -19,7 +19,7 @@ describe('KanbanCard', () => {
       props: { task: doneTask },
       global: { stubs: { Checkbox: true, Pill: true } }
     })
-    expect(wrapper.find('.line-through').exists()).toBe(true)
+    expect(wrapper.find('.kanban-card__title--done').exists()).toBe(true)
   })
 
   it('does not apply line-through when task is not done', () => {
@@ -27,7 +27,7 @@ describe('KanbanCard', () => {
       props: { task: baseTask },
       global: { stubs: { Checkbox: true, Pill: true } }
     })
-    expect(wrapper.find('.line-through').exists()).toBe(false)
+    expect(wrapper.find('.kanban-card__title--done').exists()).toBe(false)
   })
 
   it('emits "complete" with the task id when checkbox fires update:modelValue', async () => {

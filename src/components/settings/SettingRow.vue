@@ -1,26 +1,51 @@
 <template>
-  <div class="grid items-center gap-4 py-3.5" style="grid-template-columns: 240px 1fr auto">
+  <div class="setting-row" style="grid-template-columns: 240px 1fr auto">
     <div>
-      <p class="text-[14px] font-medium text-ink">
+      <p class="setting-row__label">
         {{ label }}
       </p>
 
-      <p v-if="description" class="mt-0.5 text-[12px] leading-snug text-muted">
+      <p v-if="description" class="setting-row__description">
         {{ description }}
       </p>
     </div>
 
     <div />
 
-    <div class="flex items-center">
+    <div class="setting-row__control">
       <slot />
     </div>
   </div>
 </template>
 
-<script setup>
-defineProps({
-  label: { type: String, required: true },
-  description: { type: String, default: '' },
-})
+<script>
+/** SettingRow — three-column grid row for a settings item with label, description, and control slot. */
+
+export default {
+  name: 'SettingRow',
+  props: {
+    /** Primary label for the setting */
+    label: { type: String, required: true },
+    /** Optional supporting description displayed below the label */
+    description: { type: String, default: '' }
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+.setting-row {
+  @apply grid items-center gap-4 py-3.5;
+
+  &__label {
+    @apply text-[14px] font-medium text-ink;
+  }
+
+  &__description {
+    @apply mt-0.5 text-[12px] leading-snug text-muted;
+  }
+
+  &__control {
+    @apply flex items-center;
+  }
+}
+</style>

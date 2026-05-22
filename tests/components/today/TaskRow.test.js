@@ -14,6 +14,6 @@ describe('TaskRow', () => {
   it('strikes through a done task', () => {
     const task = { id: 't2', title: 'Done thing', done: true }
     const wrapper = mount(TaskRow, { props: { task } })
-    expect(wrapper.find('.line-through').exists()).toBe(true)
+    expect(wrapper.find('.task-row__title--done').exists()).toBe(true)
   })
 })

@@ -33,9 +33,9 @@ describe('WrenBubble', () => {
       expect(wrapper.text()).toContain('Hello Wren!')
     })
 
-    it('aligns to the right (justify-end)', () => {
+    it('aligns to the right (wren-bubble--user)', () => {
       const wrapper = mount(WrenBubble, { props: { message: userMessage } })
-      expect(wrapper.find('.justify-end').exists()).toBe(true)
+      expect(wrapper.find('.wren-bubble--user').exists()).toBe(true)
     })
 
     it('does not render action buttons', () => {
@@ -53,12 +53,12 @@ describe('WrenBubble', () => {
       expect(wrapper.text()).toContain('Hi there! How can I help?')
     })
 
-    it('aligns to the left (justify-start)', () => {
+    it('aligns to the left (wren-bubble--coach)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
         global: { stubs: { Button: true } }
       })
-      expect(wrapper.find('.justify-start').exists()).toBe(true)
+      expect(wrapper.find('.wren-bubble--coach').exists()).toBe(true)
     })
 
     it('does not render action buttons when actions is empty', () => {
@@ -92,20 +92,20 @@ describe('WrenBubble', () => {
       expect(wrapper.emitted('action')?.[0]).toEqual(['Plan my day'])
     })
 
-    it('applies accent styling when actions are present', () => {
+    it('applies accent styling when actions are present (wren-bubble__body--accent)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
         global: { stubs: { Button: true } }
       })
-      expect(wrapper.find('.bg-accent').exists()).toBe(true)
+      expect(wrapper.find('.wren-bubble__body--accent').exists()).toBe(true)
     })
 
-    it('uses paper-2 background when no actions', () => {
+    it('uses default background when no actions (wren-bubble__body--default)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
         global: { stubs: { Button: true } }
       })
-      expect(wrapper.find('.bg-paper-2').exists()).toBe(true)
+      expect(wrapper.find('.wren-bubble__body--default').exists()).toBe(true)
     })
   })
 
@@ -116,14 +116,14 @@ describe('WrenBubble', () => {
         global: { stubs: { Button: true } }
       })
       // The formatted time contains AM/PM or colon — just ensure it's not empty
-      const timeEl = wrapper.find('.text-muted')
+      const timeEl = wrapper.find('.wren-bubble__timestamp')
       expect(timeEl.text()).not.toBe('')
     })
 
     it('renders an empty time when createdAt is null', () => {
       const msg = { ...userMessage, createdAt: null }
       const wrapper = mount(WrenBubble, { props: { message: msg } })
-      const timeEl = wrapper.find('.text-muted')
+      const timeEl = wrapper.find('.wren-bubble__timestamp')
       expect(timeEl.text()).toBe('')
     })
   })

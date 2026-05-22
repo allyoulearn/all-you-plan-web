@@ -10,45 +10,45 @@ function makeValues(length = 182, fill = 0) {
 describe('Heatmap', () => {
   it('renders the grid structure (26 columns x 7 rows = 182 cells)', () => {
     const wrapper = mount(Heatmap, { props: { values: makeValues() } })
-    const cells = wrapper.findAll('.h-3.w-3')
+    const cells = wrapper.findAll('.heatmap__cell')
     expect(cells).toHaveLength(182)
   })
 
-  it('applies bg-paper-3 for value 0', () => {
+  it('applies heatmap__cell--empty modifier for value 0', () => {
     const values = makeValues()
     const wrapper = mount(Heatmap, { props: { values } })
-    const firstCell = wrapper.find('.h-3.w-3')
-    expect(firstCell.classes()).toContain('bg-paper-3')
+    const firstCell = wrapper.find('.heatmap__cell')
+    expect(firstCell.classes()).toContain('heatmap__cell--empty')
   })
 
-  it('applies bg-accent/[0.25] for value 1', () => {
+  it('applies heatmap__cell--low modifier for value 1', () => {
     const values = [1, ...makeValues(181)]
     const wrapper = mount(Heatmap, { props: { values } })
-    const firstCell = wrapper.find('.h-3.w-3')
-    expect(firstCell.classes()).toContain('bg-accent/[0.25]')
+    const firstCell = wrapper.find('.heatmap__cell')
+    expect(firstCell.classes()).toContain('heatmap__cell--low')
   })
 
-  it('applies bg-accent/[0.55] for value 2', () => {
+  it('applies heatmap__cell--mid modifier for value 2', () => {
     const values = [2, ...makeValues(181)]
     const wrapper = mount(Heatmap, { props: { values } })
-    const firstCell = wrapper.find('.h-3.w-3')
-    expect(firstCell.classes()).toContain('bg-accent/[0.55]')
+    const firstCell = wrapper.find('.heatmap__cell')
+    expect(firstCell.classes()).toContain('heatmap__cell--mid')
   })
 
-  it('applies bg-accent for value >= 3', () => {
+  it('applies heatmap__cell--full modifier for value >= 3', () => {
     const values = [3, ...makeValues(181)]
     const wrapper = mount(Heatmap, { props: { values } })
-    const firstCell = wrapper.find('.h-3.w-3')
-    expect(firstCell.classes()).toContain('bg-accent')
+    const firstCell = wrapper.find('.heatmap__cell')
+    expect(firstCell.classes()).toContain('heatmap__cell--full')
   })
 
-  it('defaults out-of-bounds index to 0 (bg-paper-3)', () => {
+  it('defaults out-of-bounds index to 0 (heatmap__cell--empty)', () => {
     // Only provide 10 values — remaining cells fall back to 0
     const values = makeValues(10)
     const wrapper = mount(Heatmap, { props: { values } })
-    const cells = wrapper.findAll('.h-3.w-3')
-    // Cell at index 10 (out of bounds) should get bg-paper-3
-    expect(cells[10].classes()).toContain('bg-paper-3')
+    const cells = wrapper.findAll('.heatmap__cell')
+    // Cell at index 10 (out of bounds) should get heatmap__cell--empty
+    expect(cells[10].classes()).toContain('heatmap__cell--empty')
   })
 
   it('renders the legend with "less" and "more" labels', () => {
@@ -59,7 +59,7 @@ describe('Heatmap', () => {
 
   it('renders 4 legend swatch boxes', () => {
     const wrapper = mount(Heatmap, { props: { values: makeValues() } })
-    const legend = wrapper.findAll('.h-2\\.5.w-2\\.5')
+    const legend = wrapper.findAll('.heatmap__swatch')
     expect(legend).toHaveLength(4)
   })
 })

@@ -1,14 +1,17 @@
 <template>
-  <div class="rounded-md bg-paper p-3 shadow-sm">
-    <p class="text-[13px] leading-snug" :class="task.done ? 'text-muted line-through' : 'text-ink'">
+  <div class="kanban-card">
+    <p
+      class="kanban-card__title"
+      :class="task.done ? 'kanban-card__title--done' : 'kanban-card__title--pending'"
+    >
       {{ task.title }}
     </p>
 
-    <div class="mt-2.5 flex items-center gap-2">
+    <div class="kanban-card__footer">
       <Checkbox
         :model-value="task.done"
         :size="18"
-        @update:model-value="emit('complete', task.id)"
+        @update:model-value="$emit('complete', task.id)"
       />
 
       <Pill v-if="task.tag" variant="default">
@@ -18,12 +21,40 @@
   </div>
 </template>
 
-<script setup>
+<script>
+/** KanbanCard — compact task card for the Kanban board with completion checkbox and tag pill. */
 import Pill from '@/components/ui/Pill.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 
-defineProps({
-  task: { type: Object, required: true },
-})
-const emit = defineEmits(['complete'])
+export default {
+  name: 'KanbanCard',
+  components: { Pill, Checkbox },
+  props: {
+    /** The task object to display */
+    task: { type: Object, required: true }
+  },
+  emits: ['complete']
+}
 </script>
+
+<style lang="scss" scoped>
+.kanban-card {
+  @apply rounded-md bg-paper p-3 shadow-sm;
+
+  &__title {
+    @apply text-[13px] leading-snug;
+
+    &--done {
+      @apply text-muted line-through;
+    }
+
+    &--pending {
+      @apply text-ink;
+    }
+  }
+
+  &__footer {
+    @apply mt-2.5 flex items-center gap-2;
+  }
+}
+</style>

@@ -1,14 +1,16 @@
 <template>
-  <div class="flex items-center gap-3.5 rounded-lg px-2 py-3 transition-colors hover:bg-paper-3">
+  <div class="chore-row">
     <Checkbox
       :model-value="isCompletedToday(chore.lastCompletedOn)"
-      @update:model-value="emit('complete', chore.id)"
+      @update:model-value="$emit('complete', chore.id)"
     />
 
-    <span class="min-w-0 flex-1">
+    <span class="chore-row__body">
       <span
-        class="block text-[14px]"
-        :class="isCompletedToday(chore.lastCompletedOn) ? 'text-muted' : 'text-ink'"
+        class="chore-row__title"
+        :class="isCompletedToday(chore.lastCompletedOn)
+          ? 'chore-row__title--muted'
+          : 'chore-row__title--active'"
       >
         {{ chore.title }}
       </span>
@@ -18,24 +20,66 @@
       {{ chore.cadence.type }}
     </Pill>
 
-    <span class="font-mono text-[11px] tracking-wide text-muted">
+    <span class="chore-row__streak">
       {{ chore.streak }}d
     </span>
   </div>
 </template>
 
-<script setup>
+<script>
+/** ChoreRow — single chore entry with completion checkbox, cadence pill, and streak counter. */
 import Checkbox from '@/components/ui/Checkbox.vue'
 import Pill from '@/components/ui/Pill.vue'
 
-defineProps({
-  chore: { type: Object, required: true },
-})
-const emit = defineEmits(['complete'])
+export default {
+  name: 'ChoreRow',
+  components: { Checkbox, Pill },
+  props: {
+    /** The chore object to display */
+    chore: { type: Object, required: true }
+  },
+  emits: ['complete'],
+  setup() {
+    // -- Function definitions --
 
-function isCompletedToday(lastCompletedOn) {
-  if (!lastCompletedOn) return false
-  const today = new Date().toISOString().slice(0, 10)
-  return lastCompletedOn.slice(0, 10) === today
+    /**
+     * Returns true if the given date string represents today.
+     * @param {string|null} lastCompletedOn - ISO date string or null
+     * @returns {boolean}
+     */
+    function isCompletedToday(lastCompletedOn) {
+      if (!lastCompletedOn) return false
+      const today = new Date().toISOString().slice(0, 10)
+      return lastCompletedOn.slice(0, 10) === today
+    }
+
+    return { isCompletedToday }
+  }
 }
 </script>
+
+<style lang="scss" scoped>
+.chore-row {
+  @apply flex items-center gap-3.5 rounded-lg px-2 py-3 transition-colors hover:bg-paper-3;
+
+  &__body {
+    @apply min-w-0 flex-1;
+  }
+
+  &__title {
+    @apply block text-[14px];
+
+    &--muted {
+      @apply text-muted;
+    }
+
+    &--active {
+      @apply text-ink;
+    }
+  }
+
+  &__streak {
+    @apply font-mono text-[11px] tracking-wide text-muted;
+  }
+}
+</style>

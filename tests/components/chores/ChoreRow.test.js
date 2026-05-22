@@ -30,6 +30,6 @@ describe('ChoreRow', () => {
     const today = new Date().toISOString().slice(0, 10)
     const chore = { ...baseChore, lastCompletedOn: today }
     const wrapper = mount(ChoreRow, { props: { chore } })
-    expect(wrapper.find('.text-muted').exists()).toBe(true)
+    expect(wrapper.find('.chore-row__title--muted').exists()).toBe(true)
   })
 })
