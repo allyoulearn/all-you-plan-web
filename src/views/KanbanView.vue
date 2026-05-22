@@ -8,12 +8,12 @@
       &larr; {{ project.name }}
     </RouterLink>
 
-    <div v-if="store.loading" class="kanban-view__status kanban-view__status--mt">
+    <div v-if="store.loadingBoard" class="kanban-view__status kanban-view__status--mt">
       Loading…
     </div>
 
-    <div v-else-if="store.error" class="kanban-view__status kanban-view__status--mt kanban-view__status--error">
-      {{ store.error }}
+    <div v-else-if="store.errorBoard" class="kanban-view__status kanban-view__status--mt kanban-view__status--error">
+      {{ store.errorBoard }}
     </div>
 
     <template v-else-if="project">
@@ -48,6 +48,13 @@
         </div>
       </div>
     </template>
+
+    <div v-else class="kanban-view__status kanban-view__status--mt">
+      Project not found.
+      <RouterLink to="/projects" class="kanban-view__back-link">
+        Back to projects
+      </RouterLink>
+    </div>
   </div>
 </template>
 

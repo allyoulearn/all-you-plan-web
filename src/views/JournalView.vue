@@ -191,7 +191,6 @@ export default {
   &__editor {
     @apply mt-1 w-full resize-none rounded-sm border border-rule-soft bg-paper px-3 py-2.5;
     @apply font-serif text-[15px] text-ink placeholder:text-muted outline-none focus:border-muted;
-    @apply dark:bg-paper;
   }
 
   &__save-row {

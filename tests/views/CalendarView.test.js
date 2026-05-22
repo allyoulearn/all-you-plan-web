@@ -142,4 +142,128 @@ describe('CalendarView', () => {
       expect(wrapper.text()).toContain('Gym')
     })
   })
+
+  describe('WEB-T08-006 fix — calendar grid hidden when error is active', () => {
+    it('does not render the calendar Card when store.error is set', () => {
+      const wrapper = mountCalendar({ error: 'Something broke' })
+      // The grid Card is conditional on !store.error
+      const buttons = wrapper.findAll('button')
+      // Navigation buttons (prev/next) may still render, but no day-cell buttons
+      const dayCellButtons = buttons.filter(b =>
+        b.classes().some(c => c.startsWith('calendar-view__day-cell'))
+      )
+      expect(dayCellButtons.length).toBe(0)
+    })
+
+    it('nav buttons are still rendered while error is shown', () => {
+      const wrapper = mountCalendar({ error: 'Failed' })
+      expect(wrapper.find('[aria-label="Previous month"]').exists()).toBe(true)
+      expect(wrapper.find('[aria-label="Next month"]').exists()).toBe(true)
+    })
+  })
+
+  describe('WEB-T08-012 fix — day cell accessibility attributes', () => {
+    it('adds aria-label to each day cell button', () => {
+      const wrapper = mountCalendar()
+      const buttons = wrapper.findAll('button.calendar-view__day-cell')
+      // Non-adjacent buttons should have aria-label
+      const nonAdjacent = buttons.filter(b => !b.attributes('disabled'))
+      expect(nonAdjacent.length).toBeGreaterThan(0)
+      nonAdjacent.forEach(btn => {
+        expect(btn.attributes('aria-label')).toBeDefined()
+        expect(btn.attributes('aria-label').length).toBeGreaterThan(0)
+      })
+    })
+
+    it('sets aria-current="date" on the today cell', () => {
+      const wrapper = mountCalendar()
+      const todayCell = wrapper.findAll('button.calendar-view__day-cell--today')
+      if (todayCell.length > 0) {
+        expect(todayCell[0].attributes('aria-current')).toBe('date')
+      }
+      // If no today cell (different month), we skip the assertion
+    })
+
+    it('sets aria-pressed="true" on the selected cell', () => {
+      const wrapper = mountCalendar()
+      const selected = wrapper.findAll('button.calendar-view__day-cell--selected')
+      if (selected.length > 0) {
+        expect(selected[0].attributes('aria-pressed')).toBe('true')
+      }
+    })
+  })
+
+  describe('year rollover edge cases', () => {
+    it('rolls over from January to December when going to previous month', async () => {
+      const wrapper = mountCalendar()
+      // Manually set to January
+      wrapper.vm.currentMonth = 0
+      wrapper.vm.currentYear = 2026
+      await wrapper.vm.$nextTick()
+
+      const prevBtn = wrapper.find('[aria-label="Previous month"]')
+      await prevBtn.trigger('click')
+
+      expect(wrapper.vm.currentMonth).toBe(11)
+      expect(wrapper.vm.currentYear).toBe(2025)
+    })
+
+    it('rolls over from December to January when going to next month', async () => {
+      const wrapper = mountCalendar()
+      wrapper.vm.currentMonth = 11
+      wrapper.vm.currentYear = 2025
+      await wrapper.vm.$nextTick()
+
+      const nextBtn = wrapper.find('[aria-label="Next month"]')
+      await nextBtn.trigger('click')
+
+      expect(wrapper.vm.currentMonth).toBe(0)
+      expect(wrapper.vm.currentYear).toBe(2026)
+    })
+
+    it('clears selectedDay after navigating to a new month', async () => {
+      const wrapper = mountCalendar()
+      wrapper.vm.selectedDay = 10
+      await wrapper.vm.$nextTick()
+
+      await wrapper.find('[aria-label="Next month"]').trigger('click')
+      expect(wrapper.vm.selectedDay).toBeNull()
+    })
+  })
+
+  describe('isToday / isSelected helpers', () => {
+    it('adjacent cells are never marked as today', () => {
+      const wrapper = mountCalendar()
+      // Adjacent cells have 'disabled' attr
+      const adjacent = wrapper.findAll('button[disabled]')
+      adjacent.forEach(b => {
+        expect(b.classes()).not.toContain('calendar-view__day-cell--today')
+      })
+    })
+
+    it('selects a day cell on click', async () => {
+      const wrapper = mountCalendar()
+      const buttons = wrapper.findAll('button.calendar-view__day-cell')
+      // Find a non-disabled button
+      const clickable = buttons.find(b => !b.attributes('disabled'))
+      if (clickable) {
+        await clickable.trigger('click')
+        expect(wrapper.vm.selectedDay).toBeDefined()
+      }
+    })
+  })
+
+  describe('monthKey helper', () => {
+    it('generates correct YYYY-MM key', async () => {
+      const wrapper = mountCalendar()
+      const store = useCalendarStore()
+      // Navigate to December 2025
+      wrapper.vm.currentMonth = 11
+      wrapper.vm.currentYear = 2025
+      await wrapper.vm.$nextTick()
+      await wrapper.find('[aria-label="Next month"]').trigger('click')
+      // Should have called load with 2026-01
+      expect(store.load).toHaveBeenCalledWith('2026-01')
+    })
+  })
 })

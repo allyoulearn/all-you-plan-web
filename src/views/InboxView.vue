@@ -16,16 +16,12 @@
 
     <!-- Capture card -->
     <Card>
-      <p class="inbox-view__capture-label">
-        Capture
-      </p>
-
       <div class="inbox-view__capture-row">
-        <input
+        <TextField
           v-model="captureText"
-          type="text"
-          placeholder="What's on your mind?"
-          class="inbox-view__capture-input"
+          :label="t('inbox.captureLabel')"
+          :placeholder="t('inbox.capturePlaceholder')"
+          class="inbox-view__capture-field"
           @keydown.enter="capture"
         />
 
@@ -80,17 +76,20 @@
 <script>
 /** InboxView — quick-capture panel with a running triage list. */
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useInboxStore } from '@/stores/inbox.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import TextField from '@/components/ui/TextField.vue'
 
 export default {
   name: 'InboxView',
-  components: { ScreenHeading, SectionHeader, Button, Card },
+  components: { ScreenHeading, SectionHeader, Button, Card, TextField },
   setup() {
     // -- State --
+    const { t } = useI18n()
     const store = useInboxStore()
     const captureText = ref('')
     const capturing = ref(false)
@@ -131,7 +130,7 @@ export default {
       return `${diffDays}d ago`
     }
 
-    return { store, captureText, capturing, capture, relativeTime }
+    return { t, store, captureText, capturing, capture, relativeTime }
   }
 }
 </script>
@@ -154,9 +153,8 @@ export default {
     @apply flex gap-2.5;
   }
 
-  &__capture-input {
-    @apply flex-1 rounded-sm border border-rule-soft bg-paper px-3 py-2 text-[14px] text-ink placeholder:text-muted outline-none focus:border-muted;
-    @apply dark:bg-paper;
+  &__capture-field {
+    @apply flex-1;
   }
 
   &__list {

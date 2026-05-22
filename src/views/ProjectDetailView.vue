@@ -4,12 +4,12 @@
       &larr; Projects
     </RouterLink>
 
-    <div v-if="store.loading" class="project-detail-view__status project-detail-view__status--mt">
+    <div v-if="store.loadingBoard" class="project-detail-view__status project-detail-view__status--mt">
       Loading…
     </div>
 
-    <div v-else-if="store.error" class="project-detail-view__status project-detail-view__status--mt project-detail-view__status--error">
-      {{ store.error }}
+    <div v-else-if="store.errorBoard" class="project-detail-view__status project-detail-view__status--mt project-detail-view__status--error">
+      {{ store.errorBoard }}
     </div>
 
     <template v-else-if="project">
@@ -105,6 +105,13 @@
         </Button>
       </div>
     </template>
+
+    <div v-else class="project-detail-view__status project-detail-view__status--mt">
+      Project not found.
+      <RouterLink to="/projects" class="project-detail-view__back-link">
+        Back to projects
+      </RouterLink>
+    </div>
   </div>
 </template>
 

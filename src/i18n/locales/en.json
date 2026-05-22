@@ -74,6 +74,10 @@
     "save": "Save",
     "logout": "Sign out"
   },
+  "inbox": {
+    "captureLabel": "Capture",
+    "capturePlaceholder": "What's on your mind?"
+  },
   "common": {
     "save": "Save",
     "saved": "Saved",

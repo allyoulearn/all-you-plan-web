@@ -37,8 +37,8 @@
       />
     </div>
 
-    <!-- Calendar grid -->
-    <Card>
+    <!-- Calendar grid — hidden while error is active -->
+    <Card v-if="!store.error">
       <!-- Weekday headers -->
       <div class="calendar-view__weekday-row">
         <div
@@ -63,6 +63,9 @@
             'calendar-view__day-cell--default': !cell.adjacent && !isToday(cell) && !isSelected(cell),
           }"
           :disabled="cell.adjacent"
+          :aria-label="cellAriaLabel(cell)"
+          :aria-current="isToday(cell) ? 'date' : undefined"
+          :aria-pressed="!cell.adjacent && isSelected(cell) ? 'true' : undefined"
           @click="selectDay(cell)"
         >
           <span>
@@ -277,6 +280,18 @@ export default {
       selectedDay.value = cell.day
     }
 
+    /**
+     * Returns a descriptive aria-label for a day cell button.
+     * @param {{ day: number, adjacent: boolean, month: number }} cell
+     * @returns {string}
+     */
+    function cellAriaLabel(cell) {
+      const year = currentYear.value
+      const month = cell.adjacent ? cell.month : currentMonth.value
+      const date = new Date(year, month, cell.day)
+      return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    }
+
     return {
       MONTH_NAMES,
       DAY_HEADERS,
@@ -293,6 +308,7 @@ export default {
       isSelected,
       eventsForDay,
       selectDay,
+      cellAriaLabel,
     }
   }
 }

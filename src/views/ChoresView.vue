@@ -25,7 +25,7 @@
       </template>
 
       <div
-        v-if="!groups.some((g) => g.items.length)"
+        v-if="isEmpty"
         class="chores-view__empty"
       >
         No chores yet. Add your first recurring habit below.
@@ -42,7 +42,7 @@
 
 <script>
 /** ChoresView — recurring habit list grouped by cadence (daily, weekly, monthly). */
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useChoresStore } from '@/stores/chores.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
@@ -55,6 +55,8 @@ export default {
   setup() {
     // -- State --
     const store = useChoresStore()
+    /** True once the store has completed at least one load, preventing empty-state flash. */
+    const loaded = ref(false)
 
     // -- Computed --
 
@@ -68,10 +70,21 @@ export default {
       ]
     })
 
-    // -- Lifecycle --
-    onMounted(() => store.load())
+    /** True only when loaded and all groups are empty. */
+    const isEmpty = computed(() => loaded.value && !groups.value.some((g) => g.items.length))
 
-    return { store, groups }
+    // -- Lifecycle --
+    onMounted(async () => {
+      await store.load()
+      loaded.value = true
+    })
+
+    // Reset loaded if the store starts a fresh load (e.g. after completeChore reload)
+    watch(() => store.loading, (isLoading) => {
+      if (isLoading) loaded.value = false
+    })
+
+    return { store, groups, loaded, isEmpty }
   }
 }
 </script>
