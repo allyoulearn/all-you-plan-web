@@ -4,6 +4,9 @@
  * of route items (path, icon key, display label, keyboard shortcut) within
  * each group.  Consumed by the AppSidebar and mobile navigation components.
  */
+/**
+ * @type {Array<{ label: string, items: Array<{ to: string, icon: string, label: string, key: string }> }>}
+ */
 export const navGroups = [
   {
     label: 'Workspaces',

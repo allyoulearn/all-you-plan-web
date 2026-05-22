@@ -32,13 +32,13 @@ const routes = [
         path: 'forgot-password',
         name: 'forgot-password',
         component: () => import('@/views/auth/ForgotPasswordView.vue'),
-        meta: { title: 'Reset password', public: true }
+        meta: { title: 'Reset password', public: true, allowAuthenticated: true }
       },
       {
         path: 'reset-password',
         name: 'reset-password',
         component: () => import('@/views/auth/ResetPasswordView.vue'),
-        meta: { title: 'Reset password', public: true }
+        meta: { title: 'Reset password', public: true, allowAuthenticated: true }
       }
     ]
   },
@@ -142,7 +142,8 @@ const router = createRouter({
 router.beforeEach(to => {
   const auth = useAuthStore()
   if (!to.meta.public && !auth.isAuthenticated) return { name: 'login' }
-  if (to.meta.public && auth.isAuthenticated) return { name: 'today' }
+  if (to.meta.public && !to.meta.allowAuthenticated && auth.isAuthenticated)
+    return { name: 'today' }
   return true
 })
 

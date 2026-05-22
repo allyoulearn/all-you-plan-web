@@ -9,6 +9,8 @@ function run(link, query, variables) {
 }
 
 describe('createMockLink', () => {
+  // -- happy path: fixture found --
+
   it('resolves an operation from the registry by root field name', async () => {
     const registry = { today: vars => ({ today: { date: vars.date } }) }
     const link = createMockLink(registry)
@@ -43,7 +45,81 @@ describe('createMockLink', () => {
     expect(result.data).toEqual({ chores: [] })
   })
 
-  it('returns empty data and warns for an unmapped operation', async () => {
+  it('passes operation variables to the fixture function', async () => {
+    const fixtureFn = vi.fn().mockReturnValue({ widget: { id: '42' } })
+    const registry = { widget: fixtureFn }
+    const link = createMockLink(registry)
+    await run(
+      link,
+      gql`
+        query GetWidget($id: ID!) {
+          widget(id: $id) {
+            id
+          }
+        }
+      `,
+      { id: '42' }
+    )
+    expect(fixtureFn).toHaveBeenCalledWith({ id: '42' })
+  })
+
+  it('passes empty object to fixture when variables is undefined', async () => {
+    const fixtureFn = vi.fn().mockReturnValue({ things: [] })
+    const registry = { things: fixtureFn }
+    const link = createMockLink(registry)
+    await run(
+      link,
+      gql`
+        query {
+          things {
+            id
+          }
+        }
+      `,
+      undefined
+    )
+    expect(fixtureFn).toHaveBeenCalledWith({})
+  })
+
+  it('passes empty object to fixture when variables is null', async () => {
+    const fixtureFn = vi.fn().mockReturnValue({ things: [] })
+    const registry = { things: fixtureFn }
+    const link = createMockLink(registry)
+    await run(
+      link,
+      gql`
+        query {
+          things {
+            id
+          }
+        }
+      `,
+      null
+    )
+    expect(fixtureFn).toHaveBeenCalledWith({})
+  })
+
+  it('resolves a mutation by root field name', async () => {
+    const registry = { sendMessage: vars => ({ sendMessage: { id: '1', text: vars.text } }) }
+    const link = createMockLink(registry)
+    const result = await run(
+      link,
+      gql`
+        mutation SendMessage($text: String!) {
+          sendMessage(text: $text) {
+            id
+            text
+          }
+        }
+      `,
+      { text: 'hello' }
+    )
+    expect(result.data).toEqual({ sendMessage: { id: '1', text: 'hello' } })
+  })
+
+  // -- missing fixture: WEB-T06-005 fix — returns error response --
+
+  it('returns a graphQL errors array (not empty data) for an unmapped operation', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const link = createMockLink({})
     const result = await run(
@@ -57,8 +133,66 @@ describe('createMockLink', () => {
       `,
       {}
     )
-    expect(result.data).toEqual({})
+    expect(result.errors).toBeDefined()
+    expect(result.errors[0].message).toContain('unknownThing')
+    expect(result.data).toBeUndefined()
+    warn.mockRestore()
+  })
+
+  it('includes the missing field name in the error message', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const link = createMockLink({})
+    const result = await run(
+      link,
+      gql`
+        query {
+          missingField {
+            id
+          }
+        }
+      `,
+      {}
+    )
+    expect(result.errors[0].message).toMatch(/missingField/)
+    warn.mockRestore()
+  })
+
+  it('warns to the console for an unmapped operation', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const link = createMockLink({})
+    await run(
+      link,
+      gql`
+        query UnknownQ {
+          noSuchField {
+            id
+          }
+        }
+      `,
+      {}
+    )
     expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('returns an error response when the root selection is an inline fragment (not a Field)', async () => {
+    // An inline fragment at the root level causes getRootFieldName to return null
+    // (selection.kind === 'InlineFragment', not 'Field') — covers the non-Field branch.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const link = createMockLink({})
+
+    const result = await run(
+      link,
+      gql`
+        query NoRootField {
+          ... on Query {
+            __typename
+          }
+        }
+      `,
+      {}
+    )
+    expect(result.errors).toBeDefined()
     warn.mockRestore()
   })
 })

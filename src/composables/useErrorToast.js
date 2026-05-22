@@ -7,15 +7,16 @@ import { toast } from 'vue-sonner'
 
 export function useErrorToast() {
   /**
-   * Show an error toast, preferring the GraphQL message or a custom fallback.
+   * Show an error toast, preferring the GraphQL message over a fallback.
+   * Priority: GraphQL error → err.message → fallbackMsg → generic message.
    * @param {Error|object} err - The caught error object
    * @param {string} [fallbackMsg] - Message to display when no specific error text is available
    */
   function toastError(err, fallbackMsg) {
     const message =
-      fallbackMsg ||
       err?.graphQLErrors?.[0]?.message ||
       err?.message ||
+      fallbackMsg ||
       'An unexpected error occurred'
     toast.error(message)
   }

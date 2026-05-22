@@ -14,8 +14,9 @@ import { getMainDefinition } from '@apollo/client/utilities'
  */
 function getRootFieldName(query) {
   const def = getMainDefinition(query)
-  const selection = def?.selectionSet?.selections?.[0]
-  return selection?.kind === 'Field' ? selection.name.value : null
+  const selection = def.selectionSet.selections[0]
+  if (!selection || selection.kind !== 'Field') return null
+  return selection.name.value
 }
 
 /**
@@ -31,10 +32,12 @@ export function createMockLink(registry) {
       const field = getRootFieldName(operation.query)
       const fixture = field ? registry[field] : null
       if (fixture) {
-        observer.next({ data: fixture(operation.variables || {}) })
+        observer.next({ data: fixture(operation.variables) })
       } else {
-        console.warn(`[mock] No fixture for root field "${field}" — returning empty data.`)
-        observer.next({ data: {} })
+        console.warn(`[mock] No fixture for root field "${field}" — returning error response.`)
+        observer.next({
+          errors: [{ message: `[mock] No fixture for root field "${field}"` }]
+        })
       }
       observer.complete()
     })

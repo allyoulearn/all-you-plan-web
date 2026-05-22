@@ -14,7 +14,6 @@ const names = {
   today: 'HomeIcon',
   chores: 'ArrowPathIcon',
   projects: 'Squares2X2Icon',
-  wren: 'SparklesIcon',
   more: 'EllipsisHorizontalIcon',
   calendar: 'CalendarIcon',
   stats: 'ChartBarIcon',

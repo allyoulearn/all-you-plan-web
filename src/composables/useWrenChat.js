@@ -27,7 +27,12 @@ export function useWrenChat(bodyRef) {
   const store = useWrenStore()
   const draft = ref('')
 
-  onMounted(() => store.load())
+  onMounted(() => {
+    store.load().catch(err => {
+      // store.error is already set by the store; log for diagnostics
+      console.error('[useWrenChat] load failed', err)
+    })
+  })
 
   // -- Scroll --
 
@@ -54,8 +59,12 @@ export function useWrenChat(bodyRef) {
   async function sendMessage() {
     const text = draft.value.trim()
     if (!text || store.sending) return
-    draft.value = ''
-    await store.send(text)
+    try {
+      await store.send(text)
+      draft.value = ''
+    } catch {
+      // draft is preserved for retry; the store surfaces the error
+    }
   }
 
   /**
