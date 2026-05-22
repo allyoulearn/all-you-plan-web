@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client/core'
 
 export const CHORES_QUERY = gql`
-  query {
+  query Chores {
     chores {
       id
       title

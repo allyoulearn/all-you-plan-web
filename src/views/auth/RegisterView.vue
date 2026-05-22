@@ -56,6 +56,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -67,6 +68,7 @@ export default {
     const { t } = useI18n()
     const router = useRouter()
     const authStore = useAuthStore()
+    const { resolveErrorMessage } = useErrorToast()
 
     const name = ref('')
     const email = ref('')
@@ -97,7 +99,7 @@ export default {
         await authStore.register(email.value, password.value, name.value)
         router.push('/')
       } catch (err) {
-        error.value = err?.graphQLErrors?.[0]?.message || 'Registration failed'
+        error.value = resolveErrorMessage(err, 'Registration failed')
       } finally {
         loading.value = false
       }

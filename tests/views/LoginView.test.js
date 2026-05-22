@@ -146,7 +146,7 @@ describe('LoginView', () => {
     expect(wrapper.text()).toContain('Invalid credentials')
   })
 
-  it('shows fallback error when no graphQLErrors present', async () => {
+  it('shows err.message when no graphQLErrors present (WEB-T09-004 fix)', async () => {
     const { wrapper, store } = mountLogin()
     store.login.mockRejectedValue(new Error('network error'))
 
@@ -154,7 +154,8 @@ describe('LoginView', () => {
     await new Promise(r => setTimeout(r, 0))
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('Login failed')
+    // resolveErrorMessage prefers err.message over the fallback string
+    expect(wrapper.text()).toContain('network error')
   })
 
   it('clears the error on a new submit attempt', async () => {

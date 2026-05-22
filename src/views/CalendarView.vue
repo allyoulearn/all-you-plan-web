@@ -180,6 +180,23 @@ export default {
       return cells
     })
 
+    /**
+     * Pre-computed map of YYYY-MM-DD → Event[] for the current month's events.
+     * Replaces the per-cell eventsForDay() call, reducing 42× O(n) to O(n) + 42× O(1).
+     */
+    const eventsByDay = computed(() => {
+      const map = new Map()
+      for (const ev of store.events) {
+        const list = map.get(ev.date)
+        if (list) {
+          list.push(ev)
+        } else {
+          map.set(ev.date, [ev])
+        }
+      }
+      return map
+    })
+
     /** Events for the currently selected day. */
     const agendaEvents = computed(() => {
       if (!selectedDay.value) return []
@@ -261,6 +278,7 @@ export default {
 
     /**
      * Returns up to 3 events for a given day number (current month only).
+     * Uses the pre-computed eventsByDay map for O(1) lookup per cell.
      * @param {number} day
      * @param {boolean} adjacent
      * @returns {Array}
@@ -268,7 +286,7 @@ export default {
     function eventsForDay(day, adjacent) {
       if (adjacent) return []
       const dayStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      return store.events.filter((e) => e.date === dayStr).slice(0, 3)
+      return (eventsByDay.value.get(dayStr) ?? []).slice(0, 3)
     }
 
     /**
@@ -300,6 +318,7 @@ export default {
       currentMonth,
       selectedDay,
       calendarDays,
+      eventsByDay,
       agendaEvents,
       agendaLabel,
       prevMonth,

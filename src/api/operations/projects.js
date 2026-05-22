@@ -91,12 +91,6 @@ export const UPDATE_TASK = gql`
   }
 `
 
-export const COMPLETE_PROJECT_TASK = gql`
-  mutation CompleteTask($id: ID!) {
-    completeTask(id: $id) {
-      id
-      done
-      completedAt
-    }
-  }
-`
+// Re-export COMPLETE_TASK from today.js as COMPLETE_PROJECT_TASK so both stores
+// share the same document node, keeping the Apollo cache coherent (WEB-T05-015).
+export { COMPLETE_TASK as COMPLETE_PROJECT_TASK } from './today.js'

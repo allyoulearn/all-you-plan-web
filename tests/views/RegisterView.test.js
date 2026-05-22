@@ -158,7 +158,7 @@ describe('RegisterView', () => {
     expect(wrapper.text()).toContain('Email already in use')
   })
 
-  it('shows fallback error when rejection has no graphQLErrors', async () => {
+  it('shows err.message when rejection has no graphQLErrors (WEB-T09-004 fix)', async () => {
     const { wrapper, store } = mountRegister()
     store.register.mockRejectedValue(new Error('network'))
 
@@ -166,7 +166,8 @@ describe('RegisterView', () => {
     await new Promise(r => setTimeout(r, 0))
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('Registration failed')
+    // resolveErrorMessage prefers err.message over the fallback string
+    expect(wrapper.text()).toContain('network')
   })
 
   it('clears error message at the start of a new submit', async () => {

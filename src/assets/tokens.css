@@ -14,6 +14,25 @@
   --bad: #b7351a;
 }
 
+/* Bare dark-mode fallback — matches when data-theme is absent or unrecognised.
+   Mirrors the 'warm' dark values so the default theme always applies correctly
+   even before initTheme() fires or in SSR/test environments. (WEB-T09-001) */
+:root[data-mode='dark'] {
+  --paper: #15130e;
+  --paper-2: #1f1c15;
+  --paper-3: #2a2519;
+  --ink: #f3efe3;
+  --ink-2: #c9c4b5;
+  --muted: #8a857a;
+  --rule: #efe9d7;
+  --rule-soft: #2e2a22;
+  --accent: #ff6a2c;
+  --accent-ink: #ffffff;
+  --ok: #4caf6a;
+  --warn: #e8c84a;
+  --bad: #e05540;
+}
+
 :root[data-theme='warm'] {
   --paper: #f7f3ea;
   --paper-2: #ffffff;

@@ -81,6 +81,7 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -93,6 +94,7 @@ export default {
     const router = useRouter()
     const route = useRoute()
     const authStore = useAuthStore()
+    const { resolveErrorMessage } = useErrorToast()
 
     const email = ref('')
     const password = ref('')
@@ -130,7 +132,7 @@ export default {
             : '/'
         router.push(redirect)
       } catch (err) {
-        error.value = err?.graphQLErrors?.[0]?.message || 'Login failed'
+        error.value = resolveErrorMessage(err, 'Login failed')
       } finally {
         loading.value = false
       }

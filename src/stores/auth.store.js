@@ -7,6 +7,14 @@
  * The access token is kept in memory only (never localStorage) to reduce XSS
  * exposure. The user object is persisted to localStorage under `ayp_user` for
  * UX continuity across page refreshes.
+ *
+ * Error-surfacing policy (WEB-T09-003 / WEB-T09-004):
+ * - login, register, forgotPassword, resetPassword: catch the error into
+ *   error.value and re-throw. The calling view renders an inline error
+ *   paragraph (preferred for auth forms — gives precise placement near the
+ *   submit button). No toast is shown for these flows.
+ * - updateProfile, updateSettings: call toastError() and re-throw (these are
+ *   triggered from settings controls where no inline error paragraph exists).
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'

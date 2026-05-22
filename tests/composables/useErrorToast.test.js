@@ -72,6 +72,30 @@ describe('useErrorToast', () => {
     })
   })
 
+  describe('resolveErrorMessage()', () => {
+    it('prefers graphQL error message over err.message and fallback', () => {
+      const { resolveErrorMessage } = useErrorToast()
+      const err = { graphQLErrors: [{ message: 'GraphQL error' }], message: 'raw' }
+      expect(resolveErrorMessage(err, 'Fallback')).toBe('GraphQL error')
+    })
+
+    it('uses err.message when no graphQL error is present', () => {
+      const { resolveErrorMessage } = useErrorToast()
+      const err = { message: 'plain error' }
+      expect(resolveErrorMessage(err, 'Fallback')).toBe('plain error')
+    })
+
+    it('uses fallback when err has no message or graphQL errors', () => {
+      const { resolveErrorMessage } = useErrorToast()
+      expect(resolveErrorMessage(null, 'Fallback message')).toBe('Fallback message')
+    })
+
+    it('returns generic message when everything is absent', () => {
+      const { resolveErrorMessage } = useErrorToast()
+      expect(resolveErrorMessage(null, null)).toBe('An unexpected error occurred')
+    })
+  })
+
   describe('toastSuccess()', () => {
     it('calls toast.success with the message', () => {
       const { toastSuccess } = useErrorToast()

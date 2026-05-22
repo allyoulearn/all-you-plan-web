@@ -86,12 +86,16 @@ export default {
   }
 
   &__nav-item {
-    @apply mx-2.5 my-px flex items-center gap-2.5 rounded-sm px-3 py-2 text-[14px] text-ink transition-colors hover:bg-paper-3;
+    @apply mx-2.5 my-px flex items-center gap-2.5 rounded-sm px-3 py-2 text-[14px] text-ink transition-colors;
+
+    &:not(&--active):hover {
+      @apply bg-paper-3;
+    }
 
     &--active {
       @apply font-medium;
-      background-color: var(--ink) !important;
-      color: var(--paper) !important;
+      background-color: var(--ink);
+      color: var(--paper);
     }
   }
 

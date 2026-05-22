@@ -36,6 +36,7 @@
       <button
         v-for="prompt in QUICK_PROMPTS"
         :key="prompt"
+        type="button"
         class="wren-view__chip"
         @click="fillFromChip(prompt)"
       >
@@ -55,6 +56,7 @@
         />
 
         <button
+          type="button"
           class="wren-view__send"
           :disabled="!draft.trim() || store.sending"
           aria-label="Send message"
