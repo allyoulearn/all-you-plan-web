@@ -26,7 +26,15 @@
     "resetPasswordCta": "Set new password",
     "passwordMismatch": "Passwords do not match.",
     "passwordWeak": "Password must be at least 8 characters and include uppercase, lowercase, and a digit.",
-    "resetTokenInvalid": "This reset link is invalid or has expired."
+    "resetTokenInvalid": "This reset link is invalid or has expired.",
+    "loginHeadingPrefix": "Welcome",
+    "loginHeadingEmphasis": "back.",
+    "registerHeadingPrefix": "Create your",
+    "registerHeadingEmphasis": "account.",
+    "forgotHeadingPrefix": "Forgot your",
+    "forgotHeadingEmphasis": "password?",
+    "resetHeadingPrefix": "Reset your",
+    "resetHeadingEmphasis": "password."
   },
   "dashboard": {
     "title": "Dashboard"

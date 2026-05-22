@@ -2,8 +2,9 @@
   <div>
     <!-- Heading -->
     <h2 class="reset-password-view__heading">
-      Reset your <em>
-        password.
+      {{ t('auth.resetHeadingPrefix') }}
+      <em>
+        {{ t('auth.resetHeadingEmphasis') }}
       </em>
     </h2>
 
@@ -33,6 +34,7 @@
         v-model="confirmPassword"
         type="password"
         :label="t('auth.confirmPassword')"
+        :invalid="!!confirmPassword && !passwordsMatch"
         autocomplete="new-password"
       />
 
@@ -64,7 +66,7 @@
       <Button
         variant="accent"
         type="submit"
-        :disabled="loading || !isPasswordValid"
+        :disabled="loading || !isPasswordValid || !passwordsMatch"
         size="md"
         class="reset-password-view__submit"
       >
@@ -124,6 +126,15 @@ export default {
       return h.length && h.upper && h.lower && h.digit
     })
 
+    /**
+     * True when the confirm field is either empty (user hasn't typed yet) or
+     * matches the new password. Used to gate the submit button and wire the
+     * invalid prop on the confirm field.
+     */
+    const passwordsMatch = computed(() =>
+      !confirmPassword.value || newPassword.value === confirmPassword.value
+    )
+
     return {
       t,
       newPassword,
@@ -133,6 +144,7 @@ export default {
       token,
       hints,
       isPasswordValid,
+      passwordsMatch,
       handleSubmit,
     }
 

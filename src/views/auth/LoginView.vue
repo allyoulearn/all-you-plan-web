@@ -2,8 +2,9 @@
   <div>
     <!-- Heading -->
     <h2 class="login-view__heading">
-      Welcome <em>
-        back.
+      {{ t('auth.loginHeadingPrefix') }}
+      <em>
+        {{ t('auth.loginHeadingEmphasis') }}
       </em>
     </h2>
 
@@ -32,6 +33,7 @@
         <TextField
           v-model="password"
           type="password"
+          :label="t('auth.password')"
           autocomplete="current-password"
         />
       </div>
@@ -114,13 +116,18 @@ export default {
     /**
      * Submit the email/password login form.
      * Redirects to the originally requested route on success.
+     * The redirect param is validated to be a relative path to prevent open-redirect attacks.
      */
     async function handleLogin() {
       error.value = ''
       loading.value = true
       try {
         await authStore.login(email.value, password.value)
-        const redirect = route.query.redirect || '/'
+        const raw = route.query.redirect || '/'
+        const redirect =
+          typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')
+            ? raw
+            : '/'
         router.push(redirect)
       } catch (err) {
         error.value = err?.graphQLErrors?.[0]?.message || 'Login failed'

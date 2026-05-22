@@ -2,8 +2,9 @@
   <div>
     <!-- Heading -->
     <h2 class="forgot-password-view__heading">
-      Forgot your <em>
-        password?
+      {{ t('auth.forgotHeadingPrefix') }}
+      <em>
+        {{ t('auth.forgotHeadingEmphasis') }}
       </em>
     </h2>
 

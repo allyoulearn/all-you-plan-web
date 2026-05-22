@@ -1,8 +1,9 @@
 <template>
   <div>
     <h2 class="register-view__heading">
-      Create your <em>
-        account.
+      {{ t('auth.registerHeadingPrefix') }}
+      <em>
+        {{ t('auth.registerHeadingEmphasis') }}
       </em>
     </h2>
 
