@@ -1,30 +1,30 @@
 <template>
-  <aside class="flex h-screen flex-col overflow-hidden border-l border-rule-soft bg-paper">
+  <aside class="wren-panel">
     <!-- Header -->
-    <div class="flex items-center gap-3 border-b border-rule-soft px-[22px] py-[18px]">
-      <span class="grid h-9 w-9 place-items-center rounded-pill bg-accent font-serif text-[20px] italic text-accent-ink">
+    <div class="wren-panel__header">
+      <span class="wren-panel__avatar">
         W
       </span>
 
       <div>
-        <p class="font-serif text-[22px] italic leading-none text-ink">
+        <p class="wren-panel__name">
           Wren
         </p>
 
-        <p class="mt-0.5 text-[12px] text-muted">
+        <p class="wren-panel__role">
           Your coach
         </p>
       </div>
 
-      <span class="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted">
-        <span class="h-[7px] w-[7px] rounded-pill bg-ok" />
+      <span class="wren-panel__status">
+        <span class="wren-panel__status-dot" />
         live
       </span>
     </div>
 
     <!-- Messages body -->
-    <div ref="bodyRef" class="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
-      <div v-if="store.loading" class="text-center text-[13px] text-muted">
+    <div ref="bodyRef" class="wren-panel__body">
+      <div v-if="store.loading" class="wren-panel__loading">
         Loading…
       </div>
 
@@ -37,19 +37,19 @@
         />
       </template>
 
-      <div v-else class="flex flex-1 items-center justify-center text-center">
-        <p class="text-[13px] text-muted">
+      <div v-else class="wren-panel__empty">
+        <p class="wren-panel__empty-text">
           Say hello to Wren.
         </p>
       </div>
     </div>
 
     <!-- Quick-prompt chips -->
-    <div class="flex flex-wrap gap-2 px-4 pb-2">
+    <div class="wren-panel__chips">
       <button
         v-for="prompt in QUICK_PROMPTS"
         :key="prompt"
-        class="rounded-pill border border-rule-soft bg-paper-2 px-3 py-1 text-[11px] text-muted transition-colors hover:bg-paper-3 hover:text-ink"
+        class="wren-panel__chip"
         @click="fillFromChip(prompt)"
       >
         {{ prompt }}
@@ -57,17 +57,17 @@
     </div>
 
     <!-- Input footer -->
-    <div class="border-t border-rule-soft p-4">
-      <div class="flex items-center gap-2 rounded-pill border border-rule-soft bg-paper-2 py-1.5 pl-4 pr-1.5 focus-within:border-muted">
+    <div class="wren-panel__footer">
+      <div class="wren-panel__input-row">
         <input
           v-model="draft"
           placeholder="Tell Wren anything…"
-          class="flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted"
+          class="wren-panel__input"
           @keydown="handleKeydown"
         />
 
         <button
-          class="rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition-opacity disabled:opacity-40"
+          class="wren-panel__send"
           :disabled="!draft.trim() || store.sending"
           aria-label="Send message"
           @click="sendMessage"
@@ -79,11 +79,91 @@
   </aside>
 </template>
 
-<script setup>
+<script>
+/** WrenPanel — right-side AI coach panel with message feed, quick-prompt chips, and input. */
 import { ref } from 'vue'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
-import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
+import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat.js'
 
-const bodyRef = ref(null)
-const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+export default {
+  name: 'WrenPanel',
+  components: { WrenBubble },
+  setup() {
+    // -- State --
+    const bodyRef = ref(null)
+    const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+
+    return { bodyRef, store, draft, sendMessage, handleKeydown, fillFromChip, QUICK_PROMPTS }
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+.wren-panel {
+  @apply flex h-screen flex-col overflow-hidden border-l border-rule-soft bg-paper;
+
+  &__header {
+    @apply flex items-center gap-3 border-b border-rule-soft px-[22px] py-[18px];
+  }
+
+  &__avatar {
+    @apply grid h-9 w-9 place-items-center rounded-pill bg-accent font-serif text-[20px] italic text-accent-ink;
+  }
+
+  &__name {
+    @apply font-serif text-[22px] italic leading-none text-ink;
+  }
+
+  &__role {
+    @apply mt-0.5 text-[12px] text-muted;
+  }
+
+  &__status {
+    @apply ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted;
+  }
+
+  &__status-dot {
+    @apply h-[7px] w-[7px] rounded-pill bg-ok;
+  }
+
+  &__body {
+    @apply flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5;
+  }
+
+  &__loading {
+    @apply text-center text-[13px] text-muted;
+  }
+
+  &__empty {
+    @apply flex flex-1 items-center justify-center text-center;
+  }
+
+  &__empty-text {
+    @apply text-[13px] text-muted;
+  }
+
+  &__chips {
+    @apply flex flex-wrap gap-2 px-4 pb-2;
+  }
+
+  &__chip {
+    @apply rounded-pill border border-rule-soft bg-paper-2 px-3 py-1 text-[11px] text-muted transition-colors hover:bg-paper-3 hover:text-ink;
+  }
+
+  &__footer {
+    @apply border-t border-rule-soft p-4;
+  }
+
+  &__input-row {
+    @apply flex items-center gap-2 rounded-pill border border-rule-soft bg-paper-2 py-1.5 pl-4 pr-1.5 focus-within:border-muted;
+  }
+
+  &__input {
+    @apply flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted;
+  }
+
+  &__send {
+    @apply rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition-opacity disabled:opacity-40;
+  }
+}
+</style>

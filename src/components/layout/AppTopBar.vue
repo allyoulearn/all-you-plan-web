@@ -1,12 +1,12 @@
 <template>
-  <header class="sticky top-0 z-10 flex items-center gap-3.5 bg-paper px-8 py-4">
-    <span class="text-[13px] text-muted">
+  <header class="app-top-bar">
+    <span class="app-top-bar__crumbs">
       {{ crumbs }}
     </span>
 
-    <span class="flex-1" />
+    <span class="app-top-bar__spacer" />
 
-    <span class="text-[13px] text-muted">
+    <span class="app-top-bar__date">
       {{ today }}
     </span>
 
@@ -23,22 +23,55 @@
   </header>
 </template>
 
-<script setup>
+<script>
+/** AppTopBar — sticky top navigation bar showing breadcrumbs, current date, and action buttons. */
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import IconButton from '@/components/ui/IconButton.vue'
 import { useTheme } from '@/composables/useTheme.js'
 
-const route = useRoute()
-const { mode, toggleMode } = useTheme()
+export default {
+  name: 'AppTopBar',
+  components: { IconButton },
+  setup() {
+    // -- State --
+    const route = useRoute()
+    const { mode, toggleMode } = useTheme()
 
-const crumbs = computed(() => (route.meta.crumbs || ['all you plan']).join(' · '))
-const today = computed(() =>
-  new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }),
-)
+    // -- Computed --
+
+    /** Breadcrumb string built from the current route's meta.crumbs array */
+    const crumbs = computed(() => (route.meta.crumbs || ['all you plan']).join(' · '))
+
+    /** Today's date formatted as a human-readable string */
+    const today = computed(() =>
+      new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    )
+
+    return { crumbs, today, mode, toggleMode }
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+.app-top-bar {
+  @apply sticky top-0 z-10 flex items-center gap-3.5 bg-paper px-8 py-4;
+
+  &__crumbs {
+    @apply text-[13px] text-muted;
+  }
+
+  &__spacer {
+    @apply flex-1;
+  }
+
+  &__date {
+    @apply text-[13px] text-muted;
+  }
+}
+</style>
