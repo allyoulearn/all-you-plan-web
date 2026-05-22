@@ -25,8 +25,8 @@ const httpLink = createHttpLink({
   headers: {
     get Authorization() {
       return accessToken ? `Bearer ${accessToken}` : ''
-    },
-  },
+    }
+  }
 })
 
 const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/graphql`
@@ -34,11 +34,11 @@ const wsLink = new GraphQLWsLink(
   createClient({
     url: wsUrl,
     connectionParams: () => ({
-      Authorization: accessToken ? `Bearer ${accessToken}` : '',
+      Authorization: accessToken ? `Bearer ${accessToken}` : ''
     }),
     retryAttempts: 5,
-    shouldRetry: () => true,
-  }),
+    shouldRetry: () => true
+  })
 )
 
 const splitLink = split(
@@ -47,7 +47,7 @@ const splitLink = split(
     return def.kind === 'OperationDefinition' && def.operation === 'subscription'
   },
   wsLink,
-  httpLink,
+  httpLink
 )
 
 const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
@@ -87,8 +87,8 @@ export async function refreshAccessToken() {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
-      query: REFRESH_TOKEN.loc.source.body,
-    }),
+      query: REFRESH_TOKEN.loc.source.body
+    })
   })
   const json = await res.json()
   if (json.data?.refreshToken) {
@@ -102,11 +102,11 @@ export const apolloClient = new ApolloClient({
   link: errorLink.concat(splitLink),
   cache: new InMemoryCache({
     typePolicies: {
-      Task: { keyFields: ['id'] },
-    },
+      Task: { keyFields: ['id'] }
+    }
   }),
   defaultOptions: {
     watchQuery: { fetchPolicy: 'cache-and-network' },
-    query: { fetchPolicy: 'network-only' },
-  },
+    query: { fetchPolicy: 'network-only' }
+  }
 })

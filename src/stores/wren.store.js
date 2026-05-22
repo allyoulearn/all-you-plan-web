@@ -15,7 +15,7 @@ export const useWrenStore = defineStore('wren', () => {
     try {
       const { data } = await apolloClient.query({
         query: WREN_MESSAGES_QUERY,
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       messages.value = data.wrenMessages
     } catch (e) {
@@ -33,20 +33,20 @@ export const useWrenStore = defineStore('wren', () => {
     const optimisticId = `optimistic-${Date.now()}`
     messages.value = [
       ...messages.value,
-      { id: optimisticId, sender: 'user', text, actions: [], createdAt: new Date().toISOString() },
+      { id: optimisticId, sender: 'user', text, actions: [], createdAt: new Date().toISOString() }
     ]
 
     try {
       const { data } = await apolloClient.mutate({
         mutation: SEND_WREN_MESSAGE,
-        variables: { text },
+        variables: { text }
       })
       // Append the returned coach message
       messages.value = [...messages.value, data.sendWrenMessage]
     } catch (e) {
       error.value = e.message
       // Remove the optimistic message on failure
-      messages.value = messages.value.filter((m) => m.id !== optimisticId)
+      messages.value = messages.value.filter(m => m.id !== optimisticId)
     } finally {
       sending.value = false
     }

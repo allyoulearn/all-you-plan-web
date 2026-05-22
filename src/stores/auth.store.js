@@ -1,7 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apolloClient, setAccessToken, refreshAccessToken } from '@/api/apollo'
-import { LOGIN, REGISTER, LOGOUT, UPDATE_PROFILE, FORGOT_PASSWORD, RESET_PASSWORD } from '@/api/operations'
+import {
+  LOGIN,
+  REGISTER,
+  LOGOUT,
+  UPDATE_PROFILE,
+  FORGOT_PASSWORD,
+  RESET_PASSWORD
+} from '@/api/operations'
 import { useErrorToast } from '@/composables/useErrorToast'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -32,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: LOGIN,
-        variables: { email, password },
+        variables: { email, password }
       })
       setAuth(data.login)
       return data.login
@@ -46,7 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: REGISTER,
-        variables: { email, password, name },
+        variables: { email, password, name }
       })
       setAuth(data.register)
       return data.register
@@ -80,7 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_PROFILE,
-        variables: updates,
+        variables: updates
       })
       user.value = data.updateProfile
       localStorage.setItem('ayp_user', JSON.stringify(data.updateProfile))
@@ -98,7 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_PROFILE,
-        variables: { settings: { ...current, ...partial } },
+        variables: { settings: { ...current, ...partial } }
       })
       user.value = data.updateProfile
       localStorage.setItem('ayp_user', JSON.stringify(data.updateProfile))
@@ -115,7 +122,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: FORGOT_PASSWORD,
-        variables: { email },
+        variables: { email }
       })
       return data.forgotPassword
     } finally {
@@ -128,7 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: RESET_PASSWORD,
-        variables: { token, newPassword },
+        variables: { token, newPassword }
       })
       setAuth(data.resetPassword)
       return data.resetPassword
@@ -138,9 +145,21 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, accessToken, loading, error,
-    isAuthenticated, userName,
-    setAuth, clearAuth, login, register, logout, tryRestoreSession,
-    updateProfile, updateSettings, forgotPassword, resetPassword,
+    user,
+    accessToken,
+    loading,
+    error,
+    isAuthenticated,
+    userName,
+    setAuth,
+    clearAuth,
+    login,
+    register,
+    logout,
+    tryRestoreSession,
+    updateProfile,
+    updateSettings,
+    forgotPassword,
+    resetPassword
   }
 })

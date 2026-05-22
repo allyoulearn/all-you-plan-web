@@ -14,7 +14,7 @@ export const useChoresStore = defineStore('chores', () => {
     try {
       const { data } = await apolloClient.query({
         query: CHORES_QUERY,
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       chores.value = data.chores
     } catch (e) {

@@ -2,14 +2,20 @@
   <div>
     <!-- Heading -->
     <h2 class="mb-2 font-serif text-[22px] text-ink">
-      Forgot your <em>password?</em>
+      Forgot your <em>
+        password?
+      </em>
     </h2>
 
-    <p class="mb-6 text-sm text-muted">{{ t('auth.forgotPasswordDesc') }}</p>
+    <p class="mb-6 text-sm text-muted">
+      {{ t('auth.forgotPasswordDesc') }}
+    </p>
 
     <!-- Success state -->
     <div v-if="sent" class="space-y-4 text-center">
-      <p class="text-sm text-ink">{{ t('auth.forgotPasswordSuccess') }}</p>
+      <p class="text-sm text-ink">
+        {{ t('auth.forgotPasswordSuccess') }}
+      </p>
 
       <router-link to="/auth/login" class="text-sm text-accent hover:underline">
         {{ t('auth.backToLogin') }}
@@ -17,7 +23,7 @@
     </div>
 
     <!-- Form -->
-    <form v-else @submit.prevent="handleSubmit" class="space-y-4">
+    <form v-else class="space-y-4" @submit.prevent="handleSubmit">
       <!-- Email field -->
       <TextField
         v-model="email"
@@ -27,10 +33,18 @@
       />
 
       <!-- Error message -->
-      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">
+        {{ error }}
+      </p>
 
       <!-- Submit button -->
-      <Button variant="accent" type="submit" :disabled="loading" size="md" class="w-full justify-center">
+      <Button
+        variant="accent"
+        type="submit"
+        :disabled="loading"
+        size="md"
+        class="w-full justify-center"
+      >
         {{ loading ? t('common.loading') : t('auth.forgotPasswordCta') }}
       </Button>
 

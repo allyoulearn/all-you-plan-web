@@ -14,7 +14,7 @@ export const useStatsStore = defineStore('stats', () => {
     try {
       const { data } = await apolloClient.query({
         query: STATS_QUERY,
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       stats.value = data.stats
     } catch (e) {

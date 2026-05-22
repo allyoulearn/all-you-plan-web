@@ -1,3 +1,15 @@
+<template>
+  <div class="grid grid-cols-4 gap-3.5">
+    <KpiTile
+      v-for="t in tiles"
+      :key="t.label"
+      :label="t.label"
+      :value="t.get(props.kpis)"
+      :unit="t.unit"
+    />
+  </div>
+</template>
+
 <script setup>
 import KpiTile from './KpiTile.vue'
 
@@ -12,15 +24,3 @@ const tiles = [
   { label: 'Focus', get: (k) => `${Math.floor(k.focusMinutes / 60)}h ${k.focusMinutes % 60}m`, unit: 'logged' },
 ]
 </script>
-
-<template>
-  <div class="grid grid-cols-4 gap-3.5">
-    <KpiTile
-      v-for="t in tiles"
-      :key="t.label"
-      :label="t.label"
-      :value="t.get(props.kpis)"
-      :unit="t.unit"
-    />
-  </div>
-</template>

@@ -76,16 +76,8 @@ export const LOGOUT = gql`
 
 export const UPDATE_PROFILE = gql`
   ${USER_FRAGMENT}
-  mutation UpdateProfile(
-    $name: String
-    $timezone: String
-    $settings: UpdateSettingsInput
-  ) {
-    updateProfile(
-      name: $name
-      timezone: $timezone
-      settings: $settings
-    ) {
+  mutation UpdateProfile($name: String, $timezone: String, $settings: UpdateSettingsInput) {
+    updateProfile(name: $name, timezone: $timezone, settings: $settings) {
       ...UserFields
     }
   }

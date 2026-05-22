@@ -16,7 +16,7 @@ export const useProjectsStore = defineStore('projects', () => {
       const { data } = await apolloClient.query({
         query: PROJECTS_QUERY,
         variables: { includeArchived: false },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       projects.value = data.projects
     } catch (e) {
@@ -33,7 +33,7 @@ export const useProjectsStore = defineStore('projects', () => {
       const { data } = await apolloClient.query({
         query: PROJECT_BOARD_QUERY,
         variables: { id },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       board.value = data.projectBoard
     } catch (e) {

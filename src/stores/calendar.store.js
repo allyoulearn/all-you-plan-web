@@ -15,7 +15,7 @@ export const useCalendarStore = defineStore('calendar', () => {
       const { data } = await apolloClient.query({
         query: CALENDAR_EVENTS_QUERY,
         variables: { month: month ?? null },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       events.value = data.calendarEvents
     } catch (e) {

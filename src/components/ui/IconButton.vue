@@ -1,15 +1,3 @@
-<script setup>
-import Icon from './Icon.vue'
-
-const props = defineProps({
-  icon: { type: String, required: true },
-  size: { type: Number, default: 34 },
-  variant: { type: String, default: 'default' },
-  type: { type: String, default: 'button' },
-  disabled: { type: Boolean, default: false },
-})
-</script>
-
 <template>
   <button
     :type="type"
@@ -23,3 +11,15 @@ const props = defineProps({
     <Icon :name="icon" :size="Math.round(size * 0.47)" />
   </button>
 </template>
+
+<script setup>
+import Icon from './Icon.vue'
+
+defineProps({
+  icon: { type: String, required: true },
+  size: { type: Number, default: 34 },
+  variant: { type: String, default: 'default' },
+  type: { type: String, default: 'button' },
+  disabled: { type: Boolean, default: false },
+})
+</script>

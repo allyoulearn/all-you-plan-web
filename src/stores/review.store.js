@@ -16,7 +16,7 @@ export const useReviewStore = defineStore('review', () => {
       const { data } = await apolloClient.query({
         query: DAILY_REVIEW_QUERY,
         variables: { date },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       review.value = data.dailyReview
     } catch (e) {
@@ -32,7 +32,7 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const { data } = await apolloClient.mutate({
         mutation: SAVE_DAILY_REVIEW,
-        variables: { date, mood, responses },
+        variables: { date, mood, responses }
       })
       review.value = data.saveDailyReview
     } catch (e) {

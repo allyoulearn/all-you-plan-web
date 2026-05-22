@@ -1,29 +1,20 @@
-<script setup>
-import { ref, computed } from 'vue'
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import WrenBubble from '@/components/wren/WrenBubble.vue'
-import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
-
-const bodyRef = ref(null)
-const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
-
-const today = computed(() =>
-  new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-)
-</script>
-
 <template>
   <div class="flex h-full flex-col">
     <ScreenHeading eyebrow="With Wren · Chat" title="A longer" emphasis="conversation." />
 
     <!-- Date divider -->
     <div class="mb-5 flex items-center justify-center">
-      <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{{ today }}</span>
+      <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        {{ today }}
+      </span>
     </div>
 
     <!-- Messages area -->
     <div ref="bodyRef" class="mx-auto flex w-full max-w-[820px] flex-1 flex-col gap-4 overflow-y-auto pb-4">
-      <div v-if="store.loading" class="text-center text-[13px] text-muted">Loading…</div>
+      <div v-if="store.loading" class="text-center text-[13px] text-muted">
+        Loading…
+      </div>
+
       <template v-else-if="store.messages.length">
         <WrenBubble
           v-for="msg in store.messages"
@@ -32,8 +23,11 @@ const today = computed(() =>
           @action="fillFromChip"
         />
       </template>
+
       <div v-else class="flex flex-1 items-center justify-center text-center">
-        <p class="text-[13px] text-muted">Start a conversation with Wren.</p>
+        <p class="text-[13px] text-muted">
+          Start a conversation with Wren.
+        </p>
       </div>
     </div>
 
@@ -58,6 +52,7 @@ const today = computed(() =>
           class="flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted"
           @keydown="handleKeydown"
         />
+
         <button
           class="rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition-opacity disabled:opacity-40"
           :disabled="!draft.trim() || store.sending"
@@ -70,3 +65,17 @@ const today = computed(() =>
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import ScreenHeading from '@/components/ui/ScreenHeading.vue'
+import WrenBubble from '@/components/wren/WrenBubble.vue'
+import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
+
+const bodyRef = ref(null)
+const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+
+const today = computed(() =>
+  new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+)
+</script>

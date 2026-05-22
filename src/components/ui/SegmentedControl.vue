@@ -1,11 +1,3 @@
-<script setup>
-defineProps({
-  modelValue: { type: [String, Number], default: '' },
-  options: { type: Array, default: () => [] },
-})
-defineEmits(['update:modelValue'])
-</script>
-
 <template>
   <div class="inline-flex gap-0.5 rounded-md bg-paper-3 p-[3px]">
     <button
@@ -19,7 +11,17 @@ defineEmits(['update:modelValue'])
       @click="$emit('update:modelValue', opt.value)"
     >
       {{ opt.label }}
-      <span v-if="opt.count != null" class="font-mono text-[11px] text-muted">{{ opt.count }}</span>
+      <span v-if="opt.count != null" class="font-mono text-[11px] text-muted">
+        {{ opt.count }}
+      </span>
     </button>
   </div>
 </template>
+
+<script setup>
+defineProps({
+  modelValue: { type: [String, Number], default: '' },
+  options: { type: Array, default: () => [] },
+})
+defineEmits(['update:modelValue'])
+</script>

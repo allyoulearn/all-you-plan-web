@@ -1,10 +1,12 @@
 <template>
   <div>
     <h2 class="mb-6 font-serif text-[22px] text-ink">
-      Create your <em>account.</em>
+      Create your <em>
+        account.
+      </em>
     </h2>
 
-    <form @submit.prevent="handleRegister" class="space-y-4">
+    <form class="space-y-4" @submit.prevent="handleRegister">
       <TextField
         v-model="name"
         type="text"
@@ -23,9 +25,17 @@
         :label="t('auth.password')"
       />
 
-      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">
+        {{ error }}
+      </p>
 
-      <Button variant="accent" type="submit" :disabled="loading" size="md" class="w-full justify-center">
+      <Button
+        variant="accent"
+        type="submit"
+        :disabled="loading"
+        size="md"
+        class="w-full justify-center"
+      >
         {{ loading ? t('common.loading') : t('auth.registerCta') }}
       </Button>
 

@@ -1,17 +1,10 @@
-<script setup>
-import { RouterLink } from 'vue-router'
-import Icon from '@/components/ui/Icon.vue'
-import { navGroups } from './navConfig.js'
-import { useAuthStore } from '@/stores/auth.store'
-
-const auth = useAuthStore()
-</script>
-
 <template>
   <aside class="flex h-screen flex-col overflow-hidden border-r border-rule-soft bg-paper">
     <div class="flex items-baseline gap-2 px-[22px] pb-[18px] pt-[22px]">
       <span class="font-serif text-[26px] italic leading-none tracking-[-0.01em] text-ink">
-        all you <em>plan</em>
+        all you <em>
+          plan
+        </em>
       </span>
     </div>
 
@@ -20,6 +13,7 @@ const auth = useAuthStore()
         <p class="px-5 pb-1.5 pt-3.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
           {{ group.label }}
         </p>
+
         <RouterLink
           v-for="item in group.items"
           :key="item.to"
@@ -28,8 +22,14 @@ const auth = useAuthStore()
           active-class="!bg-ink !text-paper font-medium"
         >
           <Icon :name="item.icon" :size="16" />
-          <span>{{ item.label }}</span>
-          <span class="ml-auto font-mono text-[10px] text-muted">{{ item.key }}</span>
+
+          <span>
+            {{ item.label }}
+          </span>
+
+          <span class="ml-auto font-mono text-[10px] text-muted">
+            {{ item.key }}
+          </span>
         </RouterLink>
       </div>
     </nav>
@@ -38,7 +38,19 @@ const auth = useAuthStore()
       <span class="grid h-8 w-8 place-items-center rounded-pill bg-accent text-[13px] font-semibold text-accent-ink">
         {{ (auth.userName || 'U').charAt(0).toUpperCase() }}
       </span>
-      <span class="text-ink">{{ auth.userName || 'You' }}</span>
+
+      <span class="text-ink">
+        {{ auth.userName || 'You' }}
+      </span>
     </div>
   </aside>
 </template>
+
+<script setup>
+import { RouterLink } from 'vue-router'
+import Icon from '@/components/ui/Icon.vue'
+import { navGroups } from './navConfig.js'
+import { useAuthStore } from '@/stores/auth.store'
+
+const auth = useAuthStore()
+</script>

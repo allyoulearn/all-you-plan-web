@@ -1,19 +1,3 @@
-<script setup>
-import Button from '@/components/ui/Button.vue'
-
-const props = defineProps({
-  message: { type: Object, required: true },
-})
-
-const emit = defineEmits(['action'])
-
-function formatWhen(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-</script>
-
 <template>
   <!-- User bubble: right-aligned on paper-3 -->
   <div v-if="message.sender === 'user'" class="flex justify-end">
@@ -21,9 +5,8 @@ function formatWhen(iso) {
       <p class="mb-1 text-right font-mono text-[10px] tracking-wide text-muted">
         {{ formatWhen(message.createdAt) }}
       </p>
-      <div
-        class="rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-sm bg-paper-3 px-4 py-3 text-[14px] leading-relaxed text-ink"
-      >
+
+      <div class="rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-sm bg-paper-3 px-4 py-3 text-[14px] leading-relaxed text-ink">
         {{ message.text }}
       </div>
     </div>
@@ -35,6 +18,7 @@ function formatWhen(iso) {
       <p class="mb-1 font-mono text-[10px] tracking-wide text-muted">
         {{ formatWhen(message.createdAt) }}
       </p>
+
       <div
         class="rounded-tl-xl rounded-tr-xl rounded-br-xl rounded-bl-sm px-4 py-3 text-[14px] leading-relaxed"
         :class="
@@ -45,6 +29,7 @@ function formatWhen(iso) {
       >
         {{ message.text }}
       </div>
+
       <div v-if="message.actions && message.actions.length" class="mt-2 flex flex-wrap gap-2">
         <Button
           v-for="action in message.actions"
@@ -59,3 +44,19 @@ function formatWhen(iso) {
     </div>
   </div>
 </template>
+
+<script setup>
+import Button from '@/components/ui/Button.vue'
+
+defineProps({
+  message: { type: Object, required: true },
+})
+
+const emit = defineEmits(['action'])
+
+function formatWhen(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+</script>

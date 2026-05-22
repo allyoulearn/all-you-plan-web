@@ -2,10 +2,10 @@ import { ref, watch, nextTick, onMounted } from 'vue'
 import { useWrenStore } from '@/stores/wren.store'
 
 export const QUICK_PROMPTS = [
-  "What should I focus on?",
+  'What should I focus on?',
   "I'm feeling overwhelmed.",
-  "Plan tomorrow",
-  "I need a rest.",
+  'Plan tomorrow',
+  'I need a rest.'
 ]
 
 /**

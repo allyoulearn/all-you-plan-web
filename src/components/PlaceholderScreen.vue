@@ -1,3 +1,15 @@
+<template>
+  <div>
+    <ScreenHeading :eyebrow="eyebrow" :title="title" :emphasis="emphasis" />
+
+    <Card>
+      <p class="text-[15px] text-ink-2">
+        {{ note }}
+      </p>
+    </Card>
+  </div>
+</template>
+
 <script setup>
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import Card from '@/components/ui/Card.vue'
@@ -9,12 +21,3 @@ defineProps({
   note: { type: String, default: '' },
 })
 </script>
-
-<template>
-  <div>
-    <ScreenHeading :eyebrow="eyebrow" :title="title" :emphasis="emphasis" />
-    <Card>
-      <p class="text-[15px] text-ink-2">{{ note }}</p>
-    </Card>
-  </div>
-</template>

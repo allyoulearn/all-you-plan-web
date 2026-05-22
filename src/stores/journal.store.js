@@ -15,7 +15,7 @@ export const useJournalStore = defineStore('journal', () => {
     try {
       const { data } = await apolloClient.query({
         query: JOURNAL_ENTRIES_QUERY,
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       entries.value = data.journalEntries
     } catch (e) {
@@ -29,7 +29,7 @@ export const useJournalStore = defineStore('journal', () => {
     try {
       await apolloClient.mutate({
         mutation: CREATE_JOURNAL_ENTRY,
-        variables: { date, prompt, pullQuote, body, tags },
+        variables: { date, prompt, pullQuote, body, tags }
       })
       await load()
     } catch (e) {

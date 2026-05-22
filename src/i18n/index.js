@@ -5,7 +5,7 @@ const i18n = createI18n({
   legacy: false,
   locale: localStorage.getItem('ayp_locale') || 'en',
   fallbackLocale: 'en',
-  messages: { en },
+  messages: { en }
 })
 
 export default i18n

@@ -26,12 +26,10 @@ const names = {
   mic: 'MicrophoneIcon',
   bolt: 'BoltIcon',
   'arrow-right': 'ArrowRightIcon',
-  filter: 'FunnelIcon',
+  filter: 'FunnelIcon'
 }
 
 export const outlineIcons = Object.fromEntries(
-  Object.entries(names).map(([k, v]) => [k, Outline[v]]),
+  Object.entries(names).map(([k, v]) => [k, Outline[v]])
 )
-export const solidIcons = Object.fromEntries(
-  Object.entries(names).map(([k, v]) => [k, Solid[v]]),
-)
+export const solidIcons = Object.fromEntries(Object.entries(names).map(([k, v]) => [k, Solid[v]]))

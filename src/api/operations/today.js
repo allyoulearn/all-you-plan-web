@@ -6,9 +6,24 @@ export const TODAY_QUERY = gql`
       date
       sunrise
       sunset
-      kpis { streak todayDone todayTotal focusMinutes activeProjects }
+      kpis {
+        streak
+        todayDone
+        todayTotal
+        focusMinutes
+        activeProjects
+      }
       tasks {
-        id title note scheduledTime done completedAt effortMinutes tag projectId order
+        id
+        title
+        note
+        scheduledTime
+        done
+        completedAt
+        effortMinutes
+        tag
+        projectId
+        order
       }
     }
   }
@@ -16,24 +31,34 @@ export const TODAY_QUERY = gql`
 
 export const COMPLETE_TASK = gql`
   mutation CompleteTask($id: ID!) {
-    completeTask(id: $id) { id done completedAt }
+    completeTask(id: $id) {
+      id
+      done
+      completedAt
+    }
   }
 `
 
 export const CREATE_TASK = gql`
   mutation CreateTask($input: CreateTaskInput!) {
-    createTask(input: $input) { id }
+    createTask(input: $input) {
+      id
+    }
   }
 `
 
 export const RESCHEDULE_TASK = gql`
   mutation RescheduleTask($id: ID!, $scheduledDate: String!, $scheduledTime: String) {
-    rescheduleTask(id: $id, scheduledDate: $scheduledDate, scheduledTime: $scheduledTime) { id }
+    rescheduleTask(id: $id, scheduledDate: $scheduledDate, scheduledTime: $scheduledTime) {
+      id
+    }
   }
 `
 
 export const MOVE_UNFINISHED = gql`
   mutation MoveUnfinished($fromDate: String!) {
-    moveUnfinishedToTomorrow(fromDate: $fromDate) { id }
+    moveUnfinishedToTomorrow(fromDate: $fromDate) {
+      id
+    }
   }
 `

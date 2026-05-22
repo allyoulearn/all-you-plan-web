@@ -2,11 +2,13 @@
   <div>
     <!-- Heading -->
     <h2 class="mb-6 font-serif text-[22px] text-ink">
-      Welcome <em>back.</em>
+      Welcome <em>
+        back.
+      </em>
     </h2>
 
     <!-- Login form -->
-    <form @submit.prevent="handleLogin" class="space-y-4">
+    <form class="space-y-4" @submit.prevent="handleLogin">
       <!-- Email field -->
       <TextField
         v-model="email"
@@ -18,11 +20,15 @@
       <!-- Password field + forgot link -->
       <div>
         <div class="mb-1.5 flex items-center justify-between">
-          <span class="text-[12px] font-medium text-muted">{{ t('auth.password') }}</span>
+          <span class="text-[12px] font-medium text-muted">
+            {{ t('auth.password') }}
+          </span>
+
           <router-link to="/auth/forgot-password" class="text-xs text-accent hover:underline">
             {{ t('auth.forgotPassword') }}
           </router-link>
         </div>
+
         <TextField
           v-model="password"
           type="password"
@@ -31,10 +37,18 @@
       </div>
 
       <!-- Error message -->
-      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">
+        {{ error }}
+      </p>
 
       <!-- Submit button -->
-      <Button variant="accent" type="submit" :disabled="loading" size="md" class="w-full justify-center">
+      <Button
+        variant="accent"
+        type="submit"
+        :disabled="loading"
+        size="md"
+        class="w-full justify-center"
+      >
         {{ loading ? t('common.loading') : t('auth.loginCta') }}
       </Button>
 

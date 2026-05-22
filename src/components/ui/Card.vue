@@ -1,10 +1,3 @@
-<script setup>
-defineProps({
-  variant: { type: String, default: 'default' },
-  as: { type: String, default: 'div' },
-})
-</script>
-
 <template>
   <component
     :is="as"
@@ -16,3 +9,10 @@ defineProps({
     <slot />
   </component>
 </template>
+
+<script setup>
+defineProps({
+  variant: { type: String, default: 'default' },
+  as: { type: String, default: 'div' },
+})
+</script>

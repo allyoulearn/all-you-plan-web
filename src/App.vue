@@ -1,5 +1,6 @@
 <template>
   <Toaster position="top-right" />
+
   <RouterView />
 </template>
 

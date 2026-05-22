@@ -5,7 +5,12 @@ export const CHORES_QUERY = gql`
     chores {
       id
       title
-      cadence { type daysOfWeek interval dayOfMonth }
+      cadence {
+        type
+        daysOfWeek
+        interval
+        dayOfMonth
+      }
       streak
       bestStreak
       lastCompletedOn

@@ -1,13 +1,3 @@
-<script setup>
-import { ref } from 'vue'
-import Icon from '@/components/ui/Icon.vue'
-import WrenBubble from '@/components/wren/WrenBubble.vue'
-import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
-
-const bodyRef = ref(null)
-const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
-</script>
-
 <template>
   <aside class="flex h-screen flex-col overflow-hidden border-l border-rule-soft bg-paper">
     <!-- Header -->
@@ -15,10 +5,17 @@ const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(b
       <span class="grid h-9 w-9 place-items-center rounded-pill bg-accent font-serif text-[20px] italic text-accent-ink">
         W
       </span>
+
       <div>
-        <p class="font-serif text-[22px] italic leading-none text-ink">Wren</p>
-        <p class="mt-0.5 text-[12px] text-muted">Your coach</p>
+        <p class="font-serif text-[22px] italic leading-none text-ink">
+          Wren
+        </p>
+
+        <p class="mt-0.5 text-[12px] text-muted">
+          Your coach
+        </p>
       </div>
+
       <span class="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted">
         <span class="h-[7px] w-[7px] rounded-pill bg-ok" />
         live
@@ -27,7 +24,10 @@ const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(b
 
     <!-- Messages body -->
     <div ref="bodyRef" class="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
-      <div v-if="store.loading" class="text-center text-[13px] text-muted">Loading…</div>
+      <div v-if="store.loading" class="text-center text-[13px] text-muted">
+        Loading…
+      </div>
+
       <template v-else-if="store.messages.length">
         <WrenBubble
           v-for="msg in store.messages"
@@ -36,8 +36,11 @@ const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(b
           @action="fillFromChip"
         />
       </template>
+
       <div v-else class="flex flex-1 items-center justify-center text-center">
-        <p class="text-[13px] text-muted">Say hello to Wren.</p>
+        <p class="text-[13px] text-muted">
+          Say hello to Wren.
+        </p>
       </div>
     </div>
 
@@ -62,6 +65,7 @@ const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(b
           class="flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted"
           @keydown="handleKeydown"
         />
+
         <button
           class="rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition-opacity disabled:opacity-40"
           :disabled="!draft.trim() || store.sending"
@@ -74,3 +78,12 @@ const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(b
     </div>
   </aside>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+import WrenBubble from '@/components/wren/WrenBubble.vue'
+import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
+
+const bodyRef = ref(null)
+const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+</script>

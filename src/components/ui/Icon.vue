@@ -1,3 +1,12 @@
+<template>
+  <component
+    :is="component"
+    v-if="component"
+    :style="{ width: `${size}px`, height: `${size}px` }"
+    aria-hidden="true"
+  />
+</template>
+
 <script setup>
 import { computed } from 'vue'
 import { outlineIcons, solidIcons } from './iconMap.js'
@@ -12,12 +21,3 @@ const component = computed(
   () => (props.solid ? solidIcons : outlineIcons)[props.name] || null,
 )
 </script>
-
-<template>
-  <component
-    :is="component"
-    v-if="component"
-    :style="{ width: `${size}px`, height: `${size}px` }"
-    aria-hidden="true"
-  />
-</template>

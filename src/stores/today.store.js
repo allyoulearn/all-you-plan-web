@@ -15,7 +15,7 @@ export const useTodayStore = defineStore('today', () => {
       const { data } = await apolloClient.query({
         query: TODAY_QUERY,
         variables: { date: date ?? null },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       view.value = data.today
     } catch (e) {
@@ -32,7 +32,10 @@ export const useTodayStore = defineStore('today', () => {
 
   async function moveUnfinished() {
     if (!view.value) return
-    await apolloClient.mutate({ mutation: MOVE_UNFINISHED, variables: { fromDate: view.value.date } })
+    await apolloClient.mutate({
+      mutation: MOVE_UNFINISHED,
+      variables: { fromDate: view.value.date }
+    })
     await load(view.value.date)
   }
 

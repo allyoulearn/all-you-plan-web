@@ -1,3 +1,125 @@
+<template>
+  <div>
+    <ScreenHeading
+      eyebrow="Looking back · Calendar"
+      :title="MONTH_NAMES[currentMonth]"
+      :emphasis="`${currentYear}.`"
+    />
+
+    <div v-if="store.loading" class="text-[13px] text-muted">
+      Loading…
+    </div>
+
+    <div v-else-if="store.error" class="text-[13px] text-bad">
+      {{ store.error }}
+    </div>
+
+    <!-- Month navigation -->
+    <div class="mb-5 flex items-center gap-3">
+      <IconButton
+        icon="chevron-left"
+        :size="30"
+        variant="ghost"
+        aria-label="Previous month"
+        @click="prevMonth"
+      />
+
+      <span class="flex-1 text-center font-serif text-[22px] italic text-ink">
+        {{ MONTH_NAMES[currentMonth] }} {{ currentYear }}
+      </span>
+
+      <IconButton
+        icon="chevron-right"
+        :size="30"
+        variant="ghost"
+        aria-label="Next month"
+        @click="nextMonth"
+      />
+    </div>
+
+    <!-- Calendar grid -->
+    <Card>
+      <!-- Weekday headers -->
+      <div class="grid grid-cols-7 gap-0.5 pb-2">
+        <div
+          v-for="h in DAY_HEADERS"
+          :key="h"
+          class="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted"
+        >
+          {{ h }}
+        </div>
+      </div>
+
+      <!-- Day cells (6 rows x 7 cols) -->
+      <div class="grid grid-cols-7 gap-0.5">
+        <button
+          v-for="(cell, idx) in calendarDays"
+          :key="idx"
+          class="relative flex min-h-[52px] flex-col items-center rounded-sm px-1 pt-1.5 pb-1 text-[13px] transition-colors"
+          :class="{
+            'opacity-30': cell.adjacent,
+            'bg-accent text-accent-ink font-medium': isToday(cell) && !isSelected(cell),
+            'bg-ink text-paper font-medium ring-2 ring-ink ring-offset-1': isSelected(cell),
+            'hover:bg-paper-3': !cell.adjacent && !isToday(cell) && !isSelected(cell),
+          }"
+          :disabled="cell.adjacent"
+          @click="selectDay(cell)"
+        >
+          <span>
+            {{ cell.day }}
+          </span>
+          <!-- Event dots -->
+          <div class="mt-1 flex gap-0.5">
+            <span
+              v-for="ev in eventsForDay(cell.day, cell.adjacent)"
+              :key="ev.id"
+              class="h-1.5 w-1.5 rounded-full"
+              :class="ev.accent ? 'bg-accent' : 'bg-muted'"
+            />
+          </div>
+        </button>
+      </div>
+    </Card>
+
+    <!-- Agenda -->
+    <template v-if="selectedDay">
+      <div class="mb-3 mt-8 flex items-baseline gap-3">
+        <span class="text-[13px] font-medium text-ink">
+          {{ agendaLabel }}
+        </span>
+
+        <span class="flex-1 border-t border-rule-soft" />
+
+        <span class="font-mono text-[11px] text-muted">
+          [{{ agendaEvents.length }}]
+        </span>
+      </div>
+
+      <div v-if="agendaEvents.length === 0" class="text-[13px] text-muted">
+        No events for this day.
+      </div>
+
+      <div v-else class="rounded-md bg-paper-2 px-2.5 py-1 shadow-sm">
+        <div
+          v-for="ev in agendaEvents"
+          :key="ev.id"
+          class="flex items-center gap-3 border-b border-rule-soft py-3 last:border-0"
+          :class="ev.accent ? 'text-accent' : 'text-ink'"
+        >
+          <span
+            class="h-2 w-2 shrink-0 rounded-full"
+            :class="ev.accent ? 'bg-accent' : 'bg-muted'"
+          />
+
+          <span class="font-mono text-[13px]">
+            {{ ev.title }}
+          </span>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
+
 <script setup>
 import { onMounted, ref, computed } from 'vue'
 import { useCalendarStore } from '@/stores/calendar.store'
@@ -116,94 +238,3 @@ function selectDay(cell) {
   selectedDay.value = cell.day
 }
 </script>
-
-<template>
-  <div>
-    <ScreenHeading
-      eyebrow="Looking back · Calendar"
-      :title="MONTH_NAMES[currentMonth]"
-      :emphasis="`${currentYear}.`"
-    />
-
-    <div v-if="store.loading" class="text-[13px] text-muted">Loading…</div>
-    <div v-else-if="store.error" class="text-[13px] text-bad">{{ store.error }}</div>
-
-    <!-- Month navigation -->
-    <div class="mb-5 flex items-center gap-3">
-      <IconButton icon="chevron-left" :size="30" variant="ghost" aria-label="Previous month" @click="prevMonth" />
-      <span class="flex-1 text-center font-serif text-[22px] italic text-ink">
-        {{ MONTH_NAMES[currentMonth] }} {{ currentYear }}
-      </span>
-      <IconButton icon="chevron-right" :size="30" variant="ghost" aria-label="Next month" @click="nextMonth" />
-    </div>
-
-    <!-- Calendar grid -->
-    <Card>
-      <!-- Weekday headers -->
-      <div class="grid grid-cols-7 gap-0.5 pb-2">
-        <div
-          v-for="h in DAY_HEADERS"
-          :key="h"
-          class="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted"
-        >
-          {{ h }}
-        </div>
-      </div>
-
-      <!-- Day cells (6 rows x 7 cols) -->
-      <div class="grid grid-cols-7 gap-0.5">
-        <button
-          v-for="(cell, idx) in calendarDays"
-          :key="idx"
-          class="relative flex min-h-[52px] flex-col items-center rounded-sm px-1 pt-1.5 pb-1 text-[13px] transition-colors"
-          :class="{
-            'opacity-30': cell.adjacent,
-            'bg-accent text-accent-ink font-medium': isToday(cell) && !isSelected(cell),
-            'bg-ink text-paper font-medium ring-2 ring-ink ring-offset-1': isSelected(cell),
-            'hover:bg-paper-3': !cell.adjacent && !isToday(cell) && !isSelected(cell),
-          }"
-          :disabled="cell.adjacent"
-          @click="selectDay(cell)"
-        >
-          <span>{{ cell.day }}</span>
-          <!-- Event dots -->
-          <div class="mt-1 flex gap-0.5">
-            <span
-              v-for="ev in eventsForDay(cell.day, cell.adjacent)"
-              :key="ev.id"
-              class="h-1.5 w-1.5 rounded-full"
-              :class="ev.accent ? 'bg-accent' : 'bg-muted'"
-            />
-          </div>
-        </button>
-      </div>
-    </Card>
-
-    <!-- Agenda -->
-    <template v-if="selectedDay">
-      <div class="mb-3 mt-8 flex items-baseline gap-3">
-        <span class="text-[13px] font-medium text-ink">{{ agendaLabel }}</span>
-        <span class="flex-1 border-t border-rule-soft" />
-        <span class="font-mono text-[11px] text-muted">[{{ agendaEvents.length }}]</span>
-      </div>
-
-      <div v-if="agendaEvents.length === 0" class="text-[13px] text-muted">
-        No events for this day.
-      </div>
-      <div v-else class="rounded-md bg-paper-2 px-2.5 py-1 shadow-sm">
-        <div
-          v-for="ev in agendaEvents"
-          :key="ev.id"
-          class="flex items-center gap-3 border-b border-rule-soft py-3 last:border-0"
-          :class="ev.accent ? 'text-accent' : 'text-ink'"
-        >
-          <span
-            class="h-2 w-2 shrink-0 rounded-full"
-            :class="ev.accent ? 'bg-accent' : 'bg-muted'"
-          />
-          <span class="font-mono text-[13px]">{{ ev.title }}</span>
-        </div>
-      </div>
-    </template>
-  </div>
-</template>

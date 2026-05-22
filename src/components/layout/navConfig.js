@@ -4,8 +4,8 @@ export const navGroups = [
     items: [
       { to: '/', icon: 'today', label: 'Today', key: 'T' },
       { to: '/chores', icon: 'chores', label: 'Chores', key: 'C' },
-      { to: '/projects', icon: 'projects', label: 'Projects', key: 'P' },
-    ],
+      { to: '/projects', icon: 'projects', label: 'Projects', key: 'P' }
+    ]
   },
   {
     label: 'Looking back',
@@ -13,18 +13,18 @@ export const navGroups = [
       { to: '/calendar', icon: 'calendar', label: 'Calendar', key: 'K' },
       { to: '/stats', icon: 'stats', label: 'Stats', key: 'S' },
       { to: '/journal', icon: 'journal', label: 'Journal', key: 'J' },
-      { to: '/inbox', icon: 'inbox', label: 'Inbox', key: 'I' },
-    ],
+      { to: '/inbox', icon: 'inbox', label: 'Inbox', key: 'I' }
+    ]
   },
   {
     label: 'With Wren',
     items: [
       { to: '/wren', icon: 'chat', label: 'Chat', key: 'W' },
-      { to: '/review', icon: 'review', label: 'Daily review', key: 'R' },
-    ],
+      { to: '/review', icon: 'review', label: 'Daily review', key: 'R' }
+    ]
   },
   {
     label: 'System',
-    items: [{ to: '/settings', icon: 'settings', label: 'Settings', key: ',' }],
-  },
+    items: [{ to: '/settings', icon: 'settings', label: 'Settings', key: ',' }]
+  }
 ]

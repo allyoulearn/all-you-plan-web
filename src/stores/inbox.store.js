@@ -16,7 +16,7 @@ export const useInboxStore = defineStore('inbox', () => {
       const { data } = await apolloClient.query({
         query: INBOX_ITEMS_QUERY,
         variables: { triaged: false },
-        fetchPolicy: 'network-only',
+        fetchPolicy: 'network-only'
       })
       items.value = data.inboxItems
     } catch (e) {
@@ -30,7 +30,7 @@ export const useInboxStore = defineStore('inbox', () => {
     try {
       await apolloClient.mutate({
         mutation: CREATE_INBOX_ITEM,
-        variables: { text, source: 'web' },
+        variables: { text, source: 'web' }
       })
       await load()
     } catch (e) {

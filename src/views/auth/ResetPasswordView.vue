@@ -2,12 +2,16 @@
   <div>
     <!-- Heading -->
     <h2 class="mb-6 font-serif text-[22px] text-ink">
-      Reset your <em>password.</em>
+      Reset your <em>
+        password.
+      </em>
     </h2>
 
     <!-- Token missing / invalid error state -->
     <div v-if="!token" class="space-y-3 text-center">
-      <p class="text-sm text-bad">{{ t('auth.resetTokenInvalid') }}</p>
+      <p class="text-sm text-bad">
+        {{ t('auth.resetTokenInvalid') }}
+      </p>
 
       <router-link to="/auth/forgot-password" class="text-sm text-accent hover:underline">
         {{ t('auth.forgotPasswordCta') }}
@@ -15,7 +19,7 @@
     </div>
 
     <!-- Reset form -->
-    <form v-else @submit.prevent="handleSubmit" class="space-y-4">
+    <form v-else class="space-y-4" @submit.prevent="handleSubmit">
       <!-- New password field -->
       <TextField
         v-model="newPassword"
@@ -52,10 +56,18 @@
       </ul>
 
       <!-- Error message -->
-      <p v-if="error" class="text-sm text-bad">{{ error }}</p>
+      <p v-if="error" class="text-sm text-bad">
+        {{ error }}
+      </p>
 
       <!-- Submit button -->
-      <Button variant="accent" type="submit" :disabled="loading || !isPasswordValid" size="md" class="w-full justify-center">
+      <Button
+        variant="accent"
+        type="submit"
+        :disabled="loading || !isPasswordValid"
+        size="md"
+        class="w-full justify-center"
+      >
         {{ loading ? t('common.loading') : t('auth.resetPasswordCta') }}
       </Button>
 

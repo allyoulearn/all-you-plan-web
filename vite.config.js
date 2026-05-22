@@ -6,13 +6,13 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-    },
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
   },
   css: {
     preprocessorOptions: {
-      scss: { api: 'modern-compiler' },
-    },
+      scss: { api: 'modern-compiler' }
+    }
   },
   server: {
     port: 3100,
@@ -21,8 +21,8 @@ export default defineConfig({
       '/graphql': {
         target: 'http://localhost:4100',
         changeOrigin: true,
-        ws: true,
-      },
-    },
-  },
+        ws: true
+      }
+    }
+  }
 })

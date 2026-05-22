@@ -1,9 +1,3 @@
-<script setup>
-defineProps({
-  variant: { type: String, default: 'default' },
-})
-</script>
-
 <template>
   <span
     class="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[11px] font-medium"
@@ -14,6 +8,13 @@ defineProps({
     }"
   >
     <span v-if="variant === 'dot'" class="h-1.5 w-1.5 rounded-pill bg-accent" />
+
     <slot />
   </span>
 </template>
+
+<script setup>
+defineProps({
+  variant: { type: String, default: 'default' },
+})
+</script>

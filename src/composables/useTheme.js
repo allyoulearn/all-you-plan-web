@@ -13,7 +13,7 @@ function apply() {
   el.setAttribute('data-mode', mode.value)
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ themeName: themeName.value, mode: mode.value }),
+    JSON.stringify({ themeName: themeName.value, mode: mode.value })
   )
 }
 
