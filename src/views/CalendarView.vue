@@ -6,16 +6,16 @@
       :emphasis="`${currentYear}.`"
     />
 
-    <div v-if="store.loading" class="text-[13px] text-muted">
+    <div v-if="store.loading" class="calendar-view__status">
       Loading…
     </div>
 
-    <div v-else-if="store.error" class="text-[13px] text-bad">
+    <div v-else-if="store.error" class="calendar-view__status calendar-view__status--error">
       {{ store.error }}
     </div>
 
     <!-- Month navigation -->
-    <div class="mb-5 flex items-center gap-3">
+    <div class="calendar-view__nav">
       <IconButton
         icon="chevron-left"
         :size="30"
@@ -24,7 +24,7 @@
         @click="prevMonth"
       />
 
-      <span class="flex-1 text-center font-serif text-[22px] italic text-ink">
+      <span class="calendar-view__nav-title">
         {{ MONTH_NAMES[currentMonth] }} {{ currentYear }}
       </span>
 
@@ -40,27 +40,27 @@
     <!-- Calendar grid -->
     <Card>
       <!-- Weekday headers -->
-      <div class="grid grid-cols-7 gap-0.5 pb-2">
+      <div class="calendar-view__weekday-row">
         <div
           v-for="h in DAY_HEADERS"
           :key="h"
-          class="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted"
+          class="calendar-view__weekday-header"
         >
           {{ h }}
         </div>
       </div>
 
       <!-- Day cells (6 rows x 7 cols) -->
-      <div class="grid grid-cols-7 gap-0.5">
+      <div class="calendar-view__day-grid">
         <button
           v-for="(cell, idx) in calendarDays"
           :key="idx"
-          class="relative flex min-h-[52px] flex-col items-center rounded-sm px-1 pt-1.5 pb-1 text-[13px] transition-colors"
+          class="calendar-view__day-cell"
           :class="{
-            'opacity-30': cell.adjacent,
-            'bg-accent text-accent-ink font-medium': isToday(cell) && !isSelected(cell),
-            'bg-ink text-paper font-medium ring-2 ring-ink ring-offset-1': isSelected(cell),
-            'hover:bg-paper-3': !cell.adjacent && !isToday(cell) && !isSelected(cell),
+            'calendar-view__day-cell--adjacent': cell.adjacent,
+            'calendar-view__day-cell--today': isToday(cell) && !isSelected(cell),
+            'calendar-view__day-cell--selected': isSelected(cell),
+            'calendar-view__day-cell--default': !cell.adjacent && !isToday(cell) && !isSelected(cell),
           }"
           :disabled="cell.adjacent"
           @click="selectDay(cell)"
@@ -69,12 +69,12 @@
             {{ cell.day }}
           </span>
           <!-- Event dots -->
-          <div class="mt-1 flex gap-0.5">
+          <div class="calendar-view__dots">
             <span
               v-for="ev in eventsForDay(cell.day, cell.adjacent)"
               :key="ev.id"
-              class="h-1.5 w-1.5 rounded-full"
-              :class="ev.accent ? 'bg-accent' : 'bg-muted'"
+              class="calendar-view__dot"
+              :class="ev.accent ? 'calendar-view__dot--accent' : 'calendar-view__dot--muted'"
             />
           </div>
         </button>
@@ -83,35 +83,35 @@
 
     <!-- Agenda -->
     <template v-if="selectedDay">
-      <div class="mb-3 mt-8 flex items-baseline gap-3">
-        <span class="text-[13px] font-medium text-ink">
+      <div class="calendar-view__agenda-header">
+        <span class="calendar-view__agenda-title">
           {{ agendaLabel }}
         </span>
 
-        <span class="flex-1 border-t border-rule-soft" />
+        <span class="calendar-view__agenda-rule" />
 
-        <span class="font-mono text-[11px] text-muted">
+        <span class="calendar-view__agenda-count">
           [{{ agendaEvents.length }}]
         </span>
       </div>
 
-      <div v-if="agendaEvents.length === 0" class="text-[13px] text-muted">
+      <div v-if="agendaEvents.length === 0" class="calendar-view__status">
         No events for this day.
       </div>
 
-      <div v-else class="rounded-md bg-paper-2 px-2.5 py-1 shadow-sm">
+      <div v-else class="calendar-view__agenda-list">
         <div
           v-for="ev in agendaEvents"
           :key="ev.id"
-          class="flex items-center gap-3 border-b border-rule-soft py-3 last:border-0"
-          :class="ev.accent ? 'text-accent' : 'text-ink'"
+          class="calendar-view__agenda-item"
+          :class="ev.accent ? 'calendar-view__agenda-item--accent' : 'calendar-view__agenda-item--default'"
         >
           <span
-            class="h-2 w-2 shrink-0 rounded-full"
-            :class="ev.accent ? 'bg-accent' : 'bg-muted'"
+            class="calendar-view__event-dot"
+            :class="ev.accent ? 'calendar-view__event-dot--accent' : 'calendar-view__event-dot--muted'"
           />
 
-          <span class="font-mono text-[13px]">
+          <span class="calendar-view__event-title">
             {{ ev.title }}
           </span>
         </div>
@@ -120,20 +120,13 @@
   </div>
 </template>
 
-<script setup>
+<script>
+/** CalendarView — monthly grid with event dots and a day-level agenda panel. */
 import { onMounted, ref, computed } from 'vue'
-import { useCalendarStore } from '@/stores/calendar.store'
+import { useCalendarStore } from '@/stores/calendar.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 import Card from '@/components/ui/Card.vue'
-
-const store = useCalendarStore()
-
-const today = new Date()
-const currentYear = ref(today.getFullYear())
-const currentMonth = ref(today.getMonth()) // 0-indexed
-
-const selectedDay = ref(today.getDate())
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -141,100 +134,282 @@ const MONTH_NAMES = [
 ]
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-function monthKey(year, month) {
-  return `${year}-${String(month + 1).padStart(2, '0')}`
-}
+export default {
+  name: 'CalendarView',
+  components: { ScreenHeading, IconButton, Card },
+  setup() {
+    // -- State --
+    const store = useCalendarStore()
 
-onMounted(() => {
-  store.load(monthKey(currentYear.value, currentMonth.value))
-})
+    const today = new Date()
+    const currentYear = ref(today.getFullYear())
+    const currentMonth = ref(today.getMonth()) // 0-indexed
+    const selectedDay = ref(today.getDate())
 
-function prevMonth() {
-  if (currentMonth.value === 0) {
-    currentMonth.value = 11
-    currentYear.value--
-  } else {
-    currentMonth.value--
+    // -- Computed --
+
+    /** Builds the 6-row calendar grid (always 42 cells). */
+    const calendarDays = computed(() => {
+      const year = currentYear.value
+      const month = currentMonth.value
+      const firstDow = new Date(year, month, 1).getDay() // 0=Sun
+      const daysInMonth = new Date(year, month + 1, 0).getDate()
+      const daysInPrevMonth = new Date(year, month, 0).getDate()
+
+      const cells = []
+
+      // Leading days from previous month
+      for (let i = firstDow - 1; i >= 0; i--) {
+        cells.push({ day: daysInPrevMonth - i, adjacent: true, month: month - 1 < 0 ? 11 : month - 1 })
+      }
+
+      // Current month days
+      for (let d = 1; d <= daysInMonth; d++) {
+        cells.push({ day: d, adjacent: false, month })
+      }
+
+      // Trailing days from next month
+      const trailing = 42 - cells.length
+      for (let d = 1; d <= trailing; d++) {
+        cells.push({ day: d, adjacent: true, month: month + 1 > 11 ? 0 : month + 1 })
+      }
+
+      return cells
+    })
+
+    /** Events for the currently selected day. */
+    const agendaEvents = computed(() => {
+      if (!selectedDay.value) return []
+      const dayStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}-${String(selectedDay.value).padStart(2, '0')}`
+      return store.events.filter((e) => e.date === dayStr)
+    })
+
+    /** Formatted label for the agenda header. */
+    const agendaLabel = computed(() => {
+      if (!selectedDay.value) return ''
+      const date = new Date(currentYear.value, currentMonth.value, selectedDay.value)
+      return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    })
+
+    // -- Lifecycle --
+    onMounted(() => {
+      store.load(monthKey(currentYear.value, currentMonth.value))
+    })
+
+    // -- Function definitions --
+
+    /**
+     * Returns the YYYY-MM key for a given year and 0-indexed month.
+     * @param {number} year
+     * @param {number} month - 0-indexed
+     * @returns {string}
+     */
+    function monthKey(year, month) {
+      return `${year}-${String(month + 1).padStart(2, '0')}`
+    }
+
+    /** Navigates to the previous month and reloads store data. */
+    function prevMonth() {
+      if (currentMonth.value === 0) {
+        currentMonth.value = 11
+        currentYear.value--
+      } else {
+        currentMonth.value--
+      }
+      selectedDay.value = null
+      store.load(monthKey(currentYear.value, currentMonth.value))
+    }
+
+    /** Navigates to the next month and reloads store data. */
+    function nextMonth() {
+      if (currentMonth.value === 11) {
+        currentMonth.value = 0
+        currentYear.value++
+      } else {
+        currentMonth.value++
+      }
+      selectedDay.value = null
+      store.load(monthKey(currentYear.value, currentMonth.value))
+    }
+
+    /**
+     * Returns true if the given cell represents today's date.
+     * @param {{ day: number, adjacent: boolean }} cell
+     * @returns {boolean}
+     */
+    function isToday(cell) {
+      if (cell.adjacent) return false
+      return (
+        cell.day === today.getDate() &&
+        currentMonth.value === today.getMonth() &&
+        currentYear.value === today.getFullYear()
+      )
+    }
+
+    /**
+     * Returns true if the given cell is the currently selected day.
+     * @param {{ day: number, adjacent: boolean }} cell
+     * @returns {boolean}
+     */
+    function isSelected(cell) {
+      if (cell.adjacent) return false
+      return cell.day === selectedDay.value
+    }
+
+    /**
+     * Returns up to 3 events for a given day number (current month only).
+     * @param {number} day
+     * @param {boolean} adjacent
+     * @returns {Array}
+     */
+    function eventsForDay(day, adjacent) {
+      if (adjacent) return []
+      const dayStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      return store.events.filter((e) => e.date === dayStr).slice(0, 3)
+    }
+
+    /**
+     * Selects a day cell; does nothing for adjacent-month cells.
+     * @param {{ day: number, adjacent: boolean }} cell
+     */
+    function selectDay(cell) {
+      if (cell.adjacent) return
+      selectedDay.value = cell.day
+    }
+
+    return {
+      MONTH_NAMES,
+      DAY_HEADERS,
+      store,
+      currentYear,
+      currentMonth,
+      selectedDay,
+      calendarDays,
+      agendaEvents,
+      agendaLabel,
+      prevMonth,
+      nextMonth,
+      isToday,
+      isSelected,
+      eventsForDay,
+      selectDay,
+    }
   }
-  selectedDay.value = null
-  store.load(monthKey(currentYear.value, currentMonth.value))
-}
-
-function nextMonth() {
-  if (currentMonth.value === 11) {
-    currentMonth.value = 0
-    currentYear.value++
-  } else {
-    currentMonth.value++
-  }
-  selectedDay.value = null
-  store.load(monthKey(currentYear.value, currentMonth.value))
-}
-
-// Build the 6-row calendar grid (always 42 cells)
-const calendarDays = computed(() => {
-  const year = currentYear.value
-  const month = currentMonth.value
-  const firstDow = new Date(year, month, 1).getDay() // 0=Sun
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const daysInPrevMonth = new Date(year, month, 0).getDate()
-
-  const cells = []
-
-  // Leading days from previous month
-  for (let i = firstDow - 1; i >= 0; i--) {
-    cells.push({ day: daysInPrevMonth - i, adjacent: true, month: month - 1 < 0 ? 11 : month - 1 })
-  }
-
-  // Current month days
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, adjacent: false, month })
-  }
-
-  // Trailing days from next month
-  const trailing = 42 - cells.length
-  for (let d = 1; d <= trailing; d++) {
-    cells.push({ day: d, adjacent: true, month: month + 1 > 11 ? 0 : month + 1 })
-  }
-
-  return cells
-})
-
-function isToday(cell) {
-  if (cell.adjacent) return false
-  return (
-    cell.day === today.getDate() &&
-    currentMonth.value === today.getMonth() &&
-    currentYear.value === today.getFullYear()
-  )
-}
-
-function isSelected(cell) {
-  if (cell.adjacent) return false
-  return cell.day === selectedDay.value
-}
-
-// Events keyed by day number (current month only)
-function eventsForDay(day, adjacent) {
-  if (adjacent) return []
-  const dayStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-  return store.events.filter((e) => e.date === dayStr).slice(0, 3)
-}
-
-const agendaEvents = computed(() => {
-  if (!selectedDay.value) return []
-  const dayStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}-${String(selectedDay.value).padStart(2, '0')}`
-  return store.events.filter((e) => e.date === dayStr)
-})
-
-const agendaLabel = computed(() => {
-  if (!selectedDay.value) return ''
-  const date = new Date(currentYear.value, currentMonth.value, selectedDay.value)
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-})
-
-function selectDay(cell) {
-  if (cell.adjacent) return
-  selectedDay.value = cell.day
 }
 </script>
+
+<style lang="scss" scoped>
+.calendar-view {
+  &__status {
+    @apply text-[13px] text-muted;
+
+    &--error {
+      @apply text-bad;
+    }
+  }
+
+  &__nav {
+    @apply mb-5 flex items-center gap-3;
+  }
+
+  &__nav-title {
+    @apply flex-1 text-center font-serif text-[22px] italic text-ink;
+  }
+
+  &__weekday-row {
+    @apply grid grid-cols-7 gap-0.5 pb-2;
+  }
+
+  &__weekday-header {
+    @apply text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted;
+  }
+
+  &__day-grid {
+    @apply grid grid-cols-7 gap-0.5;
+  }
+
+  &__day-cell {
+    @apply relative flex min-h-[52px] flex-col items-center rounded-sm px-1 pt-1.5 pb-1 text-[13px] transition-colors;
+
+    &--adjacent {
+      @apply opacity-30;
+    }
+
+    &--today {
+      @apply bg-accent text-accent-ink font-medium;
+    }
+
+    &--selected {
+      @apply bg-ink text-paper font-medium ring-2 ring-ink ring-offset-1;
+    }
+
+    &--default {
+      @apply hover:bg-paper-3;
+    }
+  }
+
+  &__dots {
+    @apply mt-1 flex gap-0.5;
+  }
+
+  &__dot {
+    @apply h-1.5 w-1.5 rounded-full;
+
+    &--accent {
+      @apply bg-accent;
+    }
+
+    &--muted {
+      @apply bg-muted;
+    }
+  }
+
+  &__agenda-header {
+    @apply mb-3 mt-8 flex items-baseline gap-3;
+  }
+
+  &__agenda-title {
+    @apply text-[13px] font-medium text-ink;
+  }
+
+  &__agenda-rule {
+    @apply flex-1 border-t border-rule-soft;
+  }
+
+  &__agenda-count {
+    @apply font-mono text-[11px] text-muted;
+  }
+
+  &__agenda-list {
+    @apply rounded-md bg-paper-2 px-2.5 py-1 shadow-sm;
+  }
+
+  &__agenda-item {
+    @apply flex items-center gap-3 border-b border-rule-soft py-3 last:border-0;
+
+    &--accent {
+      @apply text-accent;
+    }
+
+    &--default {
+      @apply text-ink;
+    }
+  }
+
+  &__event-dot {
+    @apply h-2 w-2 shrink-0 rounded-full;
+
+    &--accent {
+      @apply bg-accent;
+    }
+
+    &--muted {
+      @apply bg-muted;
+    }
+  }
+
+  &__event-title {
+    @apply font-mono text-[13px];
+  }
+}
+</style>

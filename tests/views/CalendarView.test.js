@@ -63,7 +63,7 @@ describe('CalendarView', () => {
     it('shows event dots for the current month', () => {
       const wrapper = mountCalendar({ events: MAY_2026_EVENTS })
       // Event dot spans are rendered inside button cells
-      const dots = wrapper.findAll('span.rounded-full')
+      const dots = wrapper.findAll('span.calendar-view__dot')
       // 2 events on May 15, 1 on May 21 = 3 dots max (but sliced at 3 per day)
       expect(dots.length).toBeGreaterThanOrEqual(1)
     })
@@ -120,7 +120,7 @@ describe('CalendarView', () => {
         { id: 'e4', date: '2026-05-10', title: 'D', accent: false }
       ]
       const wrapper = mountCalendar({ events: manyEvents })
-      const dots = wrapper.findAll('span.rounded-full')
+      const dots = wrapper.findAll('span.calendar-view__dot')
       // slice(0,3) means max 3 dots for a single day
       expect(dots.length).toBeLessThanOrEqual(3)
     })
