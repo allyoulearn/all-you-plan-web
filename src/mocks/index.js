@@ -4,7 +4,25 @@
  * field name. Consumed by the mock link in `src/api/apollo.js`.
  */
 import { registry as auth } from './fixtures/auth.js'
+import { registry as today } from './fixtures/today.js'
+import { registry as chores } from './fixtures/chores.js'
+import { registry as projects } from './fixtures/projects.js'
+import { registry as calendar } from './fixtures/calendar.js'
+import { registry as stats } from './fixtures/stats.js'
+import { registry as journal } from './fixtures/journal.js'
+import { registry as inbox } from './fixtures/inbox.js'
+import { registry as review } from './fixtures/review.js'
+import { registry as wren } from './fixtures/wren.js'
 
 export const mockRegistry = {
-  ...auth
+  ...auth,
+  ...today,
+  ...chores,
+  ...projects,
+  ...calendar,
+  ...stats,
+  ...journal,
+  ...inbox,
+  ...review,
+  ...wren
 }
