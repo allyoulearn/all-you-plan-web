@@ -214,6 +214,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Development-only sign-in. Establishes a mock authenticated session with
+   * no API call, so the authenticated app can be reached without a running
+   * backend. No-op outside dev builds.
+   */
+  function devLogin() {
+    if (!import.meta.env.DEV) return
+    setAuth({
+      accessToken: 'dev-mock-token',
+      user: {
+        id: 'dev-user',
+        name: 'Dev Tester',
+        email: 'dev@allyouplan.test',
+        settings: {}
+      }
+    })
+  }
+
   return {
     user,
     accessToken,
@@ -230,6 +248,7 @@ export const useAuthStore = defineStore('auth', () => {
     updateProfile,
     updateSettings,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    devLogin
   }
 })

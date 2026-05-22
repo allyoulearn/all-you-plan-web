@@ -60,6 +60,16 @@
         </router-link>
       </p>
     </form>
+
+    <!-- Dev-only quick login: skips the backend, dev builds only -->
+    <Button
+      v-if="isDev"
+      variant="ghost"
+      class="login-view__dev"
+      @click="handleDevLogin"
+    >
+      Dev sign-in (skip backend)
+    </Button>
   </div>
 </template>
 
@@ -86,14 +96,17 @@ export default {
     const password = ref('')
     const error = ref('')
     const loading = ref(false)
+    const isDev = import.meta.env.DEV
 
     return {
       t,
+      isDev,
       email,
       password,
       error,
       loading,
       handleLogin,
+      handleDevLogin,
     }
 
     // -- Function definitions --
@@ -114,6 +127,16 @@ export default {
       } finally {
         loading.value = false
       }
+    }
+
+    /**
+     * Development-only sign-in. Establishes a mock session via the auth
+     * store, then navigates into the app. The triggering button renders
+     * only in dev builds.
+     */
+    function handleDevLogin() {
+      authStore.devLogin()
+      router.push('/')
     }
   },
 }
@@ -155,6 +178,10 @@ export default {
 
   &__register-link {
     @apply text-accent hover:underline;
+  }
+
+  &__dev {
+    @apply mt-3 w-full justify-center;
   }
 }
 </style>
