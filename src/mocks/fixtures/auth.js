@@ -14,12 +14,12 @@ const mockUser = {
     lastCompletionDate: '2026-05-21'
   },
   settings: {
-    theme: 'system',
-    mode: 'standard',
+    theme: 'warm',
+    mode: 'light',
     density: 'comfortable',
-    coachPersonality: 'encouraging',
-    checkIns: true,
-    stalledNudgeDays: 3,
+    coachPersonality: 'gentle',
+    checkIns: ['morning', 'evening'],
+    stalledNudgeDays: 7,
     journalVisibility: 'private'
   }
 }
