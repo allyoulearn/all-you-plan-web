@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo'
 import { INBOX_ITEMS_QUERY, CREATE_INBOX_ITEM, TRIAGE_INBOX_ITEM } from '@/api/operations'
+import { useErrorToast } from '@/composables/useErrorToast'
 
 export const useInboxStore = defineStore('inbox', () => {
   const items = ref([])
@@ -26,16 +27,30 @@ export const useInboxStore = defineStore('inbox', () => {
   }
 
   async function capture(text) {
-    await apolloClient.mutate({
-      mutation: CREATE_INBOX_ITEM,
-      variables: { text, source: 'web' },
-    })
-    await load()
+    try {
+      await apolloClient.mutate({
+        mutation: CREATE_INBOX_ITEM,
+        variables: { text, source: 'web' },
+      })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      const { toastError } = useErrorToast()
+      toastError(e, 'Failed to capture item')
+      throw e
+    }
   }
 
   async function triage(id) {
-    await apolloClient.mutate({ mutation: TRIAGE_INBOX_ITEM, variables: { id } })
-    await load()
+    try {
+      await apolloClient.mutate({ mutation: TRIAGE_INBOX_ITEM, variables: { id } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      const { toastError } = useErrorToast()
+      toastError(e, 'Failed to triage item')
+      throw e
+    }
   }
 
   return { items, loading, error, load, capture, triage }

@@ -44,55 +44,37 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
-export default {
-  name: 'ForgotPasswordView',
-  components: { TextField, Button },
-  setup() {
-    const { t } = useI18n()
-    const authStore = useAuthStore()
+const { t } = useI18n()
+const authStore = useAuthStore()
 
-    // ── Reactive state ──
-    const email = ref('')
-    const error = ref('')
-    const loading = ref(false)
-    const sent = ref(false)
+const email = ref('')
+const error = ref('')
+const loading = ref(false)
+const sent = ref(false)
 
-    return {
-      t,
-      email,
-      error,
-      loading,
-      sent,
-      handleSubmit,
-    }
-
-    // ── Function definitions ──
-
-    /**
-     * Submit the forgot-password request.
-     * Always transitions to the success state on completion
-     * to avoid leaking whether an email exists.
-     */
-    async function handleSubmit() {
-      error.value = ''
-      loading.value = true
-      try {
-        await authStore.forgotPassword(email.value)
-        sent.value = true
-      } catch {
-        // Show success state regardless to prevent email enumeration
-        sent.value = true
-      } finally {
-        loading.value = false
-      }
-    }
-  },
+/**
+ * Submit the forgot-password request.
+ * Always transitions to the success state on completion
+ * to avoid leaking whether an email exists.
+ */
+async function handleSubmit() {
+  error.value = ''
+  loading.value = true
+  try {
+    await authStore.forgotPassword(email.value)
+    sent.value = true
+  } catch {
+    // Show success state regardless to prevent email enumeration
+    sent.value = true
+  } finally {
+    loading.value = false
+  }
 }
 </script>

@@ -3,8 +3,13 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { getMainDefinition } from '@apollo/client/utilities'
 import { onError } from '@apollo/client/link/error'
 import { createClient } from 'graphql-ws'
+import { REFRESH_TOKEN } from '@/api/operations'
 
 let accessToken = null
+
+// Single in-flight refresh promise — prevents concurrent UNAUTHENTICATED
+// errors from triggering multiple simultaneous refresh calls.
+let refreshing = null
 
 export function setAccessToken(token) {
   accessToken = token
@@ -45,13 +50,28 @@ const splitLink = split(
   httpLink,
 )
 
-const errorLink = onError(({ graphQLErrors, networkError }) => {
+const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
   if (graphQLErrors) {
     for (const err of graphQLErrors) {
       if (err.extensions?.code === 'UNAUTHENTICATED') {
-        refreshAccessToken().catch(() => {
-          setAccessToken(null)
-          window.location.href = '/auth/login'
+        // Gate all concurrent UNAUTHENTICATED errors behind a single refresh.
+        if (!refreshing) {
+          refreshing = refreshAccessToken().finally(() => {
+            refreshing = null
+          })
+        }
+
+        return new Promise((resolve, reject) => {
+          refreshing
+            .then(() => resolve(forward(operation)))
+            .catch(() => {
+              setAccessToken(null)
+              // Lazy-import router to avoid circular dependency at module init.
+              import('@/router/index.js').then(({ default: router }) => {
+                router.push({ name: 'login' })
+              })
+              reject(err)
+            })
         })
       }
     }
@@ -61,13 +81,13 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   }
 })
 
-async function refreshAccessToken() {
-  const res = await fetch('/graphql', {
+export async function refreshAccessToken() {
+  const res = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
-      query: 'mutation { refreshToken { accessToken user { id email name timezone streak { current best lastCompletionDate } settings { theme mode density coachPersonality checkIns stalledNudgeDays journalVisibility } } } }',
+      query: REFRESH_TOKEN.loc.source.body,
     }),
   })
   const json = await res.json()
@@ -77,8 +97,6 @@ async function refreshAccessToken() {
   }
   throw new Error('Refresh failed')
 }
-
-export { refreshAccessToken }
 
 export const apolloClient = new ApolloClient({
   link: errorLink.concat(splitLink),

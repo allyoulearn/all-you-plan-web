@@ -69,7 +69,7 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -77,79 +77,56 @@ import { useAuthStore } from '@/stores/auth.store'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
-export default {
-  name: 'ResetPasswordView',
-  components: { TextField, Button },
-  setup() {
-    const { t } = useI18n()
-    const route = useRoute()
-    const router = useRouter()
-    const authStore = useAuthStore()
+const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
-    // ── Reactive state ──
-    const token = computed(() => route.query.token || '')
-    const newPassword = ref('')
-    const confirmPassword = ref('')
-    const error = ref('')
-    const loading = ref(false)
+const token = computed(() => route.query.token || '')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const error = ref('')
+const loading = ref(false)
 
-    // ── Computed ──
+/** Individual password strength checks */
+const hints = computed(() => ({
+  length: newPassword.value.length >= 8,
+  upper: /[A-Z]/.test(newPassword.value),
+  lower: /[a-z]/.test(newPassword.value),
+  digit: /[0-9]/.test(newPassword.value),
+}))
 
-    /** Individual password strength checks */
-    const hints = computed(() => ({
-      length: newPassword.value.length >= 8,
-      upper: /[A-Z]/.test(newPassword.value),
-      lower: /[a-z]/.test(newPassword.value),
-      digit: /[0-9]/.test(newPassword.value),
-    }))
+/** True only when all password requirements are satisfied */
+const isPasswordValid = computed(() => {
+  const h = hints.value
+  return h.length && h.upper && h.lower && h.digit
+})
 
-    /** True only when all password requirements are satisfied */
-    const isPasswordValid = computed(() => {
-      const h = hints.value
-      return h.length && h.upper && h.lower && h.digit
-    })
+/**
+ * Validate and submit the password reset.
+ * Redirects to dashboard on success.
+ */
+async function handleSubmit() {
+  error.value = ''
 
-    return {
-      t,
-      token,
-      newPassword,
-      confirmPassword,
-      error,
-      loading,
-      hints,
-      isPasswordValid,
-      handleSubmit,
-    }
+  if (!isPasswordValid.value) {
+    error.value = t('auth.passwordWeak')
+    return
+  }
 
-    // ── Function definitions ──
+  if (newPassword.value !== confirmPassword.value) {
+    error.value = t('auth.passwordMismatch')
+    return
+  }
 
-    /**
-     * Validate and submit the password reset.
-     * Redirects to dashboard on success.
-     */
-    async function handleSubmit() {
-      error.value = ''
-
-      if (!isPasswordValid.value) {
-        error.value = t('auth.passwordWeak')
-        return
-      }
-
-      if (newPassword.value !== confirmPassword.value) {
-        error.value = t('auth.passwordMismatch')
-        return
-      }
-
-      loading.value = true
-      try {
-        await authStore.resetPassword(token.value, newPassword.value)
-        router.push('/')
-      } catch (err) {
-        error.value = err?.graphQLErrors?.[0]?.message || t('auth.resetTokenInvalid')
-      } finally {
-        loading.value = false
-      }
-    }
-  },
+  loading.value = true
+  try {
+    await authStore.resetPassword(token.value, newPassword.value)
+    router.push('/')
+  } catch (err) {
+    error.value = err?.graphQLErrors?.[0]?.message || t('auth.resetTokenInvalid')
+  } finally {
+    loading.value = false
+  }
 }
 </script>

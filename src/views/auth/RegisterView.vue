@@ -39,7 +39,7 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -47,37 +47,26 @@ import { useAuthStore } from '@/stores/auth.store'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
-export default {
-  name: 'RegisterView',
-  components: { TextField, Button },
-  setup() {
-    const { t } = useI18n()
-    const router = useRouter()
-    const authStore = useAuthStore()
+const { t } = useI18n()
+const router = useRouter()
+const authStore = useAuthStore()
 
-    const name = ref('')
-    const email = ref('')
-    const password = ref('')
-    const error = ref('')
-    const loading = ref(false)
+const name = ref('')
+const email = ref('')
+const password = ref('')
+const error = ref('')
+const loading = ref(false)
 
-    async function handleRegister() {
-      error.value = ''
-      loading.value = true
-      try {
-        await authStore.register(email.value, password.value, name.value)
-        router.push('/')
-      } catch (err) {
-        error.value = err?.graphQLErrors?.[0]?.message || 'Registration failed'
-      } finally {
-        loading.value = false
-      }
-    }
-
-    return {
-      t, name, email, password, error, loading,
-      handleRegister,
-    }
-  },
+async function handleRegister() {
+  error.value = ''
+  loading.value = true
+  try {
+    await authStore.register(email.value, password.value, name.value)
+    router.push('/')
+  } catch (err) {
+    error.value = err?.graphQLErrors?.[0]?.message || 'Registration failed'
+  } finally {
+    loading.value = false
+  }
 }
 </script>

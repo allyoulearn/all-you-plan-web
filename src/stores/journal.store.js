@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo'
 import { JOURNAL_ENTRIES_QUERY, CREATE_JOURNAL_ENTRY } from '@/api/operations'
+import { useErrorToast } from '@/composables/useErrorToast'
 
 export const useJournalStore = defineStore('journal', () => {
   const entries = ref([])
@@ -25,11 +26,18 @@ export const useJournalStore = defineStore('journal', () => {
   }
 
   async function createEntry({ date, prompt, pullQuote, body, tags }) {
-    await apolloClient.mutate({
-      mutation: CREATE_JOURNAL_ENTRY,
-      variables: { date, prompt, pullQuote, body, tags },
-    })
-    await load()
+    try {
+      await apolloClient.mutate({
+        mutation: CREATE_JOURNAL_ENTRY,
+        variables: { date, prompt, pullQuote, body, tags },
+      })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      const { toastError } = useErrorToast()
+      toastError(e, 'Failed to save journal entry')
+      throw e
+    }
   }
 
   return { entries, loading, error, load, createEntry }
