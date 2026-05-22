@@ -1,23 +1,30 @@
 <template>
-  <div class="heatmap">
+  <figure class="heatmap" aria-label="Activity heatmap, last 26 weeks">
+    <figcaption class="heatmap__caption">
+      {{ totalCompletions }} total completions over the last 26 weeks
+    </figcaption>
+
     <!-- Grid: 26 columns, each column is 7 cells tall -->
-    <div class="heatmap__grid">
+    <div class="heatmap__grid" role="grid" :aria-label="'Activity heatmap, last 26 weeks'">
       <div
         v-for="col in 26"
         :key="col"
         class="heatmap__col"
+        role="row"
       >
         <div
           v-for="row in 7"
           :key="row"
+          role="gridcell"
           class="heatmap__cell"
           :class="intensityClass(values[(col - 1) * 7 + (row - 1)] ?? 0)"
+          :aria-label="cellLabel(col, row)"
         />
       </div>
     </div>
 
     <!-- Legend -->
-    <div class="heatmap__legend">
+    <div class="heatmap__legend" aria-hidden="true">
       <span class="heatmap__legend-label">
         less
       </span>
@@ -34,11 +41,14 @@
         more
       </span>
     </div>
-  </div>
+  </figure>
 </template>
 
 <script>
 /** Heatmap — 26-week x 7-day activity grid with intensity-coded cells and a legend. */
+import { computed } from 'vue'
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default {
   name: 'Heatmap',
@@ -46,7 +56,7 @@ export default {
     /** Array of 182 intensity values (0–3+) indexed as week * 7 + dayOfWeek */
     values: { type: Array, required: true }
   },
-  setup() {
+  setup(props) {
     // -- Function definitions --
 
     /**
@@ -61,13 +71,40 @@ export default {
       return 'heatmap__cell--full'
     }
 
-    return { intensityClass }
+    /**
+     * Returns an accessible label for a grid cell.
+     * col is 1-indexed (1=oldest week, 26=most recent), row is 1-indexed (1=Sun, 7=Sat).
+     * @param {number} col - Column index (1–26)
+     * @param {number} row - Row index (1–7)
+     * @returns {string}
+     */
+    function cellLabel(col, row) {
+      const count = props.values[(col - 1) * 7 + (row - 1)] ?? 0
+      const weeksAgo = 26 - col
+      const date = new Date()
+      date.setDate(date.getDate() - weeksAgo * 7 - (date.getDay() - (row - 1)))
+      const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      const dayName = DAY_NAMES[row - 1]
+      const completions = count === 1 ? '1 completion' : `${count} completions`
+      return `${dayName}, ${dateStr}: ${completions}`
+    }
+
+    /** Total completions across all cells, shown in the accessible figcaption. */
+    const totalCompletions = computed(() =>
+      props.values.reduce((sum, v) => sum + (v || 0), 0)
+    )
+
+    return { intensityClass, cellLabel, totalCompletions }
   }
 }
 </script>
 
 <style lang="scss" scoped>
 .heatmap {
+  &__caption {
+    @apply sr-only;
+  }
+
   &__grid {
     @apply flex gap-0.5;
   }

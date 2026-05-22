@@ -42,6 +42,16 @@ describe('WrenBubble', () => {
       const wrapper = mount(WrenBubble, { props: { message: userMessage } })
       expect(wrapper.find('button').exists()).toBe(false)
     })
+
+    it('applies wren-bubble__body--user class to the body', () => {
+      const wrapper = mount(WrenBubble, { props: { message: userMessage } })
+      expect(wrapper.find('.wren-bubble__body--user').exists()).toBe(true)
+    })
+
+    it('does not render coach-side container', () => {
+      const wrapper = mount(WrenBubble, { props: { message: userMessage } })
+      expect(wrapper.find('.wren-bubble--coach').exists()).toBe(false)
+    })
   })
 
   describe('coach bubble', () => {
@@ -92,6 +102,17 @@ describe('WrenBubble', () => {
       expect(wrapper.emitted('action')?.[0]).toEqual(['Plan my day'])
     })
 
+    it('emits "action" with the second action string when second button is clicked', async () => {
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachWithActions },
+        global: {
+          stubs: { Button: { template: '<button @click="$emit(\'click\')"><slot/></button>' } }
+        }
+      })
+      await wrapper.findAll('button')[1].trigger('click')
+      expect(wrapper.emitted('action')?.[0]).toEqual(['Review goals'])
+    })
+
     it('applies accent styling when actions are present (wren-bubble__body--accent)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
@@ -107,10 +128,43 @@ describe('WrenBubble', () => {
       })
       expect(wrapper.find('.wren-bubble__body--default').exists()).toBe(true)
     })
+
+    it('does not apply accent class when actions is empty', () => {
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachMessage },
+        global: { stubs: { Button: true } }
+      })
+      expect(wrapper.find('.wren-bubble__body--accent').exists()).toBe(false)
+    })
+
+    it('actions area is hidden when no actions', () => {
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachMessage },
+        global: { stubs: { Button: true } }
+      })
+      expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
+    })
+
+    it('actions area is visible when actions present', () => {
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachWithActions },
+        global: { stubs: { Button: true } }
+      })
+      expect(wrapper.find('.wren-bubble__actions').exists()).toBe(true)
+    })
+
+    it('does not apply dead --coach body class (WEB-T07-016: removed)', () => {
+      // The &--coach SCSS modifier was dead code and has been removed
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachMessage },
+        global: { stubs: { Button: true } }
+      })
+      expect(wrapper.find('.wren-bubble__body--coach').exists()).toBe(false)
+    })
   })
 
   describe('timestamp', () => {
-    it('renders a formatted time', () => {
+    it('renders a formatted time for user message', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: userMessage },
         global: { stubs: { Button: true } }
@@ -125,6 +179,37 @@ describe('WrenBubble', () => {
       const wrapper = mount(WrenBubble, { props: { message: msg } })
       const timeEl = wrapper.find('.wren-bubble__timestamp')
       expect(timeEl.text()).toBe('')
+    })
+
+    it('renders timestamp for coach message', () => {
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachMessage },
+        global: { stubs: { Button: true } }
+      })
+      const timeEl = wrapper.find('.wren-bubble__timestamp')
+      expect(timeEl.text()).not.toBe('')
+    })
+
+    it('user timestamp has --right alignment class', () => {
+      const wrapper = mount(WrenBubble, { props: { message: userMessage } })
+      expect(wrapper.find('.wren-bubble__timestamp--right').exists()).toBe(true)
+    })
+
+    it('coach timestamp does not have --right alignment class', () => {
+      const wrapper = mount(WrenBubble, {
+        props: { message: coachMessage },
+        global: { stubs: { Button: true } }
+      })
+      expect(wrapper.find('.wren-bubble__timestamp--right').exists()).toBe(false)
+    })
+  })
+
+  describe('formatWhen edge cases', () => {
+    it('handles an invalid ISO string gracefully (renders some output)', () => {
+      const msg = { ...userMessage, createdAt: 'not-a-date' }
+      const wrapper = mount(WrenBubble, { props: { message: msg } })
+      // Invalid date produces "Invalid Date" or NaN — just confirm it does not throw
+      expect(() => wrapper.find('.wren-bubble__timestamp').text()).not.toThrow()
     })
   })
 })

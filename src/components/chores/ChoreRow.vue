@@ -17,7 +17,7 @@
     </span>
 
     <Pill variant="default">
-      {{ chore.cadence.type }}
+      {{ cadenceLabel }}
     </Pill>
 
     <span class="chore-row__streak">
@@ -28,8 +28,15 @@
 
 <script>
 /** ChoreRow — single chore entry with completion checkbox, cadence pill, and streak counter. */
+import { computed } from 'vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import Pill from '@/components/ui/Pill.vue'
+
+const CADENCE_LABEL = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly'
+}
 
 export default {
   name: 'ChoreRow',
@@ -39,21 +46,28 @@ export default {
     chore: { type: Object, required: true }
   },
   emits: ['complete'],
-  setup() {
+  setup(props) {
     // -- Function definitions --
 
     /**
-     * Returns true if the given date string represents today.
+     * Returns true if the given date string represents today in the user's local timezone.
+     * Uses toLocaleDateString with 'en-CA' to get an ISO-format date (YYYY-MM-DD) in
+     * local time, avoiding UTC-vs-local mismatch for users west of UTC.
      * @param {string|null} lastCompletedOn - ISO date string or null
      * @returns {boolean}
      */
     function isCompletedToday(lastCompletedOn) {
       if (!lastCompletedOn) return false
-      const today = new Date().toISOString().slice(0, 10)
+      const today = new Date().toLocaleDateString('en-CA')
       return lastCompletedOn.slice(0, 10) === today
     }
 
-    return { isCompletedToday }
+    /** Human-readable cadence label resolved from the API enum value. */
+    const cadenceLabel = computed(() =>
+      CADENCE_LABEL[props.chore.cadence.type] ?? props.chore.cadence.type
+    )
+
+    return { isCompletedToday, cadenceLabel }
   }
 }
 </script>

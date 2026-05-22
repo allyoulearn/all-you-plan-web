@@ -107,10 +107,6 @@ export default {
       @apply rounded-bl-xl rounded-br-sm bg-paper-3 text-ink;
     }
 
-    &--coach {
-      @apply rounded-br-xl rounded-bl-sm;
-    }
-
     &--default {
       @apply rounded-br-xl rounded-bl-sm bg-paper-2 text-ink;
     }

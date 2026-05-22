@@ -1,5 +1,5 @@
 <template>
-  <div class="setting-row" style="grid-template-columns: 240px 1fr auto">
+  <div class="setting-row">
     <div>
       <p class="setting-row__label">
         {{ label }}
@@ -35,6 +35,7 @@ export default {
 <style lang="scss" scoped>
 .setting-row {
   @apply grid items-center gap-4 py-3.5;
+  grid-template-columns: 240px 1fr auto;
 
   &__label {
     @apply text-[14px] font-medium text-ink;

@@ -7,7 +7,7 @@
         </Pill>
 
         <Pill :variant="project.status === 'hot' ? 'accent' : 'default'">
-          {{ project.status }}
+          {{ statusLabel }}
         </Pill>
       </div>
 
@@ -19,16 +19,16 @@
         {{ project.blurb }}
       </p>
 
-      <div>
-        <ProgressBar :value="project.progress.percent / 100" />
+      <div v-if="progress">
+        <ProgressBar :value="progress.percent / 100" />
 
         <div class="project-card__progress-meta">
           <span class="project-card__progress-fraction">
-            {{ project.progress.done }}/{{ project.progress.total }}
+            {{ progress.done }}/{{ progress.total }}
           </span>
 
           <span class="project-card__progress-percent">
-            {{ project.progress.percent }}%
+            {{ progress.percent }}%
           </span>
         </div>
       </div>
@@ -46,11 +46,19 @@
 
 <script>
 /** ProjectCard — project summary card linking to the project detail view. */
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import Card from '@/components/ui/Card.vue'
 import Pill from '@/components/ui/Pill.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
 import Icon from '@/components/ui/Icon.vue'
+
+const STATUS_LABEL = {
+  on_track: 'On track',
+  hot: 'Hot',
+  stalled: 'Stalled',
+  idle: 'Idle'
+}
 
 export default {
   name: 'ProjectCard',
@@ -58,6 +66,17 @@ export default {
   props: {
     /** The project object to display */
     project: { type: Object, required: true }
+  },
+  setup(props) {
+    /** Safe progress object; null when the API returns no progress data. */
+    const progress = computed(() => props.project.progress ?? null)
+
+    /** Human-readable status label resolved from the API enum value. */
+    const statusLabel = computed(() =>
+      STATUS_LABEL[props.project.status] ?? props.project.status
+    )
+
+    return { progress, statusLabel }
   }
 }
 </script>
