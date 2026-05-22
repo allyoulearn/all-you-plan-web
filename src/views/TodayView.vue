@@ -38,11 +38,11 @@
       </div>
 
       <div class="today-view__actions">
-        <Button variant="primary">
+        <Button variant="primary" disabled>
           Add to today
         </Button>
 
-        <Button variant="ghost" icon="bolt">
+        <Button variant="ghost" icon="bolt" disabled>
           Plan with Wren
         </Button>
 

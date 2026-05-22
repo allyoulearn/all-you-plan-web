@@ -13,7 +13,7 @@
         <SegmentedControl
           :model-value="settings.coachPersonality ?? 'gentle'"
           :options="personalityOptions"
-          @update:model-value="authStore.updateSettings({ coachPersonality: $event })"
+          @update:model-value="onPersonalityChange"
         />
       </SettingRow>
 
@@ -84,7 +84,7 @@
         <SegmentedControl
           :model-value="settings.journalVisibility ?? 'private'"
           :options="visibilityOptions"
-          @update:model-value="authStore.updateSettings({ journalVisibility: $event })"
+          @update:model-value="onVisibilityChange"
         />
       </SettingRow>
     </div>
@@ -96,6 +96,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { useTheme } from '@/composables/useTheme.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
@@ -145,6 +146,7 @@ export default {
     // -- State --
     const authStore = useAuthStore()
     const { setTheme, setMode } = useTheme()
+    const { toastError } = useErrorToast()
 
     // -- Computed --
 
@@ -166,6 +168,18 @@ export default {
     }
 
     /**
+     * Persists the coach personality setting.
+     * @param {string} val - Personality option value.
+     */
+    async function onPersonalityChange(val) {
+      try {
+        await authStore.updateSettings({ coachPersonality: val })
+      } catch (e) {
+        toastError(e, 'Failed to update personality setting')
+      }
+    }
+
+    /**
      * Toggles the given check-in slot on or off and persists the change.
      * @param {string} val - Check-in slot name.
      */
@@ -174,7 +188,11 @@ export default {
       const next = current.includes(val)
         ? current.filter((v) => v !== val)
         : [...current, val]
-      await authStore.updateSettings({ checkIns: next })
+      try {
+        await authStore.updateSettings({ checkIns: next })
+      } catch (e) {
+        toastError(e, 'Failed to update check-in setting')
+      }
     }
 
     /**
@@ -182,7 +200,11 @@ export default {
      * @param {number|null} val - Days threshold, or null for never.
      */
     async function onNudgeChange(val) {
-      await authStore.updateSettings({ stalledNudgeDays: val })
+      try {
+        await authStore.updateSettings({ stalledNudgeDays: val })
+      } catch (e) {
+        toastError(e, 'Failed to update nudge setting')
+      }
     }
 
     /**
@@ -191,7 +213,11 @@ export default {
      */
     async function onThemeChange(val) {
       setTheme(val)
-      await authStore.updateSettings({ theme: val })
+      try {
+        await authStore.updateSettings({ theme: val })
+      } catch (e) {
+        toastError(e, 'Failed to update theme setting')
+      }
     }
 
     /**
@@ -200,7 +226,23 @@ export default {
      */
     async function onModeChange(val) {
       setMode(val)
-      await authStore.updateSettings({ mode: val })
+      try {
+        await authStore.updateSettings({ mode: val })
+      } catch (e) {
+        toastError(e, 'Failed to update appearance setting')
+      }
+    }
+
+    /**
+     * Persists the journal visibility setting.
+     * @param {string} val - Visibility option value.
+     */
+    async function onVisibilityChange(val) {
+      try {
+        await authStore.updateSettings({ journalVisibility: val })
+      } catch (e) {
+        toastError(e, 'Failed to update visibility setting')
+      }
     }
 
     return {
@@ -214,10 +256,12 @@ export default {
       modeOptions,
       visibilityOptions,
       hasCheckIn,
+      onPersonalityChange,
       toggleCheckIn,
       onNudgeChange,
       onThemeChange,
       onModeChange,
+      onVisibilityChange,
     }
   }
 }

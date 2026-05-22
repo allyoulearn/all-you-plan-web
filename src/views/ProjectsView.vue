@@ -2,12 +2,12 @@
   <div>
     <ScreenHeading eyebrow="Workspaces · Projects" title="Six things you're" emphasis="becoming." />
 
-    <div v-if="store.loading" class="projects-view__status">
+    <div v-if="store.loadingProjects" class="projects-view__status">
       Loading…
     </div>
 
-    <div v-else-if="store.error" class="projects-view__status projects-view__status--error">
-      {{ store.error }}
+    <div v-else-if="store.errorProjects" class="projects-view__status projects-view__status--error">
+      {{ store.errorProjects }}
     </div>
 
     <template v-else>

@@ -49,6 +49,7 @@
         <input
           v-model="draft"
           placeholder="Tell Wren anything…"
+          aria-label="Message Wren"
           class="wren-view__input"
           @keydown="handleKeydown"
         />

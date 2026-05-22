@@ -78,6 +78,19 @@
     "captureLabel": "Capture",
     "capturePlaceholder": "What's on your mind?"
   },
+  "review": {
+    "step1Label": "Step 1 — How was your energy today?",
+    "step2Label": "Step 2 — What moved forward",
+    "step3Label": "Step 3 — What didn't finish",
+    "step4Label": "Step 4 — Wren's send-off",
+    "sendoffQuote": "\"Every day that ends is a day you showed up. That's enough.\"",
+    "noDoneTasks": "No completed tasks today.",
+    "noPendingTasks": "Everything got done — great day.",
+    "saving": "Saving…",
+    "finishReview": "Finish review",
+    "reviewSaved": "Review saved.",
+    "loading": "Loading…"
+  },
   "common": {
     "save": "Save",
     "saved": "Saved",

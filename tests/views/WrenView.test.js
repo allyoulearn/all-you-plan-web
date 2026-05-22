@@ -1,0 +1,285 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { setActivePinia } from 'pinia'
+import { createTestingPinia } from '@pinia/testing'
+import { ref } from 'vue'
+import WrenView from '@/views/WrenView.vue'
+
+// ── Stubs ─────────────────────────────────────────────────────────────────────
+
+const globalStubs = {
+  ScreenHeading: true,
+  WrenBubble: true,
+  RouterLink: true
+}
+
+// ── Mock useWrenChat composable ───────────────────────────────────────────────
+// We control fakeStore directly so the component's v-if branches fire correctly.
+
+const mockSendMessage = vi.fn()
+const mockHandleKeydown = vi.fn()
+const mockFillFromChip = vi.fn()
+
+const QUICK_PROMPTS_LIST = [
+  'What should I focus on?',
+  "I'm feeling overwhelmed.",
+  'Plan tomorrow',
+  'I need a rest.'
+]
+
+// fakeStore is an object that mimics the wren store surface exposed by the composable.
+let fakeStore = {
+  messages: [],
+  loading: false,
+  sending: false,
+  error: '',
+  load: vi.fn().mockResolvedValue(undefined),
+  send: vi.fn().mockResolvedValue(undefined)
+}
+
+let draftRef = ref('')
+
+vi.mock('@/composables/useWrenChat.js', () => ({
+  QUICK_PROMPTS: [
+    'What should I focus on?',
+    "I'm feeling overwhelmed.",
+    'Plan tomorrow',
+    'I need a rest.'
+  ],
+  useWrenChat: () => ({
+    store: fakeStore,
+    draft: draftRef,
+    sendMessage: mockSendMessage,
+    handleKeydown: mockHandleKeydown,
+    fillFromChip: mockFillFromChip
+  })
+}))
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function buildMessage(overrides = {}) {
+  return {
+    id: 'm1',
+    sender: 'user',
+    text: 'Hello',
+    actions: [],
+    createdAt: new Date().toISOString(),
+    ...overrides
+  }
+}
+
+function mountWren(storeOverrides = {}) {
+  // Reset fakeStore to defaults then apply overrides
+  fakeStore = {
+    messages: [],
+    loading: false,
+    sending: false,
+    error: '',
+    load: vi.fn().mockResolvedValue(undefined),
+    send: vi.fn().mockResolvedValue(undefined),
+    ...storeOverrides
+  }
+  draftRef = ref(storeOverrides.draft ?? '')
+
+  return mount(WrenView, {
+    global: {
+      stubs: globalStubs,
+      plugins: [createTestingPinia({ createSpy: vi.fn })]
+    }
+  })
+}
+
+describe('WrenView', () => {
+  beforeEach(() => {
+    setActivePinia(createTestingPinia({ createSpy: vi.fn }))
+    mockSendMessage.mockReset()
+    mockHandleKeydown.mockReset()
+    mockFillFromChip.mockReset()
+  })
+
+  // -- Rendering --
+
+  it('renders without errors', () => {
+    const wrapper = mountWren()
+    expect(wrapper.exists()).toBe(true)
+  })
+
+  it('renders the date divider with a date label', () => {
+    const wrapper = mountWren()
+    const dateLabel = wrapper.find('.wren-view__date-label')
+    expect(dateLabel.exists()).toBe(true)
+    expect(dateLabel.text().length).toBeGreaterThan(0)
+  })
+
+  // -- Loading state --
+
+  it('shows loading indicator while store.loading is true', () => {
+    const wrapper = mountWren({ loading: true })
+    expect(wrapper.text()).toContain('Loading')
+  })
+
+  it('does not show empty-state when loading', () => {
+    const wrapper = mountWren({ loading: true, messages: [] })
+    expect(wrapper.text()).not.toContain('Start a conversation with Wren')
+  })
+
+  // -- Empty state --
+
+  it('shows empty-state message when messages array is empty and not loading', () => {
+    const wrapper = mountWren({ messages: [], loading: false })
+    expect(wrapper.text()).toContain('Start a conversation with Wren')
+  })
+
+  // -- Messages --
+
+  it('does not show empty-state when messages are present', () => {
+    const wrapper = mountWren({ messages: [buildMessage()], loading: false })
+    expect(wrapper.text()).not.toContain('Start a conversation with Wren')
+  })
+
+  it('renders a WrenBubble stub for each message', () => {
+    const messages = [
+      buildMessage({ id: 'm1', sender: 'user' }),
+      buildMessage({ id: 'm2', sender: 'coach' })
+    ]
+    const wrapper = mountWren({ messages, loading: false })
+    const bubbles = wrapper.findAll('wren-bubble-stub')
+    expect(bubbles).toHaveLength(2)
+  })
+
+  it('renders no WrenBubble stubs when message list is empty', () => {
+    const wrapper = mountWren({ messages: [], loading: false })
+    const bubbles = wrapper.findAll('wren-bubble-stub')
+    expect(bubbles).toHaveLength(0)
+  })
+
+  // -- Quick-prompt chips --
+
+  it('renders 4 quick-prompt chips', () => {
+    const wrapper = mountWren()
+    const chips = wrapper.findAll('.wren-view__chip')
+    expect(chips).toHaveLength(4)
+  })
+
+  it('chip text matches QUICK_PROMPTS', () => {
+    const wrapper = mountWren()
+    const text = wrapper.text()
+    for (const prompt of QUICK_PROMPTS_LIST) {
+      expect(text).toContain(prompt)
+    }
+  })
+
+  it('clicking a chip calls fillFromChip with the first prompt', async () => {
+    const wrapper = mountWren()
+    const chips = wrapper.findAll('.wren-view__chip')
+    await chips[0].trigger('click')
+    expect(mockFillFromChip).toHaveBeenCalledWith(QUICK_PROMPTS_LIST[0])
+  })
+
+  it('clicking the second chip passes the correct prompt', async () => {
+    const wrapper = mountWren()
+    const chips = wrapper.findAll('.wren-view__chip')
+    await chips[1].trigger('click')
+    expect(mockFillFromChip).toHaveBeenCalledWith(QUICK_PROMPTS_LIST[1])
+  })
+
+  it('clicking the third chip passes the correct prompt', async () => {
+    const wrapper = mountWren()
+    const chips = wrapper.findAll('.wren-view__chip')
+    await chips[2].trigger('click')
+    expect(mockFillFromChip).toHaveBeenCalledWith(QUICK_PROMPTS_LIST[2])
+  })
+
+  it('clicking the fourth chip passes the correct prompt', async () => {
+    const wrapper = mountWren()
+    const chips = wrapper.findAll('.wren-view__chip')
+    await chips[3].trigger('click')
+    expect(mockFillFromChip).toHaveBeenCalledWith(QUICK_PROMPTS_LIST[3])
+  })
+
+  // -- Input bar (WEB-T08-013 fix) --
+
+  it('renders the message input with aria-label', () => {
+    const wrapper = mountWren()
+    const input = wrapper.find('.wren-view__input')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('aria-label')).toBe('Message Wren')
+  })
+
+  it('input has correct placeholder', () => {
+    const wrapper = mountWren()
+    const input = wrapper.find('.wren-view__input')
+    expect(input.attributes('placeholder')).toBe('Tell Wren anything…')
+  })
+
+  it('renders the send button with aria-label "Send message"', () => {
+    const wrapper = mountWren()
+    const sendBtn = wrapper.find('.wren-view__send')
+    expect(sendBtn.exists()).toBe(true)
+    expect(sendBtn.attributes('aria-label')).toBe('Send message')
+  })
+
+  it('send button is disabled when draft is empty (not sending)', () => {
+    const wrapper = mountWren({ sending: false, draft: '' })
+    const sendBtn = wrapper.find('.wren-view__send')
+    // !draft.trim() = true → disabled
+    expect(sendBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('send button is disabled when store.sending is true (draft non-empty)', async () => {
+    const wrapper = mountWren({ sending: true, draft: 'Hello' })
+    await wrapper.vm.$nextTick()
+    const sendBtn = wrapper.find('.wren-view__send')
+    // !draft.trim() = false, store.sending = true → disabled
+    expect(sendBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('@click on the send button is wired to sendMessage', async () => {
+    // Draft must be non-empty so the button is not disabled;
+    // but even disabled buttons receive events via trigger()
+    // We use draft='Hello' to ensure the button is not disabled
+    const wrapper = mountWren({ sending: false, draft: 'Hello' })
+    const sendBtn = wrapper.find('.wren-view__send')
+    // Use trigger to bypass the disabled attribute check at the browser level
+    await sendBtn.trigger('click')
+    expect(mockSendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('keydown on input calls handleKeydown', async () => {
+    const wrapper = mountWren()
+    const input = wrapper.find('.wren-view__input')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(mockHandleKeydown).toHaveBeenCalledTimes(1)
+  })
+
+  // -- today computed --
+
+  it('today computed returns a non-empty date string', () => {
+    const wrapper = mountWren()
+    expect(typeof wrapper.vm.today).toBe('string')
+    expect(wrapper.vm.today.length).toBeGreaterThan(0)
+  })
+
+  it('today computed contains a day of the week', () => {
+    const wrapper = mountWren()
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    expect(days.some(d => wrapper.vm.today.includes(d))).toBe(true)
+  })
+
+  // -- fillFromChip exposed --
+
+  it('fillFromChip is returned from setup and accessible on vm', () => {
+    const wrapper = mountWren()
+    expect(typeof wrapper.vm.fillFromChip).toBe('function')
+  })
+
+  // -- Draft model --
+
+  it('input v-model is bound to draft ref', async () => {
+    const wrapper = mountWren()
+    const input = wrapper.find('.wren-view__input')
+    await input.setValue('Test message')
+    // v-model updates the ref — wrapper.vm.draft is the draftRef
+    expect(input.element.value).toBe('Test message')
+  })
+})

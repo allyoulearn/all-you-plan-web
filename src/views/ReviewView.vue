@@ -5,7 +5,7 @@
     <!-- Step 1 — Mood -->
     <Card class="mb-5">
       <p class="review-view__step-label">
-        Step 1 — How was your energy today?
+        {{ t('review.step1Label') }}
       </p>
 
       <div class="review-view__mood-row">
@@ -24,11 +24,11 @@
     <!-- Step 2 — What moved -->
     <Card class="mb-5">
       <p class="review-view__step-label">
-        Step 2 — What moved forward
+        {{ t('review.step2Label') }}
       </p>
 
       <div v-if="todayStore.loading" class="review-view__loading">
-        Loading…
+        {{ t('review.loading') }}
       </div>
 
       <div v-else-if="doneTasks.length" class="review-view__task-list">
@@ -46,18 +46,18 @@
       </div>
 
       <p v-else class="review-view__empty">
-        No completed tasks today.
+        {{ t('review.noDoneTasks') }}
       </p>
     </Card>
 
     <!-- Step 3 — What didn't -->
     <Card class="mb-5">
       <p class="review-view__step-label">
-        Step 3 — What didn't finish
+        {{ t('review.step3Label') }}
       </p>
 
       <div v-if="todayStore.loading" class="review-view__loading">
-        Loading…
+        {{ t('review.loading') }}
       </div>
 
       <div v-else-if="pendingTasks.length" class="review-view__task-list">
@@ -72,18 +72,18 @@
       </div>
 
       <p v-else class="review-view__empty">
-        Everything got done — great day.
+        {{ t('review.noPendingTasks') }}
       </p>
     </Card>
 
     <!-- Step 4 — Send-off -->
     <Card variant="accent" class="mb-5">
       <p class="review-view__sendoff-label">
-        Step 4 — Wren's send-off
+        {{ t('review.step4Label') }}
       </p>
 
       <p class="review-view__sendoff-quote">
-        "Every day that ends is a day you showed up. That's enough."
+        {{ t('review.sendoffQuote') }}
       </p>
 
       <div class="review-view__sendoff-action">
@@ -92,12 +92,12 @@
           :disabled="!mood || reviewStore.saving"
           @click="finishReview"
         >
-          {{ reviewStore.saving ? 'Saving…' : 'Finish review' }}
+          {{ reviewStore.saving ? t('review.saving') : t('review.finishReview') }}
         </Button>
       </div>
 
       <p v-if="reviewStore.review?.id && !reviewStore.saving" class="review-view__saved-note">
-        Review saved.
+        {{ t('review.reviewSaved') }}
       </p>
 
       <p v-if="reviewStore.error" class="review-view__error-note">
@@ -110,6 +110,7 @@
 <script>
 /** ReviewView — guided daily review with mood selector, task summary, and Wren send-off card. */
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
@@ -123,17 +124,16 @@ export default {
   components: { ScreenHeading, Card, Button },
   setup() {
     // -- State --
+    const { t } = useI18n()
     const todayStore = useTodayStore()
     const reviewStore = useReviewStore()
     const mood = ref('')
 
     // -- Computed --
 
-    /** ISO date string for today, used to load and save the review. */
-    const todayDate = computed(() => {
-      const d = new Date()
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    })
+    /** ISO date string for today, captured once at setup time. */
+    const d = new Date()
+    const todayDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
     /** Tasks from today's view that are marked done. */
     const doneTasks = computed(() => (todayStore.view?.tasks ?? []).filter((t) => t.done))
@@ -143,7 +143,7 @@ export default {
 
     // -- Lifecycle --
     onMounted(async () => {
-      await Promise.all([todayStore.load(todayDate.value), reviewStore.load(todayDate.value)])
+      await Promise.all([todayStore.load(todayDate), reviewStore.load(todayDate)])
       if (reviewStore.review?.mood) {
         mood.value = reviewStore.review.mood
       }
@@ -153,17 +153,19 @@ export default {
 
     /** Persists the review with the selected mood and task lists. */
     async function finishReview() {
-      await reviewStore.save(todayDate.value, mood.value, {
+      await reviewStore.save(todayDate, mood.value, {
         moved: doneTasks.value.map((t) => t.id),
         pending: pendingTasks.value.map((t) => t.id),
       })
     }
 
     return {
+      t,
       MOODS,
       todayStore,
       reviewStore,
       mood,
+      todayDate,
       doneTasks,
       pendingTasks,
       finishReview,
