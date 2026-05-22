@@ -27,6 +27,7 @@ export default [
     rules: {
       'prettier/prettier': 'error',
       'vue/multi-word-component-names': 'off',
+      'vue/no-reserved-component-names': 'off',
       'vue/no-v-html': 'off',
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],

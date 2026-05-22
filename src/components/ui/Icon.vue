@@ -7,17 +7,30 @@
   />
 </template>
 
-<script setup>
+<script>
+/** Icon — renders a Heroicons SVG by name from the shared icon map. */
 import { computed } from 'vue'
 import { outlineIcons, solidIcons } from './iconMap.js'
 
-const props = defineProps({
-  name: { type: String, required: true },
-  size: { type: Number, default: 20 },
-  solid: { type: Boolean, default: false },
-})
+export default {
+  name: 'Icon',
+  props: {
+    /** Icon name matching a key in the icon map */
+    name: { type: String, required: true },
+    /** Pixel size applied to width and height */
+    size: { type: Number, default: 20 },
+    /** Use the solid variant when true; outline by default */
+    solid: { type: Boolean, default: false }
+  },
+  setup(props) {
+    // -- Computed --
 
-const component = computed(
-  () => (props.solid ? solidIcons : outlineIcons)[props.name] || null,
-)
+    /** Resolved icon component from the outline or solid map, or null for unknown names. */
+    const component = computed(
+      () => (props.solid ? solidIcons : outlineIcons)[props.name] || null
+    )
+
+    return { component }
+  }
+}
 </script>

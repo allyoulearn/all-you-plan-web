@@ -41,7 +41,7 @@ describe('ProjectCard', () => {
   it('applies accent variant to status pill when status is hot', () => {
     const project = { ...baseProject, status: 'hot' }
     const wrapper = mountCard(project)
-    const pills = wrapper.findAll('span.bg-accent')
+    const pills = wrapper.findAll('span.pill--accent')
     expect(pills.length).toBeGreaterThan(0)
   })
 

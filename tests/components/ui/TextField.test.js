@@ -9,8 +9,8 @@ describe('TextField', () => {
     expect(wrapper.emitted('update:modelValue')[0]).toEqual(['hello'])
   })
 
-  it('shows the bad border when invalid', () => {
+  it('shows the invalid state when invalid', () => {
     const wrapper = mount(TextField, { props: { invalid: true } })
-    expect(wrapper.find('span.border-bad').exists()).toBe(true)
+    expect(wrapper.find('span.text-field__wrapper--invalid').exists()).toBe(true)
   })
 })

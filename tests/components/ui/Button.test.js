@@ -9,9 +9,9 @@ describe('Button', () => {
     expect(wrapper.text()).toContain('Save')
   })
 
-  it('applies the accent variant classes', () => {
+  it('applies the accent variant class', () => {
     const wrapper = mount(Button, { props: { variant: 'accent' } })
-    expect(wrapper.classes()).toContain('bg-accent')
+    expect(wrapper.classes()).toContain('button--accent')
   })
 })
 

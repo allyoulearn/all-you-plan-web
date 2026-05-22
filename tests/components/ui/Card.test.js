@@ -9,15 +9,15 @@ describe('Card', () => {
     expect(wrapper.text()).toContain('Body')
   })
 
-  it('uses the accent glow shadow for the accent variant', () => {
+  it('uses the accent variant class', () => {
     const wrapper = mount(Card, { props: { variant: 'accent' } })
-    expect(wrapper.classes()).toContain('shadow-accent-glow')
+    expect(wrapper.classes()).toContain('card--accent')
   })
 })
 
 describe('Pill', () => {
   it('renders a dot for the dot variant', () => {
     const wrapper = mount(Pill, { props: { variant: 'dot' }, slots: { default: 'x' } })
-    expect(wrapper.find('span.bg-accent').exists()).toBe(true)
+    expect(wrapper.find('span.pill__dot').exists()).toBe(true)
   })
 })
