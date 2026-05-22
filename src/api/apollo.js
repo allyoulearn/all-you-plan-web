@@ -4,6 +4,8 @@ import { getMainDefinition } from '@apollo/client/utilities'
 import { onError } from '@apollo/client/link/error'
 import { createClient } from 'graphql-ws'
 import { REFRESH_TOKEN } from '@/api/operations'
+import { createMockLink } from '@/mocks/mockLink.js'
+import { mockRegistry } from '@/mocks/index.js'
 
 let accessToken = null
 
@@ -82,6 +84,11 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
 })
 
 export async function refreshAccessToken() {
+  if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true') {
+    const payload = mockRegistry.refreshToken().refreshToken
+    setAccessToken(payload.accessToken)
+    return payload
+  }
   const res = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -98,8 +105,13 @@ export async function refreshAccessToken() {
   throw new Error('Refresh failed')
 }
 
+let link = errorLink.concat(splitLink)
+if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true') {
+  link = createMockLink(mockRegistry).concat(link)
+}
+
 export const apolloClient = new ApolloClient({
-  link: errorLink.concat(splitLink),
+  link,
   cache: new InMemoryCache({
     typePolicies: {
       Task: { keyFields: ['id'] }
