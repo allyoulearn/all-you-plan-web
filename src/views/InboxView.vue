@@ -59,7 +59,7 @@ function relativeTime(dateStr) {
           v-model="captureText"
           type="text"
           placeholder="What's on your mind?"
-          class="flex-1 rounded-sm border border-rule-soft bg-paper px-3 py-2 text-[14px] text-ink placeholder-muted outline-none focus:border-muted dark:bg-paper"
+          class="flex-1 rounded-sm border border-rule-soft bg-paper px-3 py-2 text-[14px] text-ink placeholder:text-muted outline-none focus:border-muted dark:bg-paper"
           @keydown.enter="capture"
         />
         <Button

@@ -39,6 +39,13 @@ const groups = computed(() => {
         </div>
       </template>
 
+      <div
+        v-if="!groups.some((g) => g.items.length)"
+        class="mt-8 text-center text-[14px] text-muted"
+      >
+        No chores yet. Add your first recurring habit below.
+      </div>
+
       <div class="mt-7 flex gap-2.5">
         <Button variant="primary">New chore</Button>
       </div>

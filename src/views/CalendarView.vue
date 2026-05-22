@@ -130,11 +130,11 @@ function selectDay(cell) {
 
     <!-- Month navigation -->
     <div class="mb-5 flex items-center gap-3">
-      <IconButton icon="chevron-left" :size="30" variant="ghost" @click="prevMonth" />
+      <IconButton icon="chevron-left" :size="30" variant="ghost" aria-label="Previous month" @click="prevMonth" />
       <span class="flex-1 text-center font-serif text-[22px] italic text-ink">
         {{ MONTH_NAMES[currentMonth] }} {{ currentYear }}
       </span>
-      <IconButton icon="chevron-right" :size="30" variant="ghost" @click="nextMonth" />
+      <IconButton icon="chevron-right" :size="30" variant="ghost" aria-label="Next month" @click="nextMonth" />
     </div>
 
     <!-- Calendar grid -->

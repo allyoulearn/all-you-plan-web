@@ -75,7 +75,7 @@ function formatDate(dateStr) {
         v-model="bodyText"
         rows="4"
         placeholder="Write something…"
-        class="mt-1 w-full resize-none rounded-sm border border-rule-soft bg-paper px-3 py-2.5 font-serif text-[15px] text-ink placeholder-muted outline-none focus:border-muted dark:bg-paper"
+        class="mt-1 w-full resize-none rounded-sm border border-rule-soft bg-paper px-3 py-2.5 font-serif text-[15px] text-ink placeholder:text-muted outline-none focus:border-muted dark:bg-paper"
       />
       <div class="flex justify-end">
         <Button

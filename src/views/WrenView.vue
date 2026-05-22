@@ -89,7 +89,7 @@ function fillFromChip(prompt) {
 
     <!-- Input bar -->
     <div class="mx-auto mt-3 w-full max-w-[820px] pb-4">
-      <div class="flex items-center gap-2 rounded-pill border border-rule-soft bg-paper-2 py-1.5 pl-4 pr-1.5">
+      <div class="flex items-center gap-2 rounded-pill border border-rule-soft bg-paper-2 py-1.5 pl-4 pr-1.5 focus-within:border-muted">
         <input
           v-model="draft"
           placeholder="Tell Wren anything…"
@@ -99,6 +99,7 @@ function fillFromChip(prompt) {
         <button
           class="rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition-opacity disabled:opacity-40"
           :disabled="!draft.trim() || store.sending"
+          aria-label="Send message"
           @click="sendMessage"
         >
           SEND

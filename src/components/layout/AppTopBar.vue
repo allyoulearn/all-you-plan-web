@@ -23,8 +23,8 @@ const today = computed(() =>
     <span class="text-[13px] text-muted">{{ crumbs }}</span>
     <span class="flex-1" />
     <span class="text-[13px] text-muted">{{ today }}</span>
-    <IconButton icon="search" :size="34" />
-    <IconButton icon="plus" :size="34" />
-    <IconButton :icon="mode === 'dark' ? 'sun' : 'moon'" :size="34" @click="toggleMode" />
+    <IconButton icon="search" :size="34" aria-label="Search" />
+    <IconButton icon="plus" :size="34" aria-label="Add" />
+    <IconButton :icon="mode === 'dark' ? 'sun' : 'moon'" :size="34" aria-label="Toggle dark mode" @click="toggleMode" />
   </header>
 </template>

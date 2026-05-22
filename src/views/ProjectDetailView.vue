@@ -97,14 +97,12 @@ const sections = computed(() => [
 
       <div class="mt-7 flex gap-2.5">
         <Button variant="primary">Add task</Button>
-        <Button variant="default" as="span">
-          <RouterLink
-            :to="`/projects/${route.params.id}/board`"
-            class="text-inherit no-underline"
-          >
-            Switch to board view
-          </RouterLink>
-        </Button>
+        <RouterLink
+          :to="`/projects/${route.params.id}/board`"
+          class="inline-flex h-9 items-center rounded-pill border border-rule-soft bg-paper-2 px-4 text-[13px] font-medium text-ink transition-colors hover:bg-paper-3 no-underline"
+        >
+          Switch to board view
+        </RouterLink>
         <Button variant="ghost">Archive project</Button>
       </div>
     </template>

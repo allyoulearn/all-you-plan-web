@@ -50,6 +50,13 @@ const groups = computed(() => {
         </div>
       </template>
 
+      <div
+        v-if="!groups.some((g) => g.items.length)"
+        class="mt-8 text-center text-[14px] text-muted"
+      >
+        Nothing scheduled for today. Add a task or plan with Wren.
+      </div>
+
       <div class="mt-7 flex gap-2.5">
         <Button variant="primary">Add to today</Button>
         <Button variant="ghost" icon="bolt">Plan with Wren</Button>
