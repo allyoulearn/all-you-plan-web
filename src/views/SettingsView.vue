@@ -5,7 +5,7 @@
     <!-- Coach -->
     <SectionHeader label="Coach" />
 
-    <div class="rounded-md bg-paper-2 px-4 shadow-sm divide-y divide-rule-soft">
+    <div class="settings-view__section-card">
       <SettingRow
         label="Wren's personality"
         description="How Wren speaks and coaches you."
@@ -21,7 +21,7 @@
         label="Proactive check-ins"
         description="When Wren pings you during the day."
       >
-        <div class="flex gap-1.5">
+        <div class="settings-view__check-in-row">
           <Button
             v-for="opt in CHECK_IN_OPTIONS"
             :key="opt"
@@ -49,7 +49,7 @@
     <!-- Look -->
     <SectionHeader label="Look" />
 
-    <div class="rounded-md bg-paper-2 px-4 shadow-sm divide-y divide-rule-soft">
+    <div class="settings-view__section-card">
       <SettingRow
         label="Theme"
         description="The color palette used across the app."
@@ -76,7 +76,7 @@
     <!-- Privacy -->
     <SectionHeader label="Privacy" />
 
-    <div class="rounded-md bg-paper-2 px-4 shadow-sm divide-y divide-rule-soft">
+    <div class="settings-view__section-card">
       <SettingRow
         label="Journal visibility"
         description="Who can see your journal entries."
@@ -91,22 +91,18 @@
   </div>
 </template>
 
-<script setup>
+<script>
+/** SettingsView — user preferences for coach personality, check-ins, theme, and privacy. */
 import { computed } from 'vue'
-import { useAuthStore } from '@/stores/auth.store'
-import { useTheme } from '@/composables/useTheme'
+import { useAuthStore } from '@/stores/auth.store.js'
+import { useTheme } from '@/composables/useTheme.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import SettingRow from '@/components/settings/SettingRow.vue'
 
-const authStore = useAuthStore()
-const { setTheme, setMode } = useTheme()
-
-const settings = computed(() => authStore.user?.settings ?? {})
-
-// --- Coach ---
+// -- Coach --
 const personalityOptions = [
   { value: 'gentle', label: 'Gentle' },
   { value: 'direct', label: 'Direct' },
@@ -115,18 +111,6 @@ const personalityOptions = [
 
 const CHECK_IN_OPTIONS = ['morning', 'midday', 'evening', 'stuck']
 
-function hasCheckIn(val) {
-  return (settings.value.checkIns ?? []).includes(val)
-}
-
-async function toggleCheckIn(val) {
-  const current = settings.value.checkIns ?? []
-  const next = current.includes(val)
-    ? current.filter((v) => v !== val)
-    : [...current, val]
-  await authStore.updateSettings({ checkIns: next })
-}
-
 const nudgeOptions = [
   { value: 4, label: '4 days' },
   { value: 7, label: '7 days' },
@@ -134,13 +118,7 @@ const nudgeOptions = [
   { value: null, label: 'Never' },
 ]
 
-const stalledNudge = computed(() => settings.value.stalledNudgeDays ?? null)
-
-async function onNudgeChange(val) {
-  await authStore.updateSettings({ stalledNudgeDays: val })
-}
-
-// --- Look ---
+// -- Look --
 const themeOptions = [
   { value: 'warm', label: 'Warm' },
   { value: 'ink', label: 'Ink' },
@@ -153,20 +131,106 @@ const modeOptions = [
   { value: 'dark', label: 'Dark' },
 ]
 
-async function onThemeChange(val) {
-  setTheme(val)
-  await authStore.updateSettings({ theme: val })
-}
-
-async function onModeChange(val) {
-  setMode(val)
-  await authStore.updateSettings({ mode: val })
-}
-
-// --- Privacy ---
+// -- Privacy --
 const visibilityOptions = [
   { value: 'private', label: 'Private' },
   { value: 'themed', label: 'Themed' },
   { value: 'open', label: 'Open' },
 ]
+
+export default {
+  name: 'SettingsView',
+  components: { ScreenHeading, SectionHeader, Button, SegmentedControl, SettingRow },
+  setup() {
+    // -- State --
+    const authStore = useAuthStore()
+    const { setTheme, setMode } = useTheme()
+
+    // -- Computed --
+
+    /** Shorthand for the current user's settings object. */
+    const settings = computed(() => authStore.user?.settings ?? {})
+
+    /** Current stalled-nudge days value derived from settings. */
+    const stalledNudge = computed(() => settings.value.stalledNudgeDays ?? null)
+
+    // -- Function definitions --
+
+    /**
+     * Returns true if the given check-in slot is currently enabled.
+     * @param {string} val - Check-in slot name.
+     * @returns {boolean}
+     */
+    function hasCheckIn(val) {
+      return (settings.value.checkIns ?? []).includes(val)
+    }
+
+    /**
+     * Toggles the given check-in slot on or off and persists the change.
+     * @param {string} val - Check-in slot name.
+     */
+    async function toggleCheckIn(val) {
+      const current = settings.value.checkIns ?? []
+      const next = current.includes(val)
+        ? current.filter((v) => v !== val)
+        : [...current, val]
+      await authStore.updateSettings({ checkIns: next })
+    }
+
+    /**
+     * Persists the stalled-nudge days setting.
+     * @param {number|null} val - Days threshold, or null for never.
+     */
+    async function onNudgeChange(val) {
+      await authStore.updateSettings({ stalledNudgeDays: val })
+    }
+
+    /**
+     * Applies the theme and persists the setting.
+     * @param {string} val - Theme name.
+     */
+    async function onThemeChange(val) {
+      setTheme(val)
+      await authStore.updateSettings({ theme: val })
+    }
+
+    /**
+     * Applies the color mode and persists the setting.
+     * @param {string} val - Mode name ('light' or 'dark').
+     */
+    async function onModeChange(val) {
+      setMode(val)
+      await authStore.updateSettings({ mode: val })
+    }
+
+    return {
+      authStore,
+      settings,
+      personalityOptions,
+      CHECK_IN_OPTIONS,
+      nudgeOptions,
+      stalledNudge,
+      themeOptions,
+      modeOptions,
+      visibilityOptions,
+      hasCheckIn,
+      toggleCheckIn,
+      onNudgeChange,
+      onThemeChange,
+      onModeChange,
+    }
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+.settings-view {
+  &__section-card {
+    @apply rounded-md bg-paper-2 px-4 shadow-sm divide-y divide-rule-soft;
+  }
+
+  &__check-in-row {
+    @apply flex gap-1.5;
+  }
+}
+</style>

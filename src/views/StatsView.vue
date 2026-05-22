@@ -6,17 +6,17 @@
       emphasis="showing up."
     />
 
-    <div v-if="store.loading" class="text-[13px] text-muted">
+    <div v-if="store.loading" class="stats-view__status">
       Loading…
     </div>
 
-    <div v-else-if="store.error" class="text-[13px] text-bad">
+    <div v-else-if="store.error" class="stats-view__status stats-view__status--error">
       {{ store.error }}
     </div>
 
     <template v-else-if="store.stats">
       <!-- KPI strip -->
-      <div class="mb-7 grid grid-cols-3 gap-3.5">
+      <div class="stats-view__kpi-strip">
         <KpiTile label="Streak" :value="topStreak" unit="days" />
 
         <KpiTile label="Best" :value="topBest" unit="days" />
@@ -34,31 +34,31 @@
       <!-- Habits ranked -->
       <SectionHeader label="Habits ranked" :count="store.stats.rankedHabits.length" />
 
-      <div v-if="store.stats.rankedHabits.length === 0" class="text-[13px] text-muted">
+      <div v-if="store.stats.rankedHabits.length === 0" class="stats-view__status">
         No habits tracked yet.
       </div>
 
-      <div v-else class="rounded-md bg-paper-2 px-2.5 py-1 shadow-sm">
+      <div v-else class="stats-view__habits-list">
         <div
           v-for="(habit, idx) in store.stats.rankedHabits"
           :key="habit.choreId"
-          class="flex items-center gap-4 border-b border-rule-soft py-3.5 last:border-0"
+          class="stats-view__habit-row"
         >
-          <span class="w-6 font-mono text-[12px] text-muted">
+          <span class="stats-view__habit-rank">
             {{ String(idx + 1).padStart(2, '0') }}
           </span>
 
-          <div class="flex flex-1 flex-col gap-0.5">
-            <span class="text-[14px] text-ink">
+          <div class="stats-view__habit-meta">
+            <span class="stats-view__habit-name">
               {{ habit.name }}
             </span>
 
-            <span class="text-[12px] text-muted">
+            <span class="stats-view__habit-sub">
               {{ habit.streak }} days · best {{ habit.bestStreak }}
             </span>
           </div>
 
-          <span class="font-mono text-[20px] font-medium text-ink">
+          <span class="stats-view__habit-streak">
             {{ habit.streak }}
           </span>
         </div>
@@ -67,27 +67,88 @@
   </div>
 </template>
 
-<script setup>
+<script>
+/** StatsView — six-month activity heatmap and ranked habits list with KPI summary tiles. */
 import { onMounted, computed } from 'vue'
-import { useStatsStore } from '@/stores/stats.store'
+import { useStatsStore } from '@/stores/stats.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Card from '@/components/ui/Card.vue'
 import KpiTile from '@/components/today/KpiTile.vue'
 import Heatmap from '@/components/stats/Heatmap.vue'
 
-const store = useStatsStore()
-onMounted(() => store.load())
+export default {
+  name: 'StatsView',
+  components: { ScreenHeading, SectionHeader, Card, KpiTile, Heatmap },
+  setup() {
+    // -- State --
+    const store = useStatsStore()
 
-const heatmapValues = computed(() => store.stats?.heatmap ?? Array(182).fill(0))
+    // -- Computed --
 
-const topStreak = computed(() => {
-  const habits = store.stats?.rankedHabits ?? []
-  return habits.reduce((max, h) => Math.max(max, h.streak), 0)
-})
+    /** Heatmap intensity values for the past 26 weeks (182 cells). */
+    const heatmapValues = computed(() => store.stats?.heatmap ?? Array(182).fill(0))
 
-const topBest = computed(() => {
-  const habits = store.stats?.rankedHabits ?? []
-  return habits.reduce((max, h) => Math.max(max, h.bestStreak), 0)
-})
+    /** Highest current streak across all ranked habits. */
+    const topStreak = computed(() => {
+      const habits = store.stats?.rankedHabits ?? []
+      return habits.reduce((max, h) => Math.max(max, h.streak), 0)
+    })
+
+    /** Highest best streak across all ranked habits. */
+    const topBest = computed(() => {
+      const habits = store.stats?.rankedHabits ?? []
+      return habits.reduce((max, h) => Math.max(max, h.bestStreak), 0)
+    })
+
+    // -- Lifecycle --
+    onMounted(() => store.load())
+
+    return { store, heatmapValues, topStreak, topBest }
+  }
+}
 </script>
+
+<style lang="scss" scoped>
+.stats-view {
+  &__status {
+    @apply text-[13px] text-muted;
+
+    &--error {
+      @apply text-bad;
+    }
+  }
+
+  &__kpi-strip {
+    @apply mb-7 grid grid-cols-3 gap-3.5;
+  }
+
+  &__habits-list {
+    @apply rounded-md bg-paper-2 px-2.5 py-1 shadow-sm;
+  }
+
+  &__habit-row {
+    @apply flex items-center gap-4 border-b border-rule-soft py-3.5 last:border-0;
+  }
+
+  &__habit-rank {
+    @apply w-6 font-mono text-[12px] text-muted;
+  }
+
+  &__habit-meta {
+    @apply flex flex-1 flex-col gap-0.5;
+  }
+
+  &__habit-name {
+    @apply text-[14px] text-ink;
+  }
+
+  &__habit-sub {
+    @apply text-[12px] text-muted;
+  }
+
+  &__habit-streak {
+    @apply font-mono text-[20px] font-medium text-ink;
+  }
+}
+</style>
