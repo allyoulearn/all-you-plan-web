@@ -6,8 +6,9 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { WREN_MESSAGES_QUERY, SEND_WREN_MESSAGE } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { WREN_MESSAGES_QUERY, SEND_WREN_MESSAGE } from '@/api/operations/index.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useWrenStore = defineStore('wren', () => {
   // -- State --
@@ -65,6 +66,8 @@ export const useWrenStore = defineStore('wren', () => {
       error.value = e.message
       // Remove the optimistic message on failure
       messages.value = messages.value.filter(m => m.id !== optimisticId)
+      const { toastError } = useErrorToast()
+      toastError(e, 'Failed to send message')
     } finally {
       sending.value = false
     }

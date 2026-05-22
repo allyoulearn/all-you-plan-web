@@ -5,8 +5,9 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { DAILY_REVIEW_QUERY, SAVE_DAILY_REVIEW } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { DAILY_REVIEW_QUERY, SAVE_DAILY_REVIEW } from '@/api/operations/index.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useReviewStore = defineStore('review', () => {
   // -- State --
@@ -45,6 +46,7 @@ export const useReviewStore = defineStore('review', () => {
    * @param {object[]} responses - Array of reflection question/answer pairs
    */
   async function save(date, mood, responses) {
+    const { toastError } = useErrorToast()
     saving.value = true
     error.value = ''
     try {
@@ -55,6 +57,8 @@ export const useReviewStore = defineStore('review', () => {
       review.value = data.saveDailyReview
     } catch (e) {
       error.value = e.message
+      toastError(e, 'Failed to save review')
+      throw e
     } finally {
       saving.value = false
     }

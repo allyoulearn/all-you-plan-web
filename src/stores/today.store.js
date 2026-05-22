@@ -3,11 +3,15 @@
  * Manages the daily view (tasks, schedule, and metadata) for a given date.
  * Exposes actions to load the view, complete individual tasks, and move
  * unfinished tasks forward to the next day.
+ *
+ * Error-surfacing policy: load errors set error.value for inline display;
+ * mutation errors additionally toast via useErrorToast.
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { TODAY_QUERY, COMPLETE_TASK, MOVE_UNFINISHED } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { TODAY_QUERY, COMPLETE_TASK, MOVE_UNFINISHED } from '@/api/operations/index.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useTodayStore = defineStore('today', () => {
   // -- State --
@@ -40,24 +44,43 @@ export const useTodayStore = defineStore('today', () => {
 
   /**
    * Mark a task as complete, then refresh the current daily view.
+   * Captures the current date before awaiting so the reload uses the correct
+   * date even if view is cleared during the async operation.
    * @param {string} id - The task ID to complete
    */
   async function completeTask(id) {
-    await apolloClient.mutate({ mutation: COMPLETE_TASK, variables: { id } })
-    await load(view.value?.date)
+    const { toastError } = useErrorToast()
+    const currentDate = view.value?.date
+    if (!currentDate) return
+    try {
+      await apolloClient.mutate({ mutation: COMPLETE_TASK, variables: { id } })
+      await load(currentDate)
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to complete task')
+    }
   }
 
   /**
    * Move all unfinished tasks from the current view's date to the next day,
    * then refresh the daily view.
+   * Captures the current date before awaiting so the reload uses the correct
+   * date even if view is cleared during the async operation.
    */
   async function moveUnfinished() {
     if (!view.value) return
-    await apolloClient.mutate({
-      mutation: MOVE_UNFINISHED,
-      variables: { fromDate: view.value.date }
-    })
-    await load(view.value.date)
+    const { toastError } = useErrorToast()
+    const currentDate = view.value.date
+    try {
+      await apolloClient.mutate({
+        mutation: MOVE_UNFINISHED,
+        variables: { fromDate: currentDate }
+      })
+      await load(currentDate)
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to move unfinished tasks')
+    }
   }
 
   return { view, loading, error, load, completeTask, moveUnfinished }

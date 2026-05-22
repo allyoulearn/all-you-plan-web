@@ -14,6 +14,11 @@ vi.mock('@/api/operations', () => ({
   SEND_WREN_MESSAGE: 'SEND_WREN_MESSAGE'
 }))
 
+const mockToastError = vi.fn()
+vi.mock('@/composables/useErrorToast', () => ({
+  useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
+}))
+
 import { apolloClient } from '@/api/apollo'
 
 const fakeMessages = [
@@ -127,6 +132,14 @@ describe('wren.store', () => {
       const store = useWrenStore()
       await store.send('Hi')
       expect(store.sending).toBe(false)
+    })
+
+    it('shows error toast on failure (WEB-T05-009)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('send failed'))
+      const store = useWrenStore()
+      await store.send('Hi')
+
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to send message')
     })
   })
 })

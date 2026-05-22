@@ -4,8 +4,8 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { STATS_QUERY } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { STATS_QUERY } from '@/api/operations/index.js'
 
 export const useStatsStore = defineStore('stats', () => {
   // -- State --

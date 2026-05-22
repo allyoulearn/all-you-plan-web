@@ -1,9 +1,15 @@
-import { ApolloClient, InMemoryCache, createHttpLink, split } from '@apollo/client/core'
+import {
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+  split,
+  fromPromise
+} from '@apollo/client/core'
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { getMainDefinition } from '@apollo/client/utilities'
 import { onError } from '@apollo/client/link/error'
 import { createClient } from 'graphql-ws'
-import { REFRESH_TOKEN } from '@/api/operations'
+import { REFRESH_TOKEN } from '@/api/operations/index.js'
 import { createMockLink } from '@/mocks/mockLink.js'
 import { mockRegistry } from '@/mocks/index.js'
 
@@ -31,7 +37,7 @@ const httpLink = createHttpLink({
   }
 })
 
-const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/graphql`
+const wsUrl = import.meta.env.VITE_WS_URL || `wss://${window.location.host}/graphql`
 const wsLink = new GraphQLWsLink(
   createClient({
     url: wsUrl,
@@ -63,18 +69,16 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
           })
         }
 
-        return new Promise((resolve, reject) => {
-          refreshing
-            .then(() => resolve(forward(operation)))
-            .catch(() => {
-              setAccessToken(null)
-              // Lazy-import router to avoid circular dependency at module init.
-              import('@/router/index.js').then(({ default: router }) => {
-                router.push({ name: 'login' })
-              })
-              reject(err)
+        return fromPromise(
+          refreshing.catch(() => {
+            setAccessToken(null)
+            // Lazy-import router to avoid circular dependency at module init.
+            import('@/router/index.js').then(({ default: router }) => {
+              router.push({ name: 'login' })
             })
-        })
+            return Promise.reject(err)
+          })
+        ).flatMap(() => forward(operation))
       }
     }
   }
@@ -97,7 +101,14 @@ export async function refreshAccessToken() {
       query: REFRESH_TOKEN.loc.source.body
     })
   })
+  if (!res.ok) {
+    throw new Error(`Refresh failed: HTTP ${res.status}`)
+  }
   const json = await res.json()
+  if (json.errors?.length) {
+    console.error('[refreshAccessToken] server errors:', json.errors)
+    throw new Error(json.errors[0].message || 'Refresh failed')
+  }
   if (json.data?.refreshToken) {
     setAccessToken(json.data.refreshToken.accessToken)
     return json.data.refreshToken

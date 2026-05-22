@@ -3,18 +3,28 @@
  * Manages the list of projects and the active project board. Exposes actions
  * to load all projects, load a specific project's board, and complete
  * individual board tasks.
+ *
+ * Error-surfacing policy: load errors set their respective error ref for
+ * inline display; mutation errors additionally toast via useErrorToast.
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { PROJECTS_QUERY, PROJECT_BOARD_QUERY, COMPLETE_PROJECT_TASK } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import {
+  PROJECTS_QUERY,
+  PROJECT_BOARD_QUERY,
+  COMPLETE_PROJECT_TASK
+} from '@/api/operations/index.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useProjectsStore = defineStore('projects', () => {
   // -- State --
   const projects = ref([])
   const board = ref(null)
-  const loading = ref(false)
-  const error = ref('')
+  const loadingProjects = ref(false)
+  const loadingBoard = ref(false)
+  const errorProjects = ref('')
+  const errorBoard = ref('')
 
   // -- Actions --
 
@@ -23,8 +33,8 @@ export const useProjectsStore = defineStore('projects', () => {
    * local list.
    */
   async function loadProjects() {
-    loading.value = true
-    error.value = ''
+    loadingProjects.value = true
+    errorProjects.value = ''
     try {
       const { data } = await apolloClient.query({
         query: PROJECTS_QUERY,
@@ -33,9 +43,9 @@ export const useProjectsStore = defineStore('projects', () => {
       })
       projects.value = data.projects
     } catch (e) {
-      error.value = e.message
+      errorProjects.value = e.message
     } finally {
-      loading.value = false
+      loadingProjects.value = false
     }
   }
 
@@ -44,8 +54,8 @@ export const useProjectsStore = defineStore('projects', () => {
    * @param {string} id - The project ID whose board to load
    */
   async function loadBoard(id) {
-    loading.value = true
-    error.value = ''
+    loadingBoard.value = true
+    errorBoard.value = ''
     try {
       const { data } = await apolloClient.query({
         query: PROJECT_BOARD_QUERY,
@@ -54,9 +64,9 @@ export const useProjectsStore = defineStore('projects', () => {
       })
       board.value = data.projectBoard
     } catch (e) {
-      error.value = e.message
+      errorBoard.value = e.message
     } finally {
-      loading.value = false
+      loadingBoard.value = false
     }
   }
 
@@ -65,11 +75,27 @@ export const useProjectsStore = defineStore('projects', () => {
    * @param {string} id - The task ID to complete
    */
   async function completeTask(id) {
-    await apolloClient.mutate({ mutation: COMPLETE_PROJECT_TASK, variables: { id } })
-    if (board.value?.project?.id) {
-      await loadBoard(board.value.project.id)
+    const { toastError } = useErrorToast()
+    try {
+      await apolloClient.mutate({ mutation: COMPLETE_PROJECT_TASK, variables: { id } })
+      if (board.value?.project?.id) {
+        await loadBoard(board.value.project.id)
+      }
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to complete task')
     }
   }
 
-  return { projects, board, loading, error, loadProjects, loadBoard, completeTask }
+  return {
+    projects,
+    board,
+    loadingProjects,
+    loadingBoard,
+    errorProjects,
+    errorBoard,
+    loadProjects,
+    loadBoard,
+    completeTask
+  }
 })

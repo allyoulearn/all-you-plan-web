@@ -15,6 +15,11 @@ vi.mock('@/api/operations', () => ({
   MOVE_UNFINISHED: 'MOVE_UNFINISHED'
 }))
 
+const mockToastError = vi.fn()
+vi.mock('@/composables/useErrorToast', () => ({
+  useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
+}))
+
 import { apolloClient } from '@/api/apollo'
 
 const fakeView = {
@@ -106,6 +111,45 @@ describe('today.store', () => {
         expect.objectContaining({ variables: { date: fakeView.date } })
       )
     })
+
+    it('is a no-op when view has no date (WEB-T05-014)', async () => {
+      const store = useTodayStore()
+      store.view = null
+      await store.completeTask('t1')
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('sets error and toasts on mutation failure (WEB-T05-005)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('mutate failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.completeTask('t1')
+
+      expect(store.error).toBe('mutate failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to complete task')
+    })
+
+    it('does not reload when mutation fails', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('mutate failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.completeTask('t1')
+      expect(apolloClient.query).not.toHaveBeenCalled()
+    })
+
+    it('uses the captured date not the post-await view.date', async () => {
+      // Simulates: view is cleared mid-flight, but reload uses the captured date
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockImplementationOnce(async () => {
+        return { data: { today: fakeView } }
+      })
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.completeTask('t1')
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { date: '2026-05-21' } })
+      )
+    })
   })
 
   describe('moveUnfinished()', () => {
@@ -127,6 +171,27 @@ describe('today.store', () => {
         expect.objectContaining({ variables: { fromDate: fakeView.date } })
       )
       expect(apolloClient.query).toHaveBeenCalled()
+    })
+
+    it('sets error and toasts on mutation failure (WEB-T05-005)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('move failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.moveUnfinished()
+
+      expect(store.error).toBe('move failed')
+      expect(mockToastError).toHaveBeenCalledWith(
+        expect.any(Error),
+        'Failed to move unfinished tasks'
+      )
+    })
+
+    it('does not reload when mutation fails', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('move failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.moveUnfinished()
+      expect(apolloClient.query).not.toHaveBeenCalled()
     })
   })
 })
