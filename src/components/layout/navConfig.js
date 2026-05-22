@@ -1,3 +1,9 @@
+/**
+ * Navigation configuration.
+ * Defines the sidebar navigation groups, their labels, and the ordered list
+ * of route items (path, icon key, display label, keyboard shortcut) within
+ * each group.  Consumed by the AppSidebar and mobile navigation components.
+ */
 export const navGroups = [
   {
     label: 'Workspaces',

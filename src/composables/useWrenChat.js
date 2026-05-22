@@ -1,6 +1,14 @@
+/**
+ * Wren chat composable.
+ * Shared logic for the Wren chat UI used by both WrenPanel and WrenView.
+ * Handles draft state, auto-scroll, send, keydown, and quick-prompt chips.
+ */
 import { ref, watch, nextTick, onMounted } from 'vue'
-import { useWrenStore } from '@/stores/wren.store'
+import { useWrenStore } from '@/stores/wren.store.js'
 
+// -- Constants --
+
+/** Pre-defined prompts displayed as quick-action chips in the chat UI. */
 export const QUICK_PROMPTS = [
   'What should I focus on?',
   "I'm feeling overwhelmed.",
@@ -8,11 +16,12 @@ export const QUICK_PROMPTS = [
   'I need a rest.'
 ]
 
+// -- Composable --
+
 /**
- * Shared logic for the Wren chat UI used by both WrenPanel and WrenView.
- * Handles draft state, auto-scroll, send, keydown, and quick-prompt chips.
- *
+ * Composable that wires the Wren chat panel to the wren store.
  * @param {import('vue').Ref<HTMLElement|null>} bodyRef - Scrollable message container ref
+ * @returns {{ store: object, draft: import('vue').Ref<string>, sendMessage: () => Promise<void>, handleKeydown: (e: KeyboardEvent) => void, fillFromChip: (prompt: string) => void }}
  */
 export function useWrenChat(bodyRef) {
   const store = useWrenStore()
@@ -20,6 +29,11 @@ export function useWrenChat(bodyRef) {
 
   onMounted(() => store.load())
 
+  // -- Scroll --
+
+  /**
+   * Scroll the message container to the bottom after the next DOM tick.
+   */
   function scrollToBottom() {
     nextTick(() => {
       if (bodyRef.value) {
@@ -30,6 +44,13 @@ export function useWrenChat(bodyRef) {
 
   watch(() => store.messages.length, scrollToBottom)
 
+  // -- Actions --
+
+  /**
+   * Send the current draft text as a message. Clears the draft on success.
+   * No-op when the draft is empty or the store is already sending.
+   * @returns {Promise<void>}
+   */
   async function sendMessage() {
     const text = draft.value.trim()
     if (!text || store.sending) return
@@ -37,6 +58,10 @@ export function useWrenChat(bodyRef) {
     await store.send(text)
   }
 
+  /**
+   * Handle textarea keydown. Submits on Enter (without Shift).
+   * @param {KeyboardEvent} e
+   */
   function handleKeydown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -44,6 +69,10 @@ export function useWrenChat(bodyRef) {
     }
   }
 
+  /**
+   * Populate the draft with a quick-prompt chip value.
+   * @param {string} prompt - The prompt text from the chip
+   */
   function fillFromChip(prompt) {
     draft.value = prompt
   }

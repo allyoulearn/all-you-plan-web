@@ -1,6 +1,15 @@
+/**
+ * Application router.
+ * Declares all client-side routes and registers two global navigation guards:
+ *   - `beforeEach` enforces authentication (redirects unauthenticated users to
+ *     login and redirects authenticated users away from public-only routes).
+ *   - `afterEach` syncs the document title from `route.meta.title`.
+ */
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth.store'
+import { useAuthStore } from '@/stores/auth.store.js'
 import AppShell from '@/components/layout/AppShell.vue'
+
+// -- Route definitions --
 
 const routes = [
   {
@@ -114,11 +123,22 @@ const routes = [
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
+// -- Router instance --
+
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
+// -- Navigation guards --
+
+/**
+ * Global before-each guard.
+ * Redirects unauthenticated users away from protected routes and authenticated
+ * users away from public-only routes (e.g. login, register).
+ * @param {import('vue-router').RouteLocationNormalized} to
+ * @returns {boolean|{ name: string }}
+ */
 router.beforeEach(to => {
   const auth = useAuthStore()
   if (!to.meta.public && !auth.isAuthenticated) return { name: 'login' }
@@ -126,6 +146,11 @@ router.beforeEach(to => {
   return true
 })
 
+/**
+ * Global after-each guard.
+ * Updates `document.title` from `route.meta.title`.
+ * @param {import('vue-router').RouteLocationNormalized} to
+ */
 router.afterEach(to => {
   document.title = to.meta.title ? `${to.meta.title} — all you plan` : 'all you plan'
 })
