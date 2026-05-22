@@ -7,8 +7,7 @@ import WrenPanel from './WrenPanel.vue'
 
 <template>
   <div
-    class="grid h-screen overflow-hidden bg-paper"
-    style="grid-template-columns: 232px 1fr 360px"
+    class="grid h-screen overflow-hidden bg-paper [grid-template-columns:232px_1fr_360px] xl:[grid-template-columns:200px_1fr_320px] lg:[grid-template-columns:64px_1fr_280px]"
   >
     <AppSidebar />
     <main class="flex flex-col overflow-y-auto bg-paper">
@@ -20,12 +19,3 @@ import WrenPanel from './WrenPanel.vue'
     <WrenPanel />
   </div>
 </template>
-
-<style scoped>
-@media (max-width: 1280px) {
-  div { grid-template-columns: 200px 1fr 320px !important; }
-}
-@media (max-width: 960px) {
-  div { grid-template-columns: 64px 1fr 280px !important; }
-}
-</style>

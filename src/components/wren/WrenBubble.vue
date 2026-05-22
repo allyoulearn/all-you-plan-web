@@ -22,7 +22,7 @@ function formatWhen(iso) {
         {{ formatWhen(message.createdAt) }}
       </p>
       <div
-        class="rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-sm bg-paper-3 px-4 py-3 text-[14px] leading-relaxed text-ink dark:bg-paper-3"
+        class="rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-sm bg-paper-3 px-4 py-3 text-[14px] leading-relaxed text-ink"
       >
         {{ message.text }}
       </div>
@@ -40,7 +40,7 @@ function formatWhen(iso) {
         :class="
           message.actions && message.actions.length
             ? 'bg-accent text-accent-ink shadow-accent-glow'
-            : 'bg-paper-2 text-ink dark:bg-paper-2'
+            : 'bg-paper-2 text-ink'
         "
       >
         {{ message.text }}

@@ -1,49 +1,11 @@
 <script setup>
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { ref } from 'vue'
 import Icon from '@/components/ui/Icon.vue'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
-import { useWrenStore } from '@/stores/wren.store'
+import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
 
-const store = useWrenStore()
-const draft = ref('')
 const bodyRef = ref(null)
-
-const QUICK_PROMPTS = [
-  "What should I focus on?",
-  "I'm feeling overwhelmed.",
-  "Plan tomorrow",
-  "I need a rest.",
-]
-
-onMounted(() => store.load())
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (bodyRef.value) {
-      bodyRef.value.scrollTop = bodyRef.value.scrollHeight
-    }
-  })
-}
-
-watch(() => store.messages.length, scrollToBottom)
-
-async function sendMessage() {
-  const text = draft.value.trim()
-  if (!text || store.sending) return
-  draft.value = ''
-  await store.send(text)
-}
-
-function handleKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
-}
-
-function fillFromChip(prompt) {
-  draft.value = prompt
-}
+const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
 </script>
 
 <template>

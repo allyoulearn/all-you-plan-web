@@ -2,8 +2,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "briefing": "Briefing",
-    "settings": "Settings",
-    "spaces": "Spaces"
+    "settings": "Settings"
   },
   "auth": {
     "login": "Sign in",
@@ -27,33 +26,19 @@
     "resetPasswordCta": "Set new password",
     "passwordMismatch": "Passwords do not match.",
     "passwordWeak": "Password must be at least 8 characters and include uppercase, lowercase, and a digit.",
-    "resetTokenInvalid": "This reset link is invalid or has expired.",
-    "orContinueWith": "or continue with",
-    "continueWithGoogle": "Continue with Google"
+    "resetTokenInvalid": "This reset link is invalid or has expired."
   },
   "dashboard": {
-    "title": "Dashboard",
-    "matrix": "Eisenhower Matrix",
-    "do": "Do",
-    "schedule": "Schedule",
-    "delegate": "Delegate",
-    "drop": "Drop",
-    "doDesc": "Urgent & Important",
-    "scheduleDesc": "Important, not urgent",
-    "delegateDesc": "Urgent, not important",
-    "dropDesc": "Neither"
+    "title": "Dashboard"
   },
   "tasks": {
     "addTask": "Add task",
     "quickAdd": "Quick add",
     "title": "Title",
     "description": "Description",
-    "quadrant": "Quadrant",
     "dueDate": "Due date",
     "effort": "Effort (min)",
     "complete": "Complete",
-    "snooze": "Snooze",
-    "delete": "Delete",
     "subtasks": "Subtasks",
     "noTasks": "No tasks yet",
     "overdue": "Overdue"

@@ -1,53 +1,15 @@
 <script setup>
-import { ref, watch, nextTick, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
-import { useWrenStore } from '@/stores/wren.store'
+import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat'
 
-const store = useWrenStore()
-const draft = ref('')
 const bodyRef = ref(null)
-
-const QUICK_PROMPTS = [
-  "What should I focus on?",
-  "I'm feeling overwhelmed.",
-  "Plan tomorrow",
-  "I need a rest.",
-]
+const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
 
 const today = computed(() =>
   new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 )
-
-onMounted(() => store.load())
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (bodyRef.value) {
-      bodyRef.value.scrollTop = bodyRef.value.scrollHeight
-    }
-  })
-}
-
-watch(() => store.messages.length, scrollToBottom)
-
-async function sendMessage() {
-  const text = draft.value.trim()
-  if (!text || store.sending) return
-  draft.value = ''
-  await store.send(text)
-}
-
-function handleKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
-}
-
-function fillFromChip(prompt) {
-  draft.value = prompt
-}
 </script>
 
 <template>
