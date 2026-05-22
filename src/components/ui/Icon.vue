@@ -26,9 +26,13 @@ export default {
     // -- Computed --
 
     /** Resolved icon component from the outline or solid map, or null for unknown names. */
-    const component = computed(
-      () => (props.solid ? solidIcons : outlineIcons)[props.name] || null
-    )
+    const component = computed(() => {
+      const resolved = (props.solid ? solidIcons : outlineIcons)[props.name] || null
+      if (import.meta.env.DEV && !resolved) {
+        console.warn(`[Icon] Unknown icon name: "${props.name}"`)
+      }
+      return resolved
+    })
 
     return { component }
   }

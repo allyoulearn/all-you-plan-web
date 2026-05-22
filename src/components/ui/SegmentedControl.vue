@@ -1,5 +1,9 @@
 <template>
-  <div class="segmented-control">
+  <div
+    class="segmented-control"
+    role="group"
+    :aria-label="groupLabel"
+  >
     <button
       v-for="opt in options"
       :key="opt.value"
@@ -8,6 +12,7 @@
       :class="opt.value === modelValue
         ? 'segmented-control__option--active'
         : 'segmented-control__option--inactive'"
+      :aria-pressed="opt.value === modelValue"
       @click="$emit('update:modelValue', opt.value)"
     >
       {{ opt.label }}
@@ -27,7 +32,9 @@ export default {
     /** Currently selected value (v-model) */
     modelValue: { type: [String, Number], default: '' },
     /** Array of option objects with value, label, and optional count */
-    options: { type: Array, default: () => [] }
+    options: { type: Array, default: () => [] },
+    /** Accessible label for the control group */
+    groupLabel: { type: String, default: 'View options' }
   },
   emits: ['update:modelValue']
 }
@@ -39,6 +46,7 @@ export default {
 
   &__option {
     @apply inline-flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-[12.5px] font-medium transition-colors;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
 
     &--active {
       @apply bg-paper-2 text-ink shadow-sm;

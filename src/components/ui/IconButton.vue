@@ -39,6 +39,7 @@ export default {
 <style lang="scss" scoped>
 .icon-button {
   @apply grid place-items-center rounded-pill text-ink-2 transition-colors hover:text-ink disabled:opacity-50;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
 
   &--default {
     @apply bg-paper-2 border border-rule-soft hover:bg-paper-3;

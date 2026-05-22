@@ -15,7 +15,7 @@ export default {
   name: 'ProgressBar',
   props: {
     /** Fill ratio between 0 and 1 */
-    value: { type: Number, default: 0 },
+    value: { type: Number, default: 0, validator: v => v >= 0 && v <= 1 },
     /** Render a thinner track when true */
     thin: { type: Boolean, default: false }
   },

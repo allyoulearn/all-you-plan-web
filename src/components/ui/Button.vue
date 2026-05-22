@@ -45,6 +45,7 @@ export default {
 .button {
   @apply inline-flex items-center gap-2 rounded-pill font-medium whitespace-nowrap transition-colors;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
 
   &--default {
     @apply bg-paper-2 text-ink border border-rule-soft hover:bg-paper-3 hover:border-muted;
