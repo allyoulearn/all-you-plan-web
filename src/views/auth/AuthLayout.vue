@@ -8,7 +8,7 @@
       </p>
 
       <div class="auth-layout__card">
-        <slot />
+        <RouterView />
       </div>
     </div>
   </div>
@@ -16,9 +16,11 @@
 
 <script>
 /** AuthLayout — centered card shell wrapping all authentication screens. */
+import { RouterView } from 'vue-router'
 
 export default {
   name: 'AuthLayout',
+  components: { RouterView }
 }
 </script>
 
