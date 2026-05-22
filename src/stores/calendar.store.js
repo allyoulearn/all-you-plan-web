@@ -1,13 +1,24 @@
+/**
+ * Calendar store.
+ * Manages the list of calendar events fetched from the API for a given month.
+ */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo'
 import { CALENDAR_EVENTS_QUERY } from '@/api/operations'
 
 export const useCalendarStore = defineStore('calendar', () => {
+  // -- State --
   const events = ref([])
   const loading = ref(false)
   const error = ref('')
 
+  // -- Actions --
+
+  /**
+   * Fetch calendar events for the given month from the API.
+   * @param {string|null} [month] - ISO month string (e.g. "2024-05"). Defaults to current month when `null`.
+   */
   async function load(month) {
     loading.value = true
     error.value = ''

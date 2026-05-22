@@ -1,14 +1,26 @@
+/**
+ * Wren store.
+ * Manages the AI coaching conversation with Wren: the message history,
+ * loading/sending state, and an optimistic-update pattern so the user's
+ * message appears immediately while the API request is in flight.
+ */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo'
 import { WREN_MESSAGES_QUERY, SEND_WREN_MESSAGE } from '@/api/operations'
 
 export const useWrenStore = defineStore('wren', () => {
+  // -- State --
   const messages = ref([])
   const loading = ref(false)
   const sending = ref(false)
   const error = ref('')
 
+  // -- Actions --
+
+  /**
+   * Fetch the full Wren message history from the API and replace the local list.
+   */
   async function load() {
     loading.value = true
     error.value = ''
@@ -25,6 +37,12 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Send a message to Wren. The user's message is appended optimistically
+   * before the request completes. On success the returned coach message is
+   * appended. On failure the optimistic message is removed.
+   * @param {string} text - The user's message text
+   */
   async function send(text) {
     if (!text || sending.value) return
     sending.value = true

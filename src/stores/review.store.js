@@ -1,14 +1,26 @@
+/**
+ * Review store.
+ * Manages the daily review record for a given date, including mood and
+ * reflection responses. Exposes actions to load and save the review.
+ */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo'
 import { DAILY_REVIEW_QUERY, SAVE_DAILY_REVIEW } from '@/api/operations'
 
 export const useReviewStore = defineStore('review', () => {
+  // -- State --
   const review = ref(null)
   const loading = ref(false)
   const saving = ref(false)
   const error = ref('')
 
+  // -- Actions --
+
+  /**
+   * Fetch the daily review record for the given date from the API.
+   * @param {string} date - ISO date string (e.g. "2024-05-22")
+   */
   async function load(date) {
     loading.value = true
     error.value = ''
@@ -26,6 +38,12 @@ export const useReviewStore = defineStore('review', () => {
     }
   }
 
+  /**
+   * Persist the daily review for the given date.
+   * @param {string} date - ISO date string (e.g. "2024-05-22")
+   * @param {string} mood - Mood rating or label for the day
+   * @param {object[]} responses - Array of reflection question/answer pairs
+   */
   async function save(date, mood, responses) {
     saving.value = true
     error.value = ''
