@@ -5,8 +5,9 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { CHORES_QUERY, COMPLETE_CHORE } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { CHORES_QUERY, COMPLETE_CHORE } from '@/api/operations/index.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useChoresStore = defineStore('chores', () => {
   // -- State --
@@ -38,10 +39,21 @@ export const useChoresStore = defineStore('chores', () => {
   /**
    * Mark a chore as complete, then refresh the chores list.
    * @param {string} id - The chore ID to complete
+   * @throws Re-throws the API error after showing an error toast
    */
   async function completeChore(id) {
-    await apolloClient.mutate({ mutation: COMPLETE_CHORE, variables: { id } })
-    await load()
+    loading.value = true
+    try {
+      await apolloClient.mutate({ mutation: COMPLETE_CHORE, variables: { id } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      const { toastError } = useErrorToast()
+      toastError(e, 'Failed to complete chore')
+      throw e
+    } finally {
+      loading.value = false
+    }
   }
 
   return { chores, loading, error, load, completeChore }

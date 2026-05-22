@@ -4,8 +4,8 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { CALENDAR_EVENTS_QUERY } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { CALENDAR_EVENTS_QUERY } from '@/api/operations/index.js'
 
 export const useCalendarStore = defineStore('calendar', () => {
   // -- State --

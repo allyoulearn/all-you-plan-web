@@ -5,8 +5,8 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { JOURNAL_ENTRIES_QUERY, CREATE_JOURNAL_ENTRY } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { JOURNAL_ENTRIES_QUERY, CREATE_JOURNAL_ENTRY } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useJournalStore = defineStore('journal', () => {

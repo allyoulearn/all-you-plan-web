@@ -5,8 +5,8 @@
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apolloClient } from '@/api/apollo'
-import { INBOX_ITEMS_QUERY, CREATE_INBOX_ITEM, TRIAGE_INBOX_ITEM } from '@/api/operations'
+import { apolloClient } from '@/api/apollo.js'
+import { INBOX_ITEMS_QUERY, CREATE_INBOX_ITEM, TRIAGE_INBOX_ITEM } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useInboxStore = defineStore('inbox', () => {

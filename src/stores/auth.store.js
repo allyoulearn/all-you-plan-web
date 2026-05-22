@@ -10,7 +10,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apolloClient, setAccessToken, refreshAccessToken } from '@/api/apollo'
+import { apolloClient, setAccessToken, refreshAccessToken } from '@/api/apollo.js'
 import {
   LOGIN,
   REGISTER,
@@ -18,7 +18,7 @@ import {
   UPDATE_PROFILE,
   FORGOT_PASSWORD,
   RESET_PASSWORD
-} from '@/api/operations'
+} from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -68,6 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function login(email, password) {
     loading.value = true
+    error.value = ''
     try {
       const { data } = await apolloClient.mutate({
         mutation: LOGIN,
@@ -75,6 +76,9 @@ export const useAuthStore = defineStore('auth', () => {
       })
       setAuth(data.login)
       return data.login
+    } catch (e) {
+      error.value = e.message
+      throw e
     } finally {
       loading.value = false
     }
@@ -89,6 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function register(email, password, name) {
     loading.value = true
+    error.value = ''
     try {
       const { data } = await apolloClient.mutate({
         mutation: REGISTER,
@@ -96,6 +101,9 @@ export const useAuthStore = defineStore('auth', () => {
       })
       setAuth(data.register)
       return data.register
+    } catch (e) {
+      error.value = e.message
+      throw e
     } finally {
       loading.value = false
     }
@@ -183,12 +191,16 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function forgotPassword(email) {
     loading.value = true
+    error.value = ''
     try {
       const { data } = await apolloClient.mutate({
         mutation: FORGOT_PASSWORD,
         variables: { email }
       })
       return data.forgotPassword
+    } catch (e) {
+      error.value = e.message
+      throw e
     } finally {
       loading.value = false
     }
@@ -202,6 +214,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function resetPassword(token, newPassword) {
     loading.value = true
+    error.value = ''
     try {
       const { data } = await apolloClient.mutate({
         mutation: RESET_PASSWORD,
@@ -209,6 +222,9 @@ export const useAuthStore = defineStore('auth', () => {
       })
       setAuth(data.resetPassword)
       return data.resetPassword
+    } catch (e) {
+      error.value = e.message
+      throw e
     } finally {
       loading.value = false
     }

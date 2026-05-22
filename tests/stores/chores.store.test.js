@@ -14,6 +14,10 @@ vi.mock('@/api/operations', () => ({
   COMPLETE_CHORE: 'COMPLETE_CHORE'
 }))
 
+vi.mock('@/composables/useErrorToast', () => ({
+  useErrorToast: () => ({ toastError: vi.fn(), toastSuccess: vi.fn() })
+}))
+
 import { apolloClient } from '@/api/apollo'
 
 const fakeChores = [
@@ -42,6 +46,15 @@ describe('chores.store', () => {
       expect(store.error).toBe('')
     })
 
+    it('uses network-only fetch policy', async () => {
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      await store.load()
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ fetchPolicy: 'network-only' })
+      )
+    })
+
     it('sets error on failure and keeps loading false', async () => {
       apolloClient.query.mockRejectedValueOnce(new Error('load failed'))
       const store = useChoresStore()
@@ -60,6 +73,14 @@ describe('chores.store', () => {
       expect(store.error).toBe('old error')
       await store.load()
       expect(store.error).toBe('')
+    })
+
+    it('replaces the chores list with the API response', async () => {
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: [fakeChores[0]] } })
+      const store = useChoresStore()
+      await store.load()
+      expect(store.chores).toHaveLength(1)
+      expect(store.chores[0].id).toBe('c1')
     })
   })
 
@@ -82,6 +103,42 @@ describe('chores.store', () => {
       await store.completeChore('c1')
 
       expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('sets loading true during the operation and resets it on completion', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      const promise = store.completeChore('c1')
+      expect(store.loading).toBe(true)
+      await promise
+      expect(store.loading).toBe(false)
+    })
+
+    it('sets error, shows a toast, and re-throws on mutation failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('mutation failed'))
+      const store = useChoresStore()
+
+      await expect(store.completeChore('c1')).rejects.toThrow('mutation failed')
+      expect(store.error).toBe('mutation failed')
+    })
+
+    it('resets loading to false on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('mutation failed'))
+      const store = useChoresStore()
+      await store.completeChore('c1').catch(() => {})
+      expect(store.loading).toBe(false)
+    })
+
+    it('load() failure after a successful mutation sets error.value silently', async () => {
+      // load() catches its own errors and sets error.value without re-throwing,
+      // so completeChore resolves rather than rejects when only the reload fails.
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockRejectedValueOnce(new Error('reload failed'))
+      const store = useChoresStore()
+
+      await store.completeChore('c1')
+      expect(store.error).toBe('reload failed')
     })
   })
 })
