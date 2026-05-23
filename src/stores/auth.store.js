@@ -143,20 +143,27 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Log out the current user.
    * Fires the server-side LOGOUT mutation to invalidate the refresh cookie,
-   * then wipes local state. Errors on the mutation are silently ignored so
-   * the user is never stuck logged in.
+   * then wipes local state. Mutation failures do not prevent local logout so
+   * the user is never stuck — but they are logged in dev so the
+   * "appears-logged-out-while-still-valid-server-side" case is diagnosable
+   * (WEB-W1-10).
    */
   async function logout() {
     try {
       await apolloClient.mutate({ mutation: LOGOUT })
-    } catch {
-      // Ignore errors on logout
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.warn('[auth] server-side logout failed:', e?.message)
+      }
     }
     clearAuth()
   }
 
   /**
    * Attempt to restore a previous session using the stored refresh token.
+   * Failures are logged in dev so legitimate breakage (server down, refresh
+   * endpoint schema drift) is diagnosable — silent in production so an
+   * expected expired-token return does not pollute the console (WEB-W1-09).
    * @returns {Promise<boolean>} `true` when the session was restored, `false` otherwise
    */
   async function tryRestoreSession() {
@@ -164,7 +171,10 @@ export const useAuthStore = defineStore('auth', () => {
       const result = await refreshAccessToken()
       setAuth(result)
       return true
-    } catch {
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.warn('[auth] session restore failed:', e?.message)
+      }
       clearAuth()
       return false
     }

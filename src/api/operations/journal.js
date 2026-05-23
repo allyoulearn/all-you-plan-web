@@ -1,5 +1,13 @@
+/**
+ * GraphQL operations for the journal feature.
+ *
+ * Queries: JOURNAL_ENTRIES_QUERY (full history).
+ * Mutations: CREATE_JOURNAL_ENTRY, UPDATE_JOURNAL_ENTRY, DELETE_JOURNAL_ENTRY.
+ * (WEB-W1-12)
+ */
 import { gql } from '@apollo/client/core'
 
+/** Fetch every journal entry (most recent first server-side). */
 export const JOURNAL_ENTRIES_QUERY = gql`
   query JournalEntries {
     journalEntries {
@@ -13,6 +21,7 @@ export const JOURNAL_ENTRIES_QUERY = gql`
   }
 `
 
+/** Persist a new journal entry from a date, optional prompt + pull quote, and body. */
 export const CREATE_JOURNAL_ENTRY = gql`
   mutation CreateJournalEntry(
     $date: String!
@@ -38,6 +47,7 @@ export const CREATE_JOURNAL_ENTRY = gql`
   }
 `
 
+/** Edit pull quote, body, and/or tags on an existing journal entry. */
 export const UPDATE_JOURNAL_ENTRY = gql`
   mutation UpdateJournalEntry($id: ID!, $pullQuote: String, $body: String, $tags: [String!]) {
     updateJournalEntry(id: $id, pullQuote: $pullQuote, body: $body, tags: $tags) {
@@ -49,6 +59,7 @@ export const UPDATE_JOURNAL_ENTRY = gql`
   }
 `
 
+/** Permanently delete a journal entry. */
 export const DELETE_JOURNAL_ENTRY = gql`
   mutation DeleteJournalEntry($id: ID!) {
     deleteJournalEntry(id: $id)

@@ -13,6 +13,9 @@ export const useInboxStore = defineStore('inbox', () => {
   // -- State --
   const items = ref([])
   const loading = ref(false)
+  // Toggled while a mutation is in flight so views can disable submit buttons
+  // independently of `loading` (which is owned by `load()`). See WEB-W1-11.
+  const saving = ref(false)
   const error = ref('')
 
   // -- Actions --
@@ -39,10 +42,13 @@ export const useInboxStore = defineStore('inbox', () => {
 
   /**
    * Create a new inbox item from the given text and refresh the list.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {string} text - The raw capture text for the new item
    * @throws Re-throws the API error after showing an error toast
    */
   async function capture(text) {
+    error.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({
         mutation: CREATE_INBOX_ITEM,
@@ -54,15 +60,20 @@ export const useInboxStore = defineStore('inbox', () => {
       const { toastError } = useErrorToast()
       toastError(e, 'Failed to capture item')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
   /**
    * Mark an inbox item as triaged and refresh the list.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {string} id - The inbox item ID to triage
    * @throws Re-throws the API error after showing an error toast
    */
   async function triage(id) {
+    error.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({ mutation: TRIAGE_INBOX_ITEM, variables: { id } })
       await load()
@@ -71,8 +82,10 @@ export const useInboxStore = defineStore('inbox', () => {
       const { toastError } = useErrorToast()
       toastError(e, 'Failed to triage item')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
-  return { items, loading, error, load, capture, triage }
+  return { items, loading, saving, error, load, capture, triage }
 })

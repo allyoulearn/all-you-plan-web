@@ -42,11 +42,13 @@ export const useWrenStore = defineStore('wren', () => {
    * Send a message to Wren. The user's message is appended optimistically
    * before the request completes. On success the returned coach message is
    * appended. On failure the optimistic message is removed.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {string} text - The user's message text
    */
   async function send(text) {
     if (!text || sending.value) return
     sending.value = true
+    error.value = ''
 
     // Optimistically append the user message
     const optimisticId = `optimistic-${Date.now()}`

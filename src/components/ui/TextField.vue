@@ -16,10 +16,12 @@
       />
 
       <input
+        v-bind="$attrs"
         :type="type"
         :placeholder="placeholder"
         :disabled="disabled"
         :value="modelValue"
+        :aria-invalid="invalid || undefined"
         class="text-field__input"
         @input="$emit('update:modelValue', $event.target.value)"
       />
@@ -28,24 +30,56 @@
 </template>
 
 <script>
-/** TextField — labeled text input with optional leading icon and validation state. */
+/**
+ * TextField — labeled text input with optional leading icon and validation
+ * state.
+ *
+ * Pass any additional native input attribute via `$attrs` (autocomplete,
+ * required, minlength, maxlength, inputmode, autofocus, name, id, etc.).
+ * `inheritAttrs: false` keeps them off the wrapping `<label>` and routes
+ * them onto the `<input>` (WEB-W2-31). `invalid` toggles both the
+ * border style and `aria-invalid` for assistive tech (WEB-W2-30).
+ */
 import Icon from './Icon.vue'
+
+// Standard HTML input types accepted by the validator. Keep this in sync
+// with the consumers — adding a new type is a deliberate change (WEB-W2-30).
+const VALID_INPUT_TYPES = [
+  'text',
+  'password',
+  'email',
+  'number',
+  'search',
+  'tel',
+  'url',
+  'date',
+  'datetime-local',
+  'month',
+  'time',
+  'week',
+  'color'
+]
 
 export default {
   name: 'TextField',
   components: { Icon },
+  inheritAttrs: false,
   props: {
     /** Input value (v-model) */
     modelValue: { type: String, default: '' },
     /** Native input type */
-    type: { type: String, default: 'text' },
+    type: {
+      type: String,
+      default: 'text',
+      validator: v => VALID_INPUT_TYPES.includes(v)
+    },
     /** Placeholder text */
     placeholder: { type: String, default: '' },
     /** Label text shown above the input */
     label: { type: String, default: '' },
     /** Leading icon name; empty for none */
     icon: { type: String, default: '' },
-    /** Show invalid (error) border state */
+    /** Show invalid (error) border state and set `aria-invalid` on the input. */
     invalid: { type: Boolean, default: false },
     /** Whether the input is disabled */
     disabled: { type: Boolean, default: false }

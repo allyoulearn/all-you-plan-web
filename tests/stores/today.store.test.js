@@ -12,7 +12,8 @@ vi.mock('@/api/apollo', () => ({
 vi.mock('@/api/operations', () => ({
   TODAY_QUERY: 'TODAY_QUERY',
   COMPLETE_TASK: 'COMPLETE_TASK',
-  MOVE_UNFINISHED: 'MOVE_UNFINISHED'
+  MOVE_UNFINISHED: 'MOVE_UNFINISHED',
+  CREATE_TASK: 'CREATE_TASK'
 }))
 
 const mockToastError = vi.fn()
@@ -206,6 +207,71 @@ describe('today.store', () => {
       const store = useTodayStore()
       store.view = fakeView
       await expect(store.moveUnfinished()).rejects.toThrow('move failed')
+    })
+  })
+
+  describe('error reset and saving flag (WEB-W1-05 / WEB-W1-11)', () => {
+    it('completeTask clears a stale error before running', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+      store.error = 'stale error'
+      await store.completeTask('t1')
+      expect(store.error).toBe('')
+    })
+
+    it('completeTask toggles saving true → false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+      const promise = store.completeTask('t1')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('completeTask resets saving on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('fail'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.completeTask('t1').catch(() => {})
+      expect(store.saving).toBe(false)
+    })
+
+    it('moveUnfinished clears a stale error and toggles saving', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+      store.error = 'stale error'
+      const promise = store.moveUnfinished()
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.error).toBe('')
+      expect(store.saving).toBe(false)
+    })
+
+    it('createTask clears a stale error and toggles saving', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+      store.error = 'stale error'
+      const promise = store.createTask({ title: 'New' })
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.error).toBe('')
+      expect(store.saving).toBe(false)
+    })
+
+    it('createTask resets saving on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create fail'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.createTask({ title: 'New' }).catch(() => {})
+      expect(store.saving).toBe(false)
     })
   })
 })

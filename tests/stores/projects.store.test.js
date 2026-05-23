@@ -12,7 +12,11 @@ vi.mock('@/api/apollo', () => ({
 vi.mock('@/api/operations/index.js', () => ({
   PROJECTS_QUERY: 'PROJECTS_QUERY',
   PROJECT_BOARD_QUERY: 'PROJECT_BOARD_QUERY',
-  COMPLETE_PROJECT_TASK: 'COMPLETE_PROJECT_TASK'
+  COMPLETE_PROJECT_TASK: 'COMPLETE_PROJECT_TASK',
+  CREATE_PROJECT: 'CREATE_PROJECT',
+  UPDATE_PROJECT: 'UPDATE_PROJECT',
+  DELETE_PROJECT: 'DELETE_PROJECT',
+  CREATE_TASK: 'CREATE_TASK'
 }))
 
 const mockToastError = vi.fn()
@@ -282,6 +286,119 @@ describe('projects.store', () => {
       const store = useProjectsStore()
       store.board = fakeBoard
       await expect(store.completeTask('t1')).rejects.toThrow('complete failed')
+    })
+
+    it('clears a stale errorBoard before running (WEB-W1-05)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      store.board = fakeBoard
+      store.errorBoard = 'stale error'
+      await store.completeTask('t1')
+      expect(store.errorBoard).toBe('')
+    })
+
+    it('toggles saving true → false (WEB-W1-11)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      store.board = fakeBoard
+      const promise = store.completeTask('t1')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('resets saving on failure (WEB-W1-11)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
+      const store = useProjectsStore()
+      store.board = fakeBoard
+      await store.completeTask('t1').catch(() => {})
+      expect(store.saving).toBe(false)
+    })
+  })
+
+  describe('updateProject error routing (WEB-W1-06)', () => {
+    it('routes failure to errorBoard when active board belongs to the project', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('update failed'))
+      const store = useProjectsStore()
+      store.board = { project: { id: 'p1' } }
+      await store.updateProject('p1', { name: 'X' }).catch(() => {})
+      expect(store.errorBoard).toBe('update failed')
+      expect(store.errorProjects).toBe('')
+    })
+
+    it('routes failure to errorProjects when no board is loaded', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('update failed'))
+      const store = useProjectsStore()
+      store.board = null
+      await store.updateProject('p1', { name: 'X' }).catch(() => {})
+      expect(store.errorProjects).toBe('update failed')
+      expect(store.errorBoard).toBe('')
+    })
+
+    it('routes failure to errorProjects when board is for a different project', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('update failed'))
+      const store = useProjectsStore()
+      store.board = { project: { id: 'other' } }
+      await store.updateProject('p1', { name: 'X' }).catch(() => {})
+      expect(store.errorProjects).toBe('update failed')
+      expect(store.errorBoard).toBe('')
+    })
+
+    it('clears both error refs at the start (WEB-W1-05)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+      store.errorBoard = 'stale board'
+      store.errorProjects = 'stale projects'
+      await store.updateProject('p1', { name: 'X' })
+      expect(store.errorBoard).toBe('')
+      expect(store.errorProjects).toBe('')
+    })
+  })
+
+  describe('createTask error routing (WEB-W1-07)', () => {
+    it('routes failure to errorBoard when active board matches projectId', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useProjectsStore()
+      store.board = { project: { id: 'p1' } }
+      await store.createTask({ title: 't', projectId: 'p1' }).catch(() => {})
+      expect(store.errorBoard).toBe('create failed')
+      expect(store.errorProjects).toBe('')
+    })
+
+    it('routes failure to errorProjects when no board is loaded', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useProjectsStore()
+      store.board = null
+      await store.createTask({ title: 't', projectId: 'p1' }).catch(() => {})
+      expect(store.errorProjects).toBe('create failed')
+      expect(store.errorBoard).toBe('')
+    })
+
+    it('routes failure to errorProjects when board belongs to another project', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useProjectsStore()
+      store.board = { project: { id: 'other' } }
+      await store.createTask({ title: 't', projectId: 'p1' }).catch(() => {})
+      expect(store.errorProjects).toBe('create failed')
+      expect(store.errorBoard).toBe('')
+    })
+  })
+
+  describe('deleteProject board cleanup (WEB-W1-21)', () => {
+    it('clears errorBoard and loadingBoard when deleting the loaded board project', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: [] } })
+      const store = useProjectsStore()
+      store.board = { project: { id: 'p1' } }
+      store.errorBoard = 'old board error'
+      store.loadingBoard = true
+      await store.deleteProject('p1')
+      expect(store.board).toBeNull()
+      expect(store.errorBoard).toBe('')
+      expect(store.loadingBoard).toBe(false)
     })
   })
 })

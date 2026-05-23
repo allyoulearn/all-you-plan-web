@@ -141,5 +141,13 @@ describe('wren.store', () => {
 
       expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to send message')
     })
+
+    it('clears a stale error before running (WEB-W1-05)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
+      const store = useWrenStore()
+      store.error = 'stale'
+      await store.send('hi')
+      expect(store.error).toBe('')
+    })
   })
 })

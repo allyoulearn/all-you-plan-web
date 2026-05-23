@@ -13,6 +13,9 @@ export const useJournalStore = defineStore('journal', () => {
   // -- State --
   const entries = ref([])
   const loading = ref(false)
+  // Toggled while a mutation is in flight so views can disable submit buttons
+  // independently of `loading` (which is owned by `load()`). See WEB-W1-11.
+  const saving = ref(false)
   const error = ref('')
 
   // -- Actions --
@@ -38,6 +41,7 @@ export const useJournalStore = defineStore('journal', () => {
 
   /**
    * Create a new journal entry and refresh the entries list.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {object} entry
    * @param {string} entry.date - ISO date string for the entry (e.g. "2024-05-22")
    * @param {string} [entry.prompt] - Optional writing prompt used for the entry
@@ -47,6 +51,8 @@ export const useJournalStore = defineStore('journal', () => {
    * @throws Re-throws the API error after showing an error toast
    */
   async function createEntry({ date, prompt, pullQuote, body, tags }) {
+    error.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({
         mutation: CREATE_JOURNAL_ENTRY,
@@ -58,8 +64,10 @@ export const useJournalStore = defineStore('journal', () => {
       const { toastError } = useErrorToast()
       toastError(e, 'Failed to save journal entry')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
-  return { entries, loading, error, load, createEntry }
+  return { entries, loading, saving, error, load, createEntry }
 })

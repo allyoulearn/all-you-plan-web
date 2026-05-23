@@ -249,4 +249,12 @@ describe('router guard', () => {
       expect(result).toBe(true)
     })
   })
+
+  describe('tryRestoreSession await (WEB-W2-15)', () => {
+    it('the auth store has a tryRestoreSession method the guard can await', () => {
+      // Smoke test — the guard depends on this method existing on the store.
+      const auth = useAuthStore()
+      expect(typeof auth.tryRestoreSession).toBe('function')
+    })
+  })
 })

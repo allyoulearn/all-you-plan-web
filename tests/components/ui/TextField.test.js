@@ -87,4 +87,58 @@ describe('TextField', () => {
     const emitted = wrapper.emitted('update:modelValue')
     expect(emitted[1]).toEqual(['second'])
   })
+
+  describe('aria-invalid (WEB-W2-30)', () => {
+    it('sets aria-invalid="true" on the input when invalid is true', () => {
+      const wrapper = mount(TextField, { props: { invalid: true } })
+      expect(wrapper.find('input').attributes('aria-invalid')).toBe('true')
+    })
+
+    it('omits aria-invalid when invalid is false', () => {
+      const wrapper = mount(TextField, { props: { invalid: false } })
+      expect(wrapper.find('input').attributes('aria-invalid')).toBeUndefined()
+    })
+  })
+
+  describe('attrs passthrough (WEB-W2-31)', () => {
+    it('passes autocomplete onto the input, not the label', () => {
+      const wrapper = mount(TextField, { attrs: { autocomplete: 'current-password' } })
+      expect(wrapper.find('input').attributes('autocomplete')).toBe('current-password')
+      expect(wrapper.element.getAttribute('autocomplete')).toBeNull()
+    })
+
+    it('passes required onto the input', () => {
+      const wrapper = mount(TextField, { attrs: { required: '' } })
+      expect(wrapper.find('input').attributes('required')).toBeDefined()
+    })
+
+    it('passes id onto the input', () => {
+      const wrapper = mount(TextField, { attrs: { id: 'email-field' } })
+      expect(wrapper.find('input').attributes('id')).toBe('email-field')
+    })
+
+    it('passes inputmode onto the input', () => {
+      const wrapper = mount(TextField, { attrs: { inputmode: 'email' } })
+      expect(wrapper.find('input').attributes('inputmode')).toBe('email')
+    })
+
+    it('passes name onto the input', () => {
+      const wrapper = mount(TextField, { attrs: { name: 'email' } })
+      expect(wrapper.find('input').attributes('name')).toBe('email')
+    })
+
+    it('passes maxlength onto the input', () => {
+      const wrapper = mount(TextField, { attrs: { maxlength: '50' } })
+      expect(wrapper.find('input').attributes('maxlength')).toBe('50')
+    })
+  })
+
+  describe('type validator (WEB-W2-30)', () => {
+    it('accepts a recognized HTML input type', () => {
+      // No error or warning expected. Vue's prop validator runs in dev only;
+      // setting a valid type should round-trip onto the input.
+      const wrapper = mount(TextField, { props: { type: 'email' } })
+      expect(wrapper.find('input').attributes('type')).toBe('email')
+    })
+  })
 })

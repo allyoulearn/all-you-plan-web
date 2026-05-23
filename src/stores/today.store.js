@@ -17,6 +17,9 @@ export const useTodayStore = defineStore('today', () => {
   // -- State --
   const view = ref(null)
   const loading = ref(false)
+  // Toggled while a mutation is in flight so views can disable submit buttons
+  // independently of `loading` (which is owned by `load()`). See WEB-W1-11.
+  const saving = ref(false)
   const error = ref('')
 
   // -- Actions --
@@ -46,6 +49,8 @@ export const useTodayStore = defineStore('today', () => {
    * Mark a task as complete, then refresh the current daily view.
    * Captures the current date before awaiting so the reload uses the correct
    * date even if view is cleared during the async operation.
+   * Resets `error.value` at the start so stale failures do not persist past a
+   * successful mutation (WEB-W1-05 / WEB-W1-13).
    * @param {string} id - The task ID to complete
    * @throws Re-throws the API error after surfacing it via error + toast.
    */
@@ -53,6 +58,8 @@ export const useTodayStore = defineStore('today', () => {
     const { toastError } = useErrorToast()
     const currentDate = view.value?.date
     if (!currentDate) return
+    error.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({ mutation: COMPLETE_TASK, variables: { id } })
       await load(currentDate)
@@ -60,6 +67,8 @@ export const useTodayStore = defineStore('today', () => {
       error.value = e.message
       toastError(e, 'Failed to complete task')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
@@ -68,12 +77,15 @@ export const useTodayStore = defineStore('today', () => {
    * then refresh the daily view.
    * Captures the current date before awaiting so the reload uses the correct
    * date even if view is cleared during the async operation.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @throws Re-throws the API error after surfacing it via error + toast.
    */
   async function moveUnfinished() {
     if (!view.value) return
     const { toastError } = useErrorToast()
     const currentDate = view.value.date
+    error.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({
         mutation: MOVE_UNFINISHED,
@@ -84,6 +96,8 @@ export const useTodayStore = defineStore('today', () => {
       error.value = e.message
       toastError(e, 'Failed to move unfinished tasks')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
@@ -93,6 +107,7 @@ export const useTodayStore = defineStore('today', () => {
    * is visible immediately.
    * Only fields with real values are sent — the server's zod schema rejects
    * `null` for optional fields, so omitting them is the safe shape.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {{ title: string, scheduledTime?: string, note?: string, effortMinutes?: number, tag?: string }} input
    * @returns {Promise<object>} Created task
    */
@@ -106,6 +121,8 @@ export const useTodayStore = defineStore('today', () => {
     if (input.note) taskInput.note = input.note
     if (input.effortMinutes != null) taskInput.effortMinutes = input.effortMinutes
     if (input.tag) taskInput.tag = input.tag
+    error.value = ''
+    saving.value = true
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_TASK,
@@ -117,8 +134,10 @@ export const useTodayStore = defineStore('today', () => {
       error.value = e.message
       toastError(e, 'Failed to add task')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
-  return { view, loading, error, load, completeTask, moveUnfinished, createTask }
+  return { view, loading, saving, error, load, completeTask, moveUnfinished, createTask }
 })

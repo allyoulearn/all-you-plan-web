@@ -265,6 +265,41 @@ describe('auth.store', () => {
 
       expect(store.user).toBeNull()
     })
+
+    it('logs the mutation failure in dev (WEB-W1-10)', async () => {
+      vi.stubEnv('DEV', true)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      apolloClient.mutate
+        .mockResolvedValueOnce({ data: { login: { accessToken: fakeToken, user: fakeUser } } })
+        .mockRejectedValueOnce(new Error('logout failed'))
+
+      const store = useAuthStore()
+      await store.login('ada@example.com', 'password')
+      await store.logout()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[auth] server-side logout failed'),
+        'logout failed'
+      )
+      warnSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+
+    it('does not log mutation failure in production (WEB-W1-10)', async () => {
+      vi.stubEnv('DEV', false)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      apolloClient.mutate
+        .mockResolvedValueOnce({ data: { login: { accessToken: fakeToken, user: fakeUser } } })
+        .mockRejectedValueOnce(new Error('logout failed'))
+
+      const store = useAuthStore()
+      await store.login('ada@example.com', 'password')
+      await store.logout()
+
+      expect(warnSpy).not.toHaveBeenCalled()
+      warnSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
   })
 
   describe('tryRestoreSession()', () => {
@@ -285,6 +320,33 @@ describe('auth.store', () => {
 
       expect(result).toBe(false)
       expect(store.isAuthenticated).toBe(false)
+    })
+
+    it('logs the failure in dev (WEB-W1-09)', async () => {
+      vi.stubEnv('DEV', true)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      refreshAccessToken.mockRejectedValueOnce(new Error('Refresh failed'))
+      const store = useAuthStore()
+      await store.tryRestoreSession()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[auth] session restore failed'),
+        'Refresh failed'
+      )
+      warnSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+
+    it('does not log the failure in production (WEB-W1-09)', async () => {
+      vi.stubEnv('DEV', false)
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      refreshAccessToken.mockRejectedValueOnce(new Error('Refresh failed'))
+      const store = useAuthStore()
+      await store.tryRestoreSession()
+
+      expect(warnSpy).not.toHaveBeenCalled()
+      warnSpy.mockRestore()
+      vi.unstubAllEnvs()
     })
   })
 

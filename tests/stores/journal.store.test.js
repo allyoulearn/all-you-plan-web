@@ -182,5 +182,31 @@ describe('journal.store', () => {
 
       await expect(store.createEntry(newEntryInput)).rejects.toThrow('save failed')
     })
+
+    it('clears a stale error before running (WEB-W1-05)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { journalEntries: fakeEntries } })
+      const store = useJournalStore()
+      store.error = 'stale'
+      await store.createEntry(newEntryInput)
+      expect(store.error).toBe('')
+    })
+
+    it('toggles saving true → false (WEB-W1-11)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { journalEntries: fakeEntries } })
+      const store = useJournalStore()
+      const promise = store.createEntry(newEntryInput)
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('resets saving on failure (WEB-W1-11)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('fail'))
+      const store = useJournalStore()
+      await store.createEntry(newEntryInput).catch(() => {})
+      expect(store.saving).toBe(false)
+    })
   })
 })

@@ -19,6 +19,9 @@ export const useChoresStore = defineStore('chores', () => {
   // -- State --
   const chores = ref([])
   const loading = ref(false)
+  // Toggled while a mutation is in flight so views can disable submit buttons
+  // independently of `loading` (which is owned by `load()`). See WEB-W1-11.
+  const saving = ref(false)
   const error = ref('')
 
   // -- Actions --
@@ -44,11 +47,14 @@ export const useChoresStore = defineStore('chores', () => {
 
   /**
    * Mark a chore as complete, then refresh the chores list.
+   * Resets `error.value` at the start so a stale message from a prior failure
+   * does not persist past a successful mutation (WEB-W1-05 / WEB-W1-13).
    * @param {string} id - The chore ID to complete
    * @throws Re-throws the API error after showing an error toast
    */
   async function completeChore(id) {
     loading.value = true
+    error.value = ''
     try {
       await apolloClient.mutate({ mutation: COMPLETE_CHORE, variables: { id } })
       await load()
@@ -64,12 +70,16 @@ export const useChoresStore = defineStore('chores', () => {
 
   /**
    * Create a new chore, then refresh the chores list.
+   * Resets `error.value` at the start so stale failures do not persist past a
+   * successful mutation (WEB-W1-05 / WEB-W1-13).
    * @param {{ title: string, cadence: { type: string, daysOfWeek?: number[], interval?: number, dayOfMonth?: number } }} input
    * @returns {Promise<object>} Created chore
    * @throws Re-throws the API error after showing an error toast
    */
   async function createChore(input) {
     const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_CHORE,
@@ -81,17 +91,22 @@ export const useChoresStore = defineStore('chores', () => {
       error.value = e.message
       toastError(e, 'Failed to create chore')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
   /**
    * Update a chore (title, cadence, or active flag), then refresh the list.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {string} id - Chore ID
    * @param {{ title?: string, cadence?: object, active?: boolean }} input
    * @returns {Promise<object>}
    */
   async function updateChore(id, input) {
     const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_CHORE,
@@ -103,15 +118,20 @@ export const useChoresStore = defineStore('chores', () => {
       error.value = e.message
       toastError(e, 'Failed to update chore')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
   /**
    * Delete a chore by ID, then refresh the list.
+   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {string} id
    */
   async function deleteChore(id) {
     const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({ mutation: DELETE_CHORE, variables: { id } })
       await load()
@@ -119,8 +139,20 @@ export const useChoresStore = defineStore('chores', () => {
       error.value = e.message
       toastError(e, 'Failed to delete chore')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
-  return { chores, loading, error, load, completeChore, createChore, updateChore, deleteChore }
+  return {
+    chores,
+    loading,
+    saving,
+    error,
+    load,
+    completeChore,
+    createChore,
+    updateChore,
+    deleteChore
+  }
 })

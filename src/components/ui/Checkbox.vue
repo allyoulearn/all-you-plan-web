@@ -20,7 +20,18 @@
 </template>
 
 <script>
-/** Checkbox — toggle button with checked/unchecked visual states and v-model support. */
+/**
+ * Checkbox — toggle button with checked/unchecked visual states and v-model
+ * support.
+ *
+ * Implemented as a native `<button role="checkbox">` so keyboard activation
+ * (Space and Enter — both trigger `click` on a button) works without an
+ * explicit keydown handler. WAI-ARIA specifies Space as the canonical
+ * activation key for `role="checkbox"`; Enter also toggles here, which is
+ * mildly off-spec but generally accepted. Any future refactor to a
+ * non-button element MUST add explicit keydown handlers for Space (and
+ * preferably Enter) to preserve this behavior (WEB-W2-33).
+ */
 import Icon from './Icon.vue'
 
 export default {

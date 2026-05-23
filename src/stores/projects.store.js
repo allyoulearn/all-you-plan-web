@@ -27,6 +27,10 @@ export const useProjectsStore = defineStore('projects', () => {
   const board = ref(null)
   const loadingProjects = ref(false)
   const loadingBoard = ref(false)
+  // Toggled while a mutation (complete/create/update/delete) is in flight so
+  // views can disable submit buttons independently of the per-collection
+  // loading flags. See WEB-W1-11.
+  const saving = ref(false)
   const errorProjects = ref('')
   const errorBoard = ref('')
 
@@ -76,11 +80,15 @@ export const useProjectsStore = defineStore('projects', () => {
 
   /**
    * Mark a project task as complete, then refresh the active board.
+   * Resets `errorBoard.value` at the start so a stale message from a prior
+   * failure does not persist past a successful mutation (WEB-W1-05 / WEB-W1-13).
    * @param {string} id - The task ID to complete
    * @throws Re-throws the API error after surfacing it via errorBoard + toast.
    */
   async function completeTask(id) {
     const { toastError } = useErrorToast()
+    errorBoard.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({ mutation: COMPLETE_PROJECT_TASK, variables: { id } })
       if (board.value?.project?.id) {
@@ -90,16 +98,21 @@ export const useProjectsStore = defineStore('projects', () => {
       errorBoard.value = e.message
       toastError(e, 'Failed to complete task')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
   /**
    * Create a new project, then refresh the projects list.
+   * Resets `errorProjects.value` at the start (WEB-W1-05 / WEB-W1-13).
    * @param {{ name: string, tag?: string, blurb?: string }} input
    * @returns {Promise<object>} Created project
    */
   async function createProject(input) {
     const { toastError } = useErrorToast()
+    errorProjects.value = ''
+    saving.value = true
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_PROJECT,
@@ -111,31 +124,48 @@ export const useProjectsStore = defineStore('projects', () => {
       errorProjects.value = e.message
       toastError(e, 'Failed to create project')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
   /**
    * Update a project's fields; if a board is currently loaded for the same
    * project, refresh it; otherwise refresh the project list.
+   *
+   * Error surfacing (WEB-W1-06): writes the failure to `errorBoard` only when
+   * the active board belongs to the updated project — otherwise writes to
+   * `errorProjects` so the message appears in whichever view is actually
+   * visible. Both refs are reset at the start (WEB-W1-05 / WEB-W1-13).
    * @param {string} id - Project ID
    * @param {object} input - Fields to update
    */
   async function updateProject(id, input) {
     const { toastError } = useErrorToast()
+    errorBoard.value = ''
+    errorProjects.value = ''
+    saving.value = true
+    const boardLoadedForThisProject = board.value?.project?.id === id
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_PROJECT,
         variables: { id, ...input }
       })
-      if (board.value?.project?.id === id) {
+      if (boardLoadedForThisProject) {
         await loadBoard(id)
       }
       await loadProjects()
       return data.updateProject
     } catch (e) {
-      errorBoard.value = e.message
+      if (boardLoadedForThisProject) {
+        errorBoard.value = e.message
+      } else {
+        errorProjects.value = e.message
+      }
       toastError(e, 'Failed to update project')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
@@ -149,20 +179,29 @@ export const useProjectsStore = defineStore('projects', () => {
 
   /**
    * Permanently delete a project (cascades tasks server-side).
+   * Resets `errorProjects.value` at the start (WEB-W1-05 / WEB-W1-13). Also
+   * clears any lingering board state when the deleted project's board was
+   * loaded so stale errorBoard messages do not leak (WEB-W1-21).
    * @param {string} id
    */
   async function deleteProject(id) {
     const { toastError } = useErrorToast()
+    errorProjects.value = ''
+    saving.value = true
     try {
       await apolloClient.mutate({ mutation: DELETE_PROJECT, variables: { id } })
       if (board.value?.project?.id === id) {
         board.value = null
+        errorBoard.value = ''
+        loadingBoard.value = false
       }
       await loadProjects()
     } catch (e) {
       errorProjects.value = e.message
       toastError(e, 'Failed to delete project')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
@@ -170,10 +209,19 @@ export const useProjectsStore = defineStore('projects', () => {
    * Create a new task under a project (defaults to the backlog column).
    * Only fields with real values are sent — the server's zod schema rejects
    * `null` for optional fields, so omitting them is the safe shape.
+   *
+   * Error surfacing (WEB-W1-07): writes the failure to `errorBoard` only when
+   * the active board belongs to the target project — otherwise writes to
+   * `errorProjects` so the message appears in whichever view is actually
+   * visible. Both refs are reset at the start (WEB-W1-05 / WEB-W1-13).
    * @param {{ title: string, projectId: string, note?: string, column?: string, tag?: string, scheduledDate?: string }} input
    */
   async function createTask(input) {
     const { toastError } = useErrorToast()
+    errorBoard.value = ''
+    errorProjects.value = ''
+    saving.value = true
+    const boardLoadedForThisProject = board.value?.project?.id === input.projectId
     const taskInput = {
       title: input.title,
       projectId: input.projectId,
@@ -187,14 +235,20 @@ export const useProjectsStore = defineStore('projects', () => {
         mutation: CREATE_TASK,
         variables: { input: taskInput }
       })
-      if (board.value?.project?.id === input.projectId) {
+      if (boardLoadedForThisProject) {
         await loadBoard(input.projectId)
       }
       return data.createTask
     } catch (e) {
-      errorBoard.value = e.message
+      if (boardLoadedForThisProject) {
+        errorBoard.value = e.message
+      } else {
+        errorProjects.value = e.message
+      }
       toastError(e, 'Failed to create task')
       throw e
+    } finally {
+      saving.value = false
     }
   }
 
@@ -203,6 +257,7 @@ export const useProjectsStore = defineStore('projects', () => {
     board,
     loadingProjects,
     loadingBoard,
+    saving,
     errorProjects,
     errorBoard,
     loadProjects,

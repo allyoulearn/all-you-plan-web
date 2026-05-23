@@ -11,7 +11,10 @@ vi.mock('@/api/apollo', () => ({
 
 vi.mock('@/api/operations', () => ({
   CHORES_QUERY: 'CHORES_QUERY',
-  COMPLETE_CHORE: 'COMPLETE_CHORE'
+  COMPLETE_CHORE: 'COMPLETE_CHORE',
+  CREATE_CHORE: 'CREATE_CHORE',
+  UPDATE_CHORE: 'UPDATE_CHORE',
+  DELETE_CHORE: 'DELETE_CHORE'
 }))
 
 vi.mock('@/composables/useErrorToast', () => ({
@@ -139,6 +142,83 @@ describe('chores.store', () => {
 
       await store.completeChore('c1')
       expect(store.error).toBe('reload failed')
+    })
+
+    it('clears a stale error.value before running (WEB-W1-05)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      store.error = 'stale error from prior failure'
+      await store.completeChore('c1')
+      expect(store.error).toBe('')
+    })
+  })
+
+  describe('saving flag (WEB-W1-11)', () => {
+    it('createChore toggles saving true → false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createChore: { id: 'new' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      const promise = store.createChore({ title: 't', cadence: { type: 'daily' } })
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('createChore resets saving on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useChoresStore()
+      await store.createChore({ title: 't', cadence: { type: 'daily' } }).catch(() => {})
+      expect(store.saving).toBe(false)
+    })
+
+    it('updateChore toggles saving true → false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      const promise = store.updateChore('c1', { title: 'new' })
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('deleteChore toggles saving true → false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: [] } })
+      const store = useChoresStore()
+      const promise = store.deleteChore('c1')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+  })
+
+  describe('error reset on mutations (WEB-W1-05 / WEB-W1-13)', () => {
+    it('createChore clears a stale error.value before running', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createChore: { id: 'new' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      store.error = 'stale error'
+      await store.createChore({ title: 't', cadence: { type: 'daily' } })
+      expect(store.error).toBe('')
+    })
+
+    it('updateChore clears a stale error.value before running', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      store.error = 'stale error'
+      await store.updateChore('c1', { title: 'new' })
+      expect(store.error).toBe('')
+    })
+
+    it('deleteChore clears a stale error.value before running', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: [] } })
+      const store = useChoresStore()
+      store.error = 'stale error'
+      await store.deleteChore('c1')
+      expect(store.error).toBe('')
     })
   })
 })

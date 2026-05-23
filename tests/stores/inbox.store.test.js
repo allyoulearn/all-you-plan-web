@@ -192,4 +192,44 @@ describe('inbox.store', () => {
       expect(apolloClient.query).not.toHaveBeenCalled()
     })
   })
+
+  describe('error reset and saving flag (WEB-W1-05 / WEB-W1-11)', () => {
+    it('capture clears a stale error before running', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { inboxItems: fakeItems } })
+      const store = useInboxStore()
+      store.error = 'stale'
+      await store.capture('hi')
+      expect(store.error).toBe('')
+    })
+
+    it('capture toggles saving true → false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { inboxItems: fakeItems } })
+      const store = useInboxStore()
+      const promise = store.capture('hi')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('capture resets saving on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('fail'))
+      const store = useInboxStore()
+      await store.capture('hi').catch(() => {})
+      expect(store.saving).toBe(false)
+    })
+
+    it('triage clears a stale error and toggles saving', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { inboxItems: [] } })
+      const store = useInboxStore()
+      store.error = 'stale'
+      const promise = store.triage('i1')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.error).toBe('')
+      expect(store.saving).toBe(false)
+    })
+  })
 })

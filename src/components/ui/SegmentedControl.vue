@@ -5,7 +5,7 @@
     :aria-label="groupLabel"
   >
     <button
-      v-for="opt in options"
+      v-for="(opt, idx) in options"
       :key="opt.value"
       type="button"
       class="segmented-control__option"
@@ -14,6 +14,10 @@
         : 'segmented-control__option--inactive'"
       :aria-pressed="opt.value === modelValue"
       @click="$emit('update:modelValue', opt.value)"
+      @keydown.left.prevent="moveTo(idx - 1)"
+      @keydown.right.prevent="moveTo(idx + 1)"
+      @keydown.home.prevent="moveTo(0)"
+      @keydown.end.prevent="moveTo(options.length - 1)"
     >
       {{ opt.label }}
       <span v-if="opt.count != null" class="segmented-control__count">
@@ -24,7 +28,14 @@
 </template>
 
 <script>
-/** SegmentedControl — pill-shaped tab switcher with v-model binding. */
+/**
+ * SegmentedControl — pill-shaped tab switcher with v-model binding.
+ *
+ * Keyboard: Tab focuses the first option; Left/Right arrow keys cycle the
+ * selection (wrapping at the ends), Home/End jump to first/last. Activating
+ * an option emits `update:modelValue` so consumers see the change as a
+ * normal v-model update (WEB-W2-32).
+ */
 
 export default {
   name: 'SegmentedControl',
@@ -36,7 +47,18 @@ export default {
     /** Accessible label for the control group */
     groupLabel: { type: String, default: 'View options' }
   },
-  emits: ['update:modelValue']
+  emits: ['update:modelValue'],
+  setup(props, { emit }) {
+    function moveTo(idx) {
+      if (!props.options.length) return
+      const len = props.options.length
+      // Wrap around at both ends so users do not get stuck at an edge.
+      const wrapped = ((idx % len) + len) % len
+      const opt = props.options[wrapped]
+      if (opt) emit('update:modelValue', opt.value)
+    }
+    return { moveTo }
+  }
 }
 </script>
 

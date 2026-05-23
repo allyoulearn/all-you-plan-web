@@ -5,7 +5,7 @@ const projectList = [
     id: 'p1',
     name: 'Launch personal site',
     tag: 'work',
-    status: 'active',
+    status: 'on_track',
     blurb: 'Portfolio and writing hub',
     nudge: null,
     startedOn: '2026-04-01',
@@ -18,7 +18,7 @@ const projectList = [
     id: 'p2',
     name: 'Fitness baseline',
     tag: 'health',
-    status: 'active',
+    status: 'on_track',
     blurb: 'Build a sustainable movement habit',
     nudge: null,
     startedOn: '2026-03-15',
@@ -31,7 +31,7 @@ const projectList = [
     id: 'p3',
     name: 'Read 12 books this year',
     tag: 'learning',
-    status: 'active',
+    status: 'on_track',
     blurb: 'One book per month minimum',
     nudge: 'Pick the next book',
     startedOn: '2026-01-01',
@@ -44,7 +44,10 @@ const projectList = [
     id: 'p4',
     name: 'Home deep clean',
     tag: 'personal',
-    status: 'done',
+    // Status enum is on_track | hot | stalled | idle (WEB-W2-26). A finished
+    // project surfaces via `archived: true` once it is wrapped up; the status
+    // itself stays `idle` until then.
+    status: 'idle',
     blurb: 'Spring cleaning top to bottom',
     nudge: null,
     startedOn: '2026-04-10',

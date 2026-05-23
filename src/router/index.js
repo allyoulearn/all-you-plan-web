@@ -132,15 +132,38 @@ const router = createRouter({
 
 // -- Navigation guards --
 
+// Tracks whether the first attempt to restore a refresh-token session has
+// completed. Without this guard, navigating directly to a protected route
+// would redirect to /login before tryRestoreSession() had a chance to swap
+// the refresh cookie for an in-memory access token (WEB-W2-15).
+let restoreAttempted = false
+let restorePromise = null
+
 /**
  * Global before-each guard.
  * Redirects unauthenticated users away from protected routes and authenticated
  * users away from public-only routes (e.g. login, register).
+ *
+ * On the very first navigation it awaits `tryRestoreSession()` so a deep link
+ * to a protected route does not flash the login form when the user has a
+ * valid refresh-cookie session (WEB-W2-15).
  * @param {import('vue-router').RouteLocationNormalized} to
- * @returns {boolean|{ name: string }}
+ * @returns {Promise<boolean|{ name: string }>}
  */
-router.beforeEach(to => {
+router.beforeEach(async to => {
   const auth = useAuthStore()
+
+  // First-navigation race: try to restore the session before evaluating auth
+  // state. Only awaited once per app load — subsequent navigations skip this.
+  if (!restoreAttempted && !auth.isAuthenticated) {
+    restoreAttempted = true
+    restorePromise = auth.tryRestoreSession().catch(() => false)
+  }
+  if (restorePromise) {
+    await restorePromise
+    restorePromise = null
+  }
+
   if (!to.meta.public && !auth.isAuthenticated) return { name: 'login' }
   if (to.meta.public && !to.meta.allowAuthenticated && auth.isAuthenticated)
     return { name: 'today' }

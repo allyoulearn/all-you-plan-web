@@ -117,4 +117,55 @@ describe('SegmentedControl', () => {
     const wrapper = mount(SegmentedControl, { props: { modelValue: 1, options: numOptions } })
     expect(wrapper.findAll('button')[0].attributes('aria-pressed')).toBe('true')
   })
+
+  describe('keyboard arrow navigation (WEB-W2-32)', () => {
+    const trio = [
+      { value: 'a', label: 'A' },
+      { value: 'b', label: 'B' },
+      { value: 'c', label: 'C' }
+    ]
+
+    it('arrow Right moves to the next option', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: 'a', options: trio } })
+      await wrapper.findAll('button')[0].trigger('keydown.right')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual(['b'])
+    })
+
+    it('arrow Left moves to the previous option', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: 'b', options: trio } })
+      await wrapper.findAll('button')[1].trigger('keydown.left')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual(['a'])
+    })
+
+    it('Home jumps to the first option', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: 'c', options: trio } })
+      await wrapper.findAll('button')[2].trigger('keydown.home')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual(['a'])
+    })
+
+    it('End jumps to the last option', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: 'a', options: trio } })
+      await wrapper.findAll('button')[0].trigger('keydown.end')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual(['c'])
+    })
+
+    it('arrow Right wraps from last to first', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: 'c', options: trio } })
+      await wrapper.findAll('button')[2].trigger('keydown.right')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual(['a'])
+    })
+
+    it('arrow Left wraps from first to last', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: 'a', options: trio } })
+      await wrapper.findAll('button')[0].trigger('keydown.left')
+      expect(wrapper.emitted('update:modelValue')[0]).toEqual(['c'])
+    })
+
+    it('does not emit when options array is empty', async () => {
+      const wrapper = mount(SegmentedControl, { props: { modelValue: '', options: [] } })
+      // The component-level wrapper still exists; press a key on it.
+      await wrapper.trigger('keydown.right')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+  })
 })
