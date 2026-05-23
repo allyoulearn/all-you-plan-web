@@ -27,6 +27,9 @@
           :key="msg.id"
           :message="msg"
           @action="fillFromChip"
+          @undo="token => store.undo(token)"
+          @confirm="token => store.confirm(token)"
+          @cancel="token => store.cancel(token)"
         />
       </template>
 
