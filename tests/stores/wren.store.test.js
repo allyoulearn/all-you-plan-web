@@ -5,13 +5,25 @@ import { useWrenStore } from '@/stores/wren.store'
 vi.mock('@/api/apollo', () => ({
   apolloClient: {
     query: vi.fn(),
-    mutate: vi.fn()
+    mutate: vi.fn(),
+    // send() opens a subscription before the mutation (so first stream events
+    // aren't dropped). Tests don't exercise streaming via the link, so return
+    // an observable-shaped object whose .subscribe() is a no-op.
+    subscribe: vi.fn(() => ({ subscribe: () => ({ unsubscribe: () => {} }) }))
   }
 }))
 
 vi.mock('@/api/operations', () => ({
   WREN_MESSAGES_QUERY: 'WREN_MESSAGES_QUERY',
-  SEND_WREN_MESSAGE: 'SEND_WREN_MESSAGE'
+  WREN_CONVERSATION_QUERY: 'WREN_CONVERSATION_QUERY',
+  SEND_WREN_MESSAGE: 'SEND_WREN_MESSAGE',
+  WREN_STREAM_SUBSCRIPTION: 'WREN_STREAM_SUBSCRIPTION',
+  UNDO_WREN_ACTION: 'UNDO_WREN_ACTION',
+  CONFIRM_WREN_ACTION: 'CONFIRM_WREN_ACTION',
+  CANCEL_WREN_ACTION: 'CANCEL_WREN_ACTION',
+  WREN_SETTINGS_QUERY: 'WREN_SETTINGS_QUERY',
+  UPDATE_WREN_SETTINGS: 'UPDATE_WREN_SETTINGS',
+  EXPORT_WREN_CONVERSATION: 'EXPORT_WREN_CONVERSATION'
 }))
 
 const mockToastError = vi.fn()
@@ -153,11 +165,160 @@ describe('wren.store', () => {
     })
 
     it('clears a stale error before running (WEB-W1-05)', async () => {
+      // send() now resolves the conversationId via WREN_CONVERSATION_QUERY
+      // before mutating, so we mock both the query (for conversationId) and
+      // the mutation (for the coach reply).
+      apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
       apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
       const store = useWrenStore()
       store.error = 'stale'
       await store.send('hi')
       expect(store.error).toBe('')
     })
+  })
+})
+
+describe('useWrenStore — streaming events', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('appends token deltas to the placeholder coach message text', () => {
+    const store = useWrenStore()
+    store.messages = [
+      { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
+    ]
+    store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi ' })
+    store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'there' })
+    expect(store.messages[0].text).toBe('hi there')
+  })
+
+  it('inserts a pending action chip on WrenActionStarted', () => {
+    const store = useWrenStore()
+    store.messages = [
+      { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenActionStarted',
+      messageId: 'p1',
+      tempId: 't1',
+      kind: 'task.creating',
+      summary: 'Adding task…'
+    })
+    expect(store.messages[0].actions).toHaveLength(1)
+    expect(store.messages[0].actions[0]).toMatchObject({
+      __typename: 'WrenAppliedAction',
+      kind: 'task.creating',
+      summary: 'Adding task…',
+      tempId: 't1',
+      pending: true
+    })
+  })
+
+  it('reconciles a pending chip with WrenActionEvent (matched by tempId)', () => {
+    const store = useWrenStore()
+    store.messages = [
+      {
+        id: 'p1',
+        sender: 'coach',
+        text: '',
+        actions: [
+          {
+            __typename: 'WrenAppliedAction',
+            kind: 'task.creating',
+            summary: 'Adding task…',
+            tempId: 't1',
+            pending: true
+          }
+        ],
+        status: 'streaming',
+        createdAt: ''
+      }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenActionEvent',
+      messageId: 'p1',
+      tempId: 't1',
+      action: {
+        __typename: 'WrenAppliedAction',
+        kind: 'task.created',
+        summary: 'Added "X"',
+        refType: 'task',
+        refId: 'abc',
+        undoToken: 'u1',
+        undoExpiresAt: '2030-05-23T00:01:00Z'
+      }
+    })
+    expect(store.messages[0].actions).toHaveLength(1)
+    expect(store.messages[0].actions[0]).toMatchObject({
+      kind: 'task.created',
+      summary: 'Added "X"',
+      undoToken: 'u1'
+    })
+  })
+
+  it('appends a pending-confirmation chip on WrenPendingConfirmationEvent', () => {
+    const store = useWrenStore()
+    store.messages = [
+      { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenPendingConfirmationEvent',
+      messageId: 'p1',
+      confirmToken: 'ct1',
+      tool: 'deleteTask',
+      summary: 'Delete "X"?',
+      refType: 'task',
+      refId: 'abc',
+      expiresAt: '2030-05-23T00:05:00Z'
+    })
+    expect(store.messages[0].actions).toHaveLength(1)
+    expect(store.messages[0].actions[0]).toMatchObject({
+      __typename: 'WrenPendingConfirmation',
+      confirmToken: 'ct1',
+      summary: 'Delete "X"?'
+    })
+  })
+
+  it('replaces placeholder with final message on WrenComplete', () => {
+    const store = useWrenStore()
+    store.messages = [
+      {
+        id: 'p1',
+        sender: 'coach',
+        text: 'partial',
+        actions: [],
+        status: 'streaming',
+        createdAt: ''
+      }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenComplete',
+      message: {
+        id: 'p1',
+        sender: 'coach',
+        text: 'partial complete',
+        actions: [],
+        status: 'complete',
+        createdAt: '2026-05-23T00:01:00Z'
+      }
+    })
+    expect(store.messages[0].status).toBe('complete')
+    expect(store.messages[0].text).toBe('partial complete')
+  })
+
+  it('marks message failed on WrenError', () => {
+    const store = useWrenStore()
+    store.messages = [
+      { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenError',
+      messageId: 'p1',
+      code: 'PROVIDER_DOWN',
+      message: 'oops'
+    })
+    expect(store.messages[0].status).toBe('failed')
+    expect(store.error).toMatch(/PROVIDER_DOWN|oops/i)
   })
 })
