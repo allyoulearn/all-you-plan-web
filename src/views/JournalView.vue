@@ -154,22 +154,25 @@ export default {
     }
 
     /**
-     * Extracts the numeric day from a YYYY-MM-DD date string.
+     * Extracts the numeric day from a YYYY-MM-DD date string. Tolerates a full
+     * ISO 8601 timestamp (e.g. "2026-05-20T03:00:00.000Z") by reading only the
+     * date portion.
      * @param {string} dateStr
      * @returns {number}
      */
     function dayNumber(dateStr) {
-      return Number(dateStr?.split('-')[2] ?? 0)
+      return Number(dateStr?.slice(0, 10).split('-')[2] ?? 0)
     }
 
     /**
-     * Formats a YYYY-MM-DD date string as "Mon YYYY" in the browser's locale (WEB-W4-07).
+     * Formats a YYYY-MM-DD (or full ISO) date string as "Mon YYYY" in the
+     * browser's locale (WEB-W4-07).
      * @param {string} dateStr
      * @returns {string}
      */
     function formatDate(dateStr) {
       if (!dateStr) return ''
-      const [y, m, d] = dateStr.split('-')
+      const [y, m, d] = dateStr.slice(0, 10).split('-')
       const date = new Date(Number(y), Number(m) - 1, Number(d))
       return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
     }
