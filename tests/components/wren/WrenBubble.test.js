@@ -213,3 +213,134 @@ describe('WrenBubble', () => {
     })
   })
 })
+
+// ── Action union & streaming cursor ───────────────────────────────────────────
+
+describe('WrenBubble — action union', () => {
+  it('renders WrenAppliedAction via WrenActionChip', () => {
+    const action = {
+      __typename: 'WrenAppliedAction',
+      kind: 'task.created',
+      summary: 'Added "X"',
+      undoToken: 'u1',
+      undoExpiresAt: new Date(Date.now() + 60_000).toISOString()
+    }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: 'Done',
+          actions: [action],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    expect(wrapper.text()).toContain('Added "X"')
+    expect(wrapper.text()).toContain('Undo')
+  })
+
+  it('renders WrenPendingConfirmation via WrenConfirmChip', () => {
+    const pending = {
+      __typename: 'WrenPendingConfirmation',
+      confirmToken: 'ct1',
+      summary: 'Delete "X"?'
+    }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: '',
+          actions: [pending],
+          status: 'streaming',
+          createdAt: ''
+        }
+      }
+    })
+    expect(wrapper.text()).toContain('Delete "X"?')
+    expect(wrapper.text()).toContain('Confirm')
+    expect(wrapper.text()).toContain('Cancel')
+  })
+
+  it('shows streaming cursor when status=streaming on coach bubble', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: 'typ',
+          actions: [],
+          status: 'streaming',
+          createdAt: ''
+        }
+      }
+    })
+    expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(true)
+  })
+
+  it('does NOT show cursor when status=complete', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: 'done',
+          actions: [],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(false)
+  })
+
+  it('propagates undo event from chip', async () => {
+    const action = {
+      __typename: 'WrenAppliedAction',
+      summary: 'X',
+      undoToken: 'u1',
+      undoExpiresAt: new Date(Date.now() + 60_000).toISOString()
+    }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: '',
+          actions: [action],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    await wrapper.find('button').trigger('click')
+    expect(wrapper.emitted('undo')).toEqual([['u1']])
+  })
+
+  it('propagates confirm and cancel events from confirm chip', async () => {
+    const pending = {
+      __typename: 'WrenPendingConfirmation',
+      confirmToken: 'ct1',
+      summary: 'X?'
+    }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: '',
+          actions: [pending],
+          status: 'streaming',
+          createdAt: ''
+        }
+      }
+    })
+    const btns = wrapper.findAll('button')
+    await btns[0].trigger('click') // Cancel
+    expect(wrapper.emitted('cancel')).toEqual([['ct1']])
+    await btns[1].trigger('click') // Confirm
+    expect(wrapper.emitted('confirm')).toEqual([['ct1']])
+  })
+})

@@ -21,56 +21,112 @@
 
       <div
         class="wren-bubble__body"
-        :class="message.actions && message.actions.length
-          ? 'wren-bubble__body--accent'
-          : 'wren-bubble__body--default'"
+        :class="hasActions ? 'wren-bubble__body--accent' : 'wren-bubble__body--default'"
       >
-        {{ message.text }}
+        {{ message.text }}<span
+          v-if="message.status === 'streaming'"
+          class="wren-bubble__cursor"
+          aria-hidden="true"
+        >
+          ▊
+        </span>
       </div>
 
-      <div v-if="message.actions && message.actions.length" class="wren-bubble__actions">
-        <Button
-          v-for="(action, idx) in message.actions"
-          :key="`${message.id}-${idx}`"
-          variant="ghost"
-          size="sm"
-          class="wren-bubble__action-btn"
-          @click="$emit('action', action)"
-        >
-          {{ action }}
-        </Button>
+      <div v-if="hasActions" class="wren-bubble__actions">
+        <template v-for="(action, idx) in normalizedActions" :key="`${message.id}-${idx}`">
+          <Button
+            v-if="action.kind === 'suggested'"
+            variant="ghost"
+            size="sm"
+            class="wren-bubble__action-btn"
+            @click="$emit('action', action.label)"
+          >
+            {{ action.label }}
+          </Button>
+
+          <WrenActionChip
+            v-else-if="action.kind === 'applied'"
+            :action="action.payload"
+            @undo="token => $emit('undo', token)"
+          />
+
+          <WrenConfirmChip
+            v-else-if="action.kind === 'pending'"
+            :pending="action.payload"
+            @confirm="token => $emit('confirm', token)"
+            @cancel="token => $emit('cancel', token)"
+          />
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-/** WrenBubble — chat message bubble for the Wren coach interface, supporting user and coach orientations. */
+/**
+ * WrenBubble — chat message bubble for the Wren coach interface.
+ *
+ * Supports the new actions union (WrenSuggestedAction | WrenAppliedAction |
+ * WrenPendingConfirmation) AND legacy plain-string actions for backwards
+ * compatibility with the scripted-matcher path.
+ */
 import Button from '@/components/ui/Button.vue'
+import WrenActionChip from '@/components/wren/WrenActionChip.vue'
+import WrenConfirmChip from '@/components/wren/WrenConfirmChip.vue'
+
+/**
+ * Classify a raw action entry into a normalised shape consumed by the template.
+ * @param {string|object|null} raw
+ * @returns {{ kind: 'suggested', label: string } | { kind: 'applied'|'pending', payload: object } | null}
+ */
+function classify(raw) {
+  if (typeof raw === 'string') return { kind: 'suggested', label: raw }
+  if (!raw || typeof raw !== 'object') return null
+  if (raw.__typename === 'WrenSuggestedAction' || typeof raw.label === 'string') {
+    return { kind: 'suggested', label: raw.label }
+  }
+  if (raw.__typename === 'WrenPendingConfirmation' || raw.confirmToken) {
+    return { kind: 'pending', payload: raw }
+  }
+  if (raw.__typename === 'WrenAppliedAction' || raw.summary) {
+    return { kind: 'applied', payload: raw }
+  }
+  return null
+}
 
 export default {
   name: 'WrenBubble',
-  components: { Button },
+  components: { Button, WrenActionChip, WrenConfirmChip },
   props: {
-    /** The message object with sender, text, actions, and createdAt fields */
+    /** The message object with sender, text, actions, status, and createdAt fields */
     message: { type: Object, required: true }
   },
-  emits: ['action'],
-  setup() {
-    // -- Function definitions --
-
+  emits: ['action', 'undo', 'confirm', 'cancel'],
+  computed: {
+    normalizedActions() {
+      if (!Array.isArray(this.message.actions)) return []
+      return this.message.actions.map(classify).filter(Boolean)
+    },
+    hasActions() {
+      return this.normalizedActions.length > 0
+    }
+  },
+  methods: {
     /**
      * Formats an ISO timestamp to a short locale time string.
      * @param {string|null} iso - ISO 8601 date string or null
      * @returns {string}
      */
-    function formatWhen(iso) {
+    formatWhen(iso) {
       if (!iso) return ''
-      const d = new Date(iso)
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      try {
+        const d = new Date(iso)
+        if (Number.isNaN(d.getTime())) return ''
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      } catch {
+        return ''
+      }
     }
-
-    return { formatWhen }
   }
 }
 </script>
@@ -125,6 +181,18 @@ export default {
   // bubble's max-width (WEB-W3-20).
   &__action-btn {
     @apply max-w-full truncate;
+  }
+
+  &__cursor {
+    display: inline-block;
+    margin-left: 1px;
+    animation: wren-bubble-cursor-blink 1s steps(2, start) infinite;
+  }
+}
+
+@keyframes wren-bubble-cursor-blink {
+  to {
+    visibility: hidden;
   }
 }
 </style>
