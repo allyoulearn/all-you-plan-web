@@ -1,10 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
-import { gql, execute } from '@apollo/client/core'
+import { gql, execute, Observable } from '@apollo/client/core'
 import { createMockLink } from '@/mocks/mockLink.js'
 
 function run(link, query, variables) {
   return new Promise((resolve, reject) => {
     execute(link, { query, variables }).subscribe({ next: resolve, error: reject })
+  })
+}
+
+function collect(link, query, variables) {
+  return new Promise((resolve, reject) => {
+    const events = []
+    execute(link, { query, variables }).subscribe({
+      next: v => events.push(v),
+      error: reject,
+      complete: () => resolve(events)
+    })
   })
 }
 
@@ -172,6 +183,73 @@ describe('createMockLink', () => {
       {}
     )
     expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  // -- subscriptions: registry fixture returns an Observable --
+
+  it('forwards subscription events from a fixture Observable', async () => {
+    const registry = {
+      ticker: () =>
+        new Observable(observer => {
+          observer.next({ data: { ticker: { t: 1 } } })
+          observer.next({ data: { ticker: { t: 2 } } })
+          observer.complete()
+        })
+    }
+    const link = createMockLink(registry)
+    const events = await collect(
+      link,
+      gql`
+        subscription Ticker {
+          ticker {
+            t
+          }
+        }
+      `,
+      {}
+    )
+    expect(events).toHaveLength(2)
+    expect(events[0].data).toEqual({ ticker: { t: 1 } })
+    expect(events[1].data).toEqual({ ticker: { t: 2 } })
+  })
+
+  it('emits an error response for a subscription with no fixture', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const link = createMockLink({})
+    const result = await run(
+      link,
+      gql`
+        subscription Missing {
+          missingThing {
+            id
+          }
+        }
+      `,
+      {}
+    )
+    expect(result.errors).toBeDefined()
+    expect(result.errors[0].message).toContain('missingThing')
+    warn.mockRestore()
+  })
+
+  it('emits an error response when subscription fixture does not return an Observable', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const registry = { bad: () => ({ not: 'observable' }) }
+    const link = createMockLink(registry)
+    const result = await run(
+      link,
+      gql`
+        subscription B {
+          bad {
+            x
+          }
+        }
+      `,
+      {}
+    )
+    expect(result.errors).toBeDefined()
+    expect(result.errors[0].message).toContain('Observable')
     warn.mockRestore()
   })
 
