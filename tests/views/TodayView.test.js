@@ -2,8 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import TodayView from '@/views/TodayView.vue'
 import { useTodayStore } from '@/stores/today.store'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    { path: '/', name: 'today', component: { template: '<div />' } },
+    { path: '/wren', name: 'wren', component: { template: '<div />' } }
+  ]
+})
 
 // Stub heavy child components to keep tests focused on TodayView logic
 const globalStubs = {
@@ -12,7 +24,14 @@ const globalStubs = {
   Button: { template: '<button v-bind="$attrs"><slot /></button>' },
   KpiRow: true,
   TaskRow: true,
-  RouterLink: true
+  RouterLink: true,
+  CreateTaskModal: true
+}
+
+function mountToday(options = {}) {
+  return mount(TodayView, {
+    global: { stubs: globalStubs, plugins: [i18n, router], ...(options.global ?? {}) }
+  })
 }
 
 function buildView(tasks = []) {
@@ -36,7 +55,7 @@ describe('TodayView', () => {
     store.error = ''
     store.view = null
 
-    const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+    const wrapper = mountToday()
     expect(wrapper.text()).toContain('Loading')
   })
 
@@ -46,7 +65,7 @@ describe('TodayView', () => {
     store.error = 'Something went wrong'
     store.view = null
 
-    const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+    const wrapper = mountToday()
     expect(wrapper.text()).toContain('Something went wrong')
   })
 
@@ -56,13 +75,13 @@ describe('TodayView', () => {
     store.error = ''
     store.view = buildView([])
 
-    const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+    const wrapper = mountToday()
     expect(wrapper.text()).toContain('Nothing scheduled for today')
   })
 
   it('calls store.load() on mount', () => {
     const store = useTodayStore()
-    mount(TodayView, { global: { stubs: globalStubs } })
+    mountToday()
     expect(store.load).toHaveBeenCalledTimes(1)
   })
 
@@ -73,7 +92,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([{ id: 't1', title: 'Run', done: false, scheduledTime: '07:00' }])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       // SectionHeader is stubbed — Vue Test Utils uses kebab-case with -stub suffix
       const sectionHeaders = wrapper.findAll('section-header-stub')
       expect(sectionHeaders.some(el => el.attributes('label') === 'Morning')).toBe(true)
@@ -87,7 +106,7 @@ describe('TodayView', () => {
         { id: 't2', title: 'Lunch call', done: false, scheduledTime: '13:00' }
       ])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const sectionHeaders = wrapper.findAll('section-header-stub')
       expect(sectionHeaders.some(el => el.attributes('label') === 'Afternoon')).toBe(true)
     })
@@ -98,7 +117,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([{ id: 't3', title: 'Reading', done: false, scheduledTime: '19:30' }])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const sectionHeaders = wrapper.findAll('section-header-stub')
       expect(sectionHeaders.some(el => el.attributes('label') === 'Evening')).toBe(true)
     })
@@ -110,7 +129,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([{ id: 't4', title: 'No time', done: false, scheduledTime: null }])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const sectionHeaders = wrapper.findAll('section-header-stub')
       expect(sectionHeaders.some(el => el.attributes('label') === 'Afternoon')).toBe(true)
     })
@@ -125,7 +144,7 @@ describe('TodayView', () => {
         { id: 'c', title: 'Dinner', done: false, scheduledTime: '18:00' }
       ])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const sectionHeaders = wrapper.findAll('section-header-stub')
       const labels = sectionHeaders.map(el => el.attributes('label'))
       expect(labels).toContain('Morning')
@@ -141,7 +160,7 @@ describe('TodayView', () => {
         { id: 'x', title: 'Late morning', done: false, scheduledTime: '11:59' }
       ])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const sectionHeaders = wrapper.findAll('section-header-stub')
       expect(sectionHeaders.some(el => el.attributes('label') === 'Morning')).toBe(true)
     })
@@ -154,7 +173,7 @@ describe('TodayView', () => {
         { id: 'y', title: 'Evening task', done: false, scheduledTime: '17:00' }
       ])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const sectionHeaders = wrapper.findAll('section-header-stub')
       expect(sectionHeaders.some(el => el.attributes('label') === 'Evening')).toBe(true)
     })
@@ -167,7 +186,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       expect(wrapper.find('.today-view__actions').exists()).toBe(true)
     })
 
@@ -177,7 +196,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       // Button stub renders a real <button> element
       const buttons = wrapper.findAll('button')
       // 3 action buttons: "Add to today", "Plan with Wren", "Move unfinished"
@@ -190,7 +209,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const text = wrapper.text()
       expect(text).toContain('Add to today')
     })
@@ -201,7 +220,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       expect(wrapper.text()).toContain('Plan with Wren')
     })
 
@@ -211,7 +230,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       expect(wrapper.text()).toContain('Move unfinished')
     })
   })
@@ -223,7 +242,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([{ id: 't1', title: 'Task 1', done: false, scheduledTime: '09:00' }])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const taskRows = wrapper.findAll('task-row-stub')
       expect(taskRows).toHaveLength(1)
     })
@@ -235,7 +254,7 @@ describe('TodayView', () => {
       const task = { id: 't1', title: 'My Task', done: false, scheduledTime: '09:00' }
       store.view = buildView([task])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const taskRow = wrapper.find('task-row-stub')
       expect(taskRow.exists()).toBe(true)
     })
@@ -248,7 +267,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       const kpiRow = wrapper.find('kpi-row-stub')
       expect(kpiRow.exists()).toBe(true)
     })
@@ -258,7 +277,7 @@ describe('TodayView', () => {
       store.loading = true
       store.view = null
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       expect(wrapper.find('kpi-row-stub').exists()).toBe(false)
     })
   })
@@ -270,7 +289,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       expect(wrapper.vm.store.view.sunrise).toBe('6:01 AM')
       expect(wrapper.vm.store.view.sunset).toBe('8:17 PM')
     })
@@ -281,7 +300,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = null
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       expect(wrapper.vm.store.view).toBeNull()
     })
 
@@ -292,7 +311,7 @@ describe('TodayView', () => {
       store.view = buildView([])
 
       // Use the real ScreenHeading component so the #meta slot renders
-      const wrapper = mount(TodayView, {
+      const wrapper = mountToday({
         global: {
           stubs: {
             ...globalStubs,
@@ -313,7 +332,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([{ id: 'x', title: 'Midnight', done: false, scheduledTime: '00:00' }])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       // hour 0 < 12 → Morning
       expect(wrapper.vm.groups[0].items).toHaveLength(1)
     })
@@ -324,7 +343,7 @@ describe('TodayView', () => {
       store.error = ''
       store.view = buildView([{ id: 'y', title: 'Late', done: false, scheduledTime: '23:59' }])
 
-      const wrapper = mount(TodayView, { global: { stubs: globalStubs } })
+      const wrapper = mountToday()
       // hour 23 >= 17 → Evening
       expect(wrapper.vm.groups[2].items).toHaveLength(1)
     })

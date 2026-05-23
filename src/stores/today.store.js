@@ -10,7 +10,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo.js'
-import { TODAY_QUERY, COMPLETE_TASK, MOVE_UNFINISHED } from '@/api/operations/index.js'
+import { TODAY_QUERY, COMPLETE_TASK, MOVE_UNFINISHED, CREATE_TASK } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useTodayStore = defineStore('today', () => {
@@ -47,6 +47,7 @@ export const useTodayStore = defineStore('today', () => {
    * Captures the current date before awaiting so the reload uses the correct
    * date even if view is cleared during the async operation.
    * @param {string} id - The task ID to complete
+   * @throws Re-throws the API error after surfacing it via error + toast.
    */
   async function completeTask(id) {
     const { toastError } = useErrorToast()
@@ -58,6 +59,7 @@ export const useTodayStore = defineStore('today', () => {
     } catch (e) {
       error.value = e.message
       toastError(e, 'Failed to complete task')
+      throw e
     }
   }
 
@@ -66,6 +68,7 @@ export const useTodayStore = defineStore('today', () => {
    * then refresh the daily view.
    * Captures the current date before awaiting so the reload uses the correct
    * date even if view is cleared during the async operation.
+   * @throws Re-throws the API error after surfacing it via error + toast.
    */
   async function moveUnfinished() {
     if (!view.value) return
@@ -80,8 +83,42 @@ export const useTodayStore = defineStore('today', () => {
     } catch (e) {
       error.value = e.message
       toastError(e, 'Failed to move unfinished tasks')
+      throw e
     }
   }
 
-  return { view, loading, error, load, completeTask, moveUnfinished }
+  /**
+   * Create a new task scheduled for the current view's date (or today).
+   * After the mutation resolves, the today view is reloaded so the new task
+   * is visible immediately.
+   * Only fields with real values are sent — the server's zod schema rejects
+   * `null` for optional fields, so omitting them is the safe shape.
+   * @param {{ title: string, scheduledTime?: string, note?: string, effortMinutes?: number, tag?: string }} input
+   * @returns {Promise<object>} Created task
+   */
+  async function createTask(input) {
+    const { toastError } = useErrorToast()
+    const today = new Date()
+    const localDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const date = view.value?.date ?? localDateString
+    const taskInput = { title: input.title, scheduledDate: date }
+    if (input.scheduledTime) taskInput.scheduledTime = input.scheduledTime
+    if (input.note) taskInput.note = input.note
+    if (input.effortMinutes != null) taskInput.effortMinutes = input.effortMinutes
+    if (input.tag) taskInput.tag = input.tag
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_TASK,
+        variables: { input: taskInput }
+      })
+      await load(date)
+      return data.createTask
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to add task')
+      throw e
+    }
+  }
+
+  return { view, loading, error, load, completeTask, moveUnfinished, createTask }
 })

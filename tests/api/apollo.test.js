@@ -14,7 +14,8 @@ const { captured } = vi.hoisted(() => ({
     onErrorHandler: null,
     httpLinkOpts: null,
     splitPredicate: null,
-    wsClientOpts: null
+    wsClientOpts: null,
+    wsClientDispose: null
   }
 }))
 
@@ -45,7 +46,8 @@ vi.mock('@apollo/client/link/subscriptions', () => ({
 vi.mock('graphql-ws', () => ({
   createClient: vi.fn().mockImplementation(opts => {
     captured.wsClientOpts = opts
-    return {}
+    captured.wsClientDispose = vi.fn()
+    return { dispose: captured.wsClientDispose }
   })
 }))
 
@@ -74,7 +76,7 @@ vi.mock('@/mocks/index.js', () => ({
   }
 }))
 
-import { setAccessToken, getAccessToken, refreshAccessToken } from '@/api/apollo'
+import { setAccessToken, getAccessToken, refreshAccessToken, resetWsConnection } from '@/api/apollo'
 import { mockRegistry } from '@/mocks/index.js'
 
 describe('apollo.js', () => {
@@ -553,6 +555,61 @@ describe('apollo.js', () => {
 
       await refreshAccessToken().catch(() => {})
       expect(getAccessToken()).toBeNull()
+    })
+
+    it('disposes the WS client after a successful refresh (WEB-W1-03)', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            data: { refreshToken: { accessToken: 'rotated-token' } }
+          })
+        })
+      )
+      captured.wsClientDispose.mockClear()
+
+      await refreshAccessToken()
+
+      expect(captured.wsClientDispose).toHaveBeenCalled()
+    })
+
+    it('does not dispose the WS client when refresh fails (WEB-W1-03)', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+      captured.wsClientDispose.mockClear()
+
+      await refreshAccessToken().catch(() => {})
+
+      expect(captured.wsClientDispose).not.toHaveBeenCalled()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('refreshAccessToken() — mock-mode WS reconnect (WEB-W1-03)', () => {
+    it('disposes the WS client after a successful mock refresh', async () => {
+      vi.stubEnv('DEV', true)
+      vi.stubEnv('VITE_USE_MOCKS', 'true')
+      captured.wsClientDispose.mockClear()
+
+      await refreshAccessToken()
+
+      expect(captured.wsClientDispose).toHaveBeenCalled()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('resetWsConnection() (WEB-W1-03)', () => {
+    it('calls dispose() on the underlying WS client', () => {
+      captured.wsClientDispose.mockClear()
+      resetWsConnection()
+      expect(captured.wsClientDispose).toHaveBeenCalledTimes(1)
+    })
+
+    it('swallows errors thrown by dispose so callers are unaffected', () => {
+      captured.wsClientDispose.mockImplementationOnce(() => {
+        throw new Error('dispose failed')
+      })
+      expect(() => resetWsConnection()).not.toThrow()
     })
   })
 })

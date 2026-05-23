@@ -29,9 +29,32 @@ import {
 } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
+/**
+ * Safely read the persisted user object from localStorage.
+ * Returns `null` if the entry is missing, corrupted, or in any unexpected
+ * shape — clearing the bad entry so the next persist starts clean.
+ *
+ * The store factory runs at first use (typically inside the router guard
+ * before any route resolves). A JSON.parse throw here would crash the app
+ * with a blank screen and no in-app recovery (WEB-W1-04).
+ * @returns {object|null}
+ */
+function readPersistedUser() {
+  try {
+    return JSON.parse(localStorage.getItem('ayp_user') || 'null')
+  } catch {
+    try {
+      localStorage.removeItem('ayp_user')
+    } catch {
+      // Storage unavailable (private mode, quota) — nothing to clean up.
+    }
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // -- State --
-  const user = ref(JSON.parse(localStorage.getItem('ayp_user') || 'null'))
+  const user = ref(readPersistedUser())
   const accessToken = ref(null)
   const loading = ref(false)
   const error = ref('')

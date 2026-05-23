@@ -89,8 +89,8 @@
       </template>
 
       <div class="project-detail-view__actions">
-        <Button variant="primary">
-          Add task
+        <Button variant="primary" icon="plus" @click="showCreateTask = true">
+          {{ t('projects.addTask') }}
         </Button>
 
         <RouterLink
@@ -100,8 +100,13 @@
           Switch to board view
         </RouterLink>
 
-        <Button variant="ghost">
-          Archive project
+        <Button
+          variant="ghost"
+          icon="archive"
+          :disabled="archiving"
+          @click="showArchive = true"
+        >
+          {{ archiving ? t('projects.archiving') : t('projects.archive') }}
         </Button>
       </div>
     </template>
@@ -112,13 +117,32 @@
         Back to projects
       </RouterLink>
     </div>
+
+    <CreateProjectTaskModal
+      v-if="project"
+      v-model="showCreateTask"
+      :project-id="project.id"
+    />
+
+    <ConfirmDialog
+      v-model="showArchive"
+      :title="t('projects.archive')"
+      :message="t('projects.archiveConfirm')"
+      :confirm-label="t('projects.archiveConfirmCta')"
+      :busy-label="t('projects.archiving')"
+      :cancel-label="t('common.cancel')"
+      :busy="archiving"
+      variant="primary"
+      @confirm="handleArchive"
+    />
   </div>
 </template>
 
 <script>
 /** ProjectDetailView — project overview with progress stats, task sections, and board navigation. */
-import { onMounted, computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { onMounted, computed, ref } from 'vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
@@ -127,14 +151,46 @@ import Card from '@/components/ui/Card.vue'
 import Pill from '@/components/ui/Pill.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import CreateProjectTaskModal from '@/components/projects/CreateProjectTaskModal.vue'
 
 export default {
   name: 'ProjectDetailView',
-  components: { RouterLink, ScreenHeading, SectionHeader, Button, Card, Pill, Checkbox, ProgressBar },
+  components: {
+    RouterLink,
+    ScreenHeading,
+    SectionHeader,
+    Button,
+    Card,
+    Pill,
+    Checkbox,
+    ProgressBar,
+    ConfirmDialog,
+    CreateProjectTaskModal
+  },
   setup() {
     // -- State --
     const route = useRoute()
+    const router = useRouter()
     const store = useProjectsStore()
+    const { t } = useI18n()
+    const showCreateTask = ref(false)
+    const showArchive = ref(false)
+    const archiving = ref(false)
+
+    async function handleArchive() {
+      if (archiving.value) return
+      archiving.value = true
+      try {
+        await store.archiveProject(route.params.id)
+        showArchive.value = false
+        router.push('/projects')
+      } catch {
+        // Error already toasted by the store
+      } finally {
+        archiving.value = false
+      }
+    }
 
     // -- Computed --
 
@@ -164,7 +220,20 @@ export default {
     // -- Lifecycle --
     onMounted(() => store.loadBoard(route.params.id))
 
-    return { route, store, project, done, open, percent, sections }
+    return {
+      route,
+      store,
+      project,
+      done,
+      open,
+      percent,
+      sections,
+      t,
+      showCreateTask,
+      showArchive,
+      archiving,
+      handleArchive
+    }
   }
 }
 </script>

@@ -48,6 +48,23 @@ describe('auth.store', () => {
       expect(store.user).toBeNull()
     })
 
+    it('falls back to null and clears entry when ayp_user is corrupted (WEB-W1-04)', () => {
+      // A truncated / hand-edited JSON string would normally throw at parse time
+      // and crash the store factory before any route resolves.
+      localStorage.setItem('ayp_user', '{"id":"u1",') // invalid JSON
+      setActivePinia(createPinia())
+      const store = useAuthStore()
+      expect(store.user).toBeNull()
+      expect(localStorage.getItem('ayp_user')).toBeNull()
+    })
+
+    it('does not crash when ayp_user is the literal string "undefined"', () => {
+      localStorage.setItem('ayp_user', 'undefined')
+      setActivePinia(createPinia())
+      const store = useAuthStore()
+      expect(store.user).toBeNull()
+    })
+
     it('isAuthenticated is false before login', () => {
       const store = useAuthStore()
       expect(store.isAuthenticated).toBe(false)

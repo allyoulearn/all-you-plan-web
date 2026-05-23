@@ -13,7 +13,11 @@ import { apolloClient } from '@/api/apollo.js'
 import {
   PROJECTS_QUERY,
   PROJECT_BOARD_QUERY,
-  COMPLETE_PROJECT_TASK
+  COMPLETE_PROJECT_TASK,
+  CREATE_PROJECT,
+  UPDATE_PROJECT,
+  DELETE_PROJECT,
+  CREATE_TASK
 } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
@@ -73,6 +77,7 @@ export const useProjectsStore = defineStore('projects', () => {
   /**
    * Mark a project task as complete, then refresh the active board.
    * @param {string} id - The task ID to complete
+   * @throws Re-throws the API error after surfacing it via errorBoard + toast.
    */
   async function completeTask(id) {
     const { toastError } = useErrorToast()
@@ -84,6 +89,112 @@ export const useProjectsStore = defineStore('projects', () => {
     } catch (e) {
       errorBoard.value = e.message
       toastError(e, 'Failed to complete task')
+      throw e
+    }
+  }
+
+  /**
+   * Create a new project, then refresh the projects list.
+   * @param {{ name: string, tag?: string, blurb?: string }} input
+   * @returns {Promise<object>} Created project
+   */
+  async function createProject(input) {
+    const { toastError } = useErrorToast()
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_PROJECT,
+        variables: { name: input.name, tag: input.tag ?? null, blurb: input.blurb ?? null }
+      })
+      await loadProjects()
+      return data.createProject
+    } catch (e) {
+      errorProjects.value = e.message
+      toastError(e, 'Failed to create project')
+      throw e
+    }
+  }
+
+  /**
+   * Update a project's fields; if a board is currently loaded for the same
+   * project, refresh it; otherwise refresh the project list.
+   * @param {string} id - Project ID
+   * @param {object} input - Fields to update
+   */
+  async function updateProject(id, input) {
+    const { toastError } = useErrorToast()
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_PROJECT,
+        variables: { id, ...input }
+      })
+      if (board.value?.project?.id === id) {
+        await loadBoard(id)
+      }
+      await loadProjects()
+      return data.updateProject
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to update project')
+      throw e
+    }
+  }
+
+  /**
+   * Archive (soft-delete) a project — sets archived:true, then refreshes lists.
+   * @param {string} id
+   */
+  async function archiveProject(id) {
+    return updateProject(id, { archived: true })
+  }
+
+  /**
+   * Permanently delete a project (cascades tasks server-side).
+   * @param {string} id
+   */
+  async function deleteProject(id) {
+    const { toastError } = useErrorToast()
+    try {
+      await apolloClient.mutate({ mutation: DELETE_PROJECT, variables: { id } })
+      if (board.value?.project?.id === id) {
+        board.value = null
+      }
+      await loadProjects()
+    } catch (e) {
+      errorProjects.value = e.message
+      toastError(e, 'Failed to delete project')
+      throw e
+    }
+  }
+
+  /**
+   * Create a new task under a project (defaults to the backlog column).
+   * Only fields with real values are sent — the server's zod schema rejects
+   * `null` for optional fields, so omitting them is the safe shape.
+   * @param {{ title: string, projectId: string, note?: string, column?: string, tag?: string, scheduledDate?: string }} input
+   */
+  async function createTask(input) {
+    const { toastError } = useErrorToast()
+    const taskInput = {
+      title: input.title,
+      projectId: input.projectId,
+      column: input.column ?? 'backlog'
+    }
+    if (input.note) taskInput.note = input.note
+    if (input.tag) taskInput.tag = input.tag
+    if (input.scheduledDate) taskInput.scheduledDate = input.scheduledDate
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_TASK,
+        variables: { input: taskInput }
+      })
+      if (board.value?.project?.id === input.projectId) {
+        await loadBoard(input.projectId)
+      }
+      return data.createTask
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to create task')
+      throw e
     }
   }
 
@@ -96,6 +207,11 @@ export const useProjectsStore = defineStore('projects', () => {
     errorBoard,
     loadProjects,
     loadBoard,
-    completeTask
+    completeTask,
+    createProject,
+    updateProject,
+    archiveProject,
+    deleteProject,
+    createTask
   }
 })

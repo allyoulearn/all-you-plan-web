@@ -2,15 +2,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import ProjectsView from '@/views/ProjectsView.vue'
 import { useProjectsStore } from '@/stores/projects.store'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: '/projects/:id', name: 'project', component: { template: '<div />' } }]
+})
 
 const globalStubs = {
   ScreenHeading: true,
   SectionHeader: true,
   Button: { template: '<button v-bind="$attrs"><slot /></button>' },
   ProjectCard: true,
-  RouterLink: true
+  RouterLink: true,
+  CreateProjectModal: true
 }
 
 function mountProjects(storeState = {}) {
@@ -31,7 +41,9 @@ function mountProjects(storeState = {}) {
               ...storeState
             }
           }
-        })
+        }),
+        i18n,
+        router
       ]
     }
   })

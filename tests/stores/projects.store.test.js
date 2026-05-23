@@ -262,7 +262,7 @@ describe('projects.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
       const store = useProjectsStore()
       store.board = fakeBoard
-      await store.completeTask('t1')
+      await store.completeTask('t1').catch(() => {})
 
       expect(store.errorBoard).toBe('complete failed')
       expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to complete task')
@@ -272,9 +272,16 @@ describe('projects.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
       const store = useProjectsStore()
       store.board = fakeBoard
-      await store.completeTask('t1')
+      await store.completeTask('t1').catch(() => {})
 
       expect(apolloClient.query).not.toHaveBeenCalled()
+    })
+
+    it('re-throws the error on mutation failure (WEB-W1-01)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
+      const store = useProjectsStore()
+      store.board = fakeBoard
+      await expect(store.completeTask('t1')).rejects.toThrow('complete failed')
     })
   })
 })

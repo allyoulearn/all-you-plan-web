@@ -6,7 +6,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo.js'
-import { CHORES_QUERY, COMPLETE_CHORE } from '@/api/operations/index.js'
+import {
+  CHORES_QUERY,
+  COMPLETE_CHORE,
+  CREATE_CHORE,
+  UPDATE_CHORE,
+  DELETE_CHORE
+} from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useChoresStore = defineStore('chores', () => {
@@ -56,5 +62,65 @@ export const useChoresStore = defineStore('chores', () => {
     }
   }
 
-  return { chores, loading, error, load, completeChore }
+  /**
+   * Create a new chore, then refresh the chores list.
+   * @param {{ title: string, cadence: { type: string, daysOfWeek?: number[], interval?: number, dayOfMonth?: number } }} input
+   * @returns {Promise<object>} Created chore
+   * @throws Re-throws the API error after showing an error toast
+   */
+  async function createChore(input) {
+    const { toastError } = useErrorToast()
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_CHORE,
+        variables: { title: input.title, cadence: input.cadence }
+      })
+      await load()
+      return data.createChore
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to create chore')
+      throw e
+    }
+  }
+
+  /**
+   * Update a chore (title, cadence, or active flag), then refresh the list.
+   * @param {string} id - Chore ID
+   * @param {{ title?: string, cadence?: object, active?: boolean }} input
+   * @returns {Promise<object>}
+   */
+  async function updateChore(id, input) {
+    const { toastError } = useErrorToast()
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_CHORE,
+        variables: { id, ...input }
+      })
+      await load()
+      return data.updateChore
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to update chore')
+      throw e
+    }
+  }
+
+  /**
+   * Delete a chore by ID, then refresh the list.
+   * @param {string} id
+   */
+  async function deleteChore(id) {
+    const { toastError } = useErrorToast()
+    try {
+      await apolloClient.mutate({ mutation: DELETE_CHORE, variables: { id } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to delete chore')
+      throw e
+    }
+  }
+
+  return { chores, loading, error, load, completeChore, createChore, updateChore, deleteChore }
 })

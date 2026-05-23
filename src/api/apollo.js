@@ -38,16 +38,34 @@ const httpLink = createHttpLink({
 })
 
 const wsUrl = import.meta.env.VITE_WS_URL || `wss://${window.location.host}/graphql`
-const wsLink = new GraphQLWsLink(
-  createClient({
-    url: wsUrl,
-    connectionParams: () => ({
-      Authorization: accessToken ? `Bearer ${accessToken}` : ''
-    }),
-    retryAttempts: 5,
-    shouldRetry: () => true
-  })
-)
+const wsClient = createClient({
+  url: wsUrl,
+  connectionParams: () => ({
+    Authorization: accessToken ? `Bearer ${accessToken}` : ''
+  }),
+  retryAttempts: 5,
+  shouldRetry: () => true
+})
+const wsLink = new GraphQLWsLink(wsClient)
+
+/**
+ * Force the WebSocket subscription transport to reconnect.
+ * Disposes the underlying graphql-ws client; graphql-ws's retry logic + the
+ * GraphQLWsLink will re-establish the connection lazily on the next
+ * subscription, picking up the current access token via `connectionParams`.
+ *
+ * Called after a successful access-token refresh so existing subscriptions
+ * stop sending the stale token (WEB-W1-03).
+ */
+export function resetWsConnection() {
+  try {
+    wsClient.dispose()
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[apollo] resetWsConnection dispose failed:', e?.message)
+    }
+  }
+}
 
 const splitLink = split(
   ({ query }) => {
@@ -91,6 +109,7 @@ export async function refreshAccessToken() {
   if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true') {
     const payload = mockRegistry.refreshToken().refreshToken
     setAccessToken(payload.accessToken)
+    resetWsConnection()
     return payload
   }
   const res = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
@@ -111,6 +130,7 @@ export async function refreshAccessToken() {
   }
   if (json.data?.refreshToken) {
     setAccessToken(json.data.refreshToken.accessToken)
+    resetWsConnection()
     return json.data.refreshToken
   }
   throw new Error('Refresh failed')

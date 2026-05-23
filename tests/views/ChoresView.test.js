@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import ChoresView from '@/views/ChoresView.vue'
 import { useChoresStore } from '@/stores/chores.store'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -11,7 +15,8 @@ const globalStubs = {
   ScreenHeading: true,
   SectionHeader: true,
   Button: { template: '<button type="button"><slot /></button>' },
-  ChoreRow: true
+  ChoreRow: true,
+  CreateChoreModal: true
 }
 
 const DAILY_CHORE = {
@@ -41,7 +46,8 @@ function mountChores(storeOverrides = {}) {
         createTestingPinia({
           createSpy: vi.fn,
           initialState: { chores: { chores: [], loading: false, error: '', ...storeOverrides } }
-        })
+        }),
+        i18n
       ]
     }
   })
@@ -96,7 +102,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [DAILY_CHORE], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -117,7 +124,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [WEEKLY_CHORE], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -137,7 +145,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [MONTHLY_CHORE], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -163,7 +172,8 @@ describe('ChoresView', () => {
                 error: ''
               }
             }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -190,7 +200,8 @@ describe('ChoresView', () => {
             initialState: {
               chores: { chores: [DAILY_CHORE, WEEKLY_CHORE], loading: false, error: '' }
             }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -212,7 +223,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -235,7 +247,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -263,7 +276,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -286,7 +300,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: null, loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -308,7 +323,8 @@ describe('ChoresView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { chores: { chores: [DAILY_CHORE], loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })

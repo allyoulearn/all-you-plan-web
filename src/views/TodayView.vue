@@ -38,38 +38,50 @@
       </div>
 
       <div class="today-view__actions">
-        <Button variant="primary" disabled>
-          Add to today
+        <Button variant="primary" @click="showCreateTask = true">
+          {{ t('today.addTask') }}
         </Button>
 
-        <Button variant="ghost" icon="bolt" disabled>
-          Plan with Wren
+        <Button variant="ghost" icon="bolt" @click="planWithWren">
+          {{ t('today.planWithWren') }}
         </Button>
 
         <Button variant="ghost" @click="store.moveUnfinished">
-          Move unfinished to tomorrow
+          {{ t('today.moveUnfinished') }}
         </Button>
       </div>
     </template>
+
+    <CreateTaskModal v-model="showCreateTask" />
   </div>
 </template>
 
 <script>
 /** TodayView — daily task board grouped by morning, afternoon, and evening time slots. */
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useTodayStore } from '@/stores/today.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import KpiRow from '@/components/today/KpiRow.vue'
 import TaskRow from '@/components/today/TaskRow.vue'
+import CreateTaskModal from '@/components/today/CreateTaskModal.vue'
 
 export default {
   name: 'TodayView',
-  components: { ScreenHeading, SectionHeader, Button, KpiRow, TaskRow },
+  components: { ScreenHeading, SectionHeader, Button, KpiRow, TaskRow, CreateTaskModal },
   setup() {
     // -- State --
     const store = useTodayStore()
+    const router = useRouter()
+    const { t } = useI18n()
+    const showCreateTask = ref(false)
+
+    function planWithWren() {
+      router.push({ name: 'wren' })
+    }
 
     // -- Computed --
 
@@ -102,7 +114,7 @@ export default {
       return Number(task.scheduledTime.split(':')[0])
     }
 
-    return { store, groups }
+    return { store, groups, t, showCreateTask, planWithWren }
   }
 }
 </script>

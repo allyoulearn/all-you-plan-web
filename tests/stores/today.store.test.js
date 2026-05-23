@@ -123,7 +123,7 @@ describe('today.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('mutate failed'))
       const store = useTodayStore()
       store.view = fakeView
-      await store.completeTask('t1')
+      await store.completeTask('t1').catch(() => {})
 
       expect(store.error).toBe('mutate failed')
       expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to complete task')
@@ -133,8 +133,15 @@ describe('today.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('mutate failed'))
       const store = useTodayStore()
       store.view = fakeView
-      await store.completeTask('t1')
+      await store.completeTask('t1').catch(() => {})
       expect(apolloClient.query).not.toHaveBeenCalled()
+    })
+
+    it('re-throws the error on mutation failure (WEB-W1-02)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('mutate failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await expect(store.completeTask('t1')).rejects.toThrow('mutate failed')
     })
 
     it('uses the captured date not the post-await view.date', async () => {
@@ -177,7 +184,7 @@ describe('today.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('move failed'))
       const store = useTodayStore()
       store.view = fakeView
-      await store.moveUnfinished()
+      await store.moveUnfinished().catch(() => {})
 
       expect(store.error).toBe('move failed')
       expect(mockToastError).toHaveBeenCalledWith(
@@ -190,8 +197,15 @@ describe('today.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('move failed'))
       const store = useTodayStore()
       store.view = fakeView
-      await store.moveUnfinished()
+      await store.moveUnfinished().catch(() => {})
       expect(apolloClient.query).not.toHaveBeenCalled()
+    })
+
+    it('re-throws the error on mutation failure (WEB-W1-02)', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('move failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+      await expect(store.moveUnfinished()).rejects.toThrow('move failed')
     })
   })
 })

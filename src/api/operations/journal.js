@@ -19,7 +19,7 @@ export const CREATE_JOURNAL_ENTRY = gql`
     $prompt: String
     $pullQuote: String
     $body: String!
-    $tags: [String]
+    $tags: [String!]
   ) {
     createJournalEntry(
       date: $date
@@ -29,6 +29,28 @@ export const CREATE_JOURNAL_ENTRY = gql`
       tags: $tags
     ) {
       id
+      date
+      prompt
+      pullQuote
+      body
+      tags
     }
+  }
+`
+
+export const UPDATE_JOURNAL_ENTRY = gql`
+  mutation UpdateJournalEntry($id: ID!, $pullQuote: String, $body: String, $tags: [String!]) {
+    updateJournalEntry(id: $id, pullQuote: $pullQuote, body: $body, tags: $tags) {
+      id
+      pullQuote
+      body
+      tags
+    }
+  }
+`
+
+export const DELETE_JOURNAL_ENTRY = gql`
+  mutation DeleteJournalEntry($id: ID!) {
+    deleteJournalEntry(id: $id)
   }
 `

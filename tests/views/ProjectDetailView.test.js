@@ -2,13 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import ProjectDetailView from '@/views/ProjectDetailView.vue'
 import { useProjectsStore } from '@/stores/projects.store'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { id: 'proj-42' } }),
+  useRouter: () => ({ push: vi.fn() }),
   RouterLink: { template: '<a :href="$attrs.to"><slot /></a>' }
 }))
 
@@ -22,7 +27,9 @@ const globalStubs = {
   Pill: { template: '<span class="pill"><slot /></span>' },
   Checkbox: { template: '<input type="checkbox" :checked="$attrs.modelValue" />' },
   ProgressBar: true,
-  RouterLink: { template: '<a :href="$attrs.to"><slot /></a>' }
+  RouterLink: { template: '<a :href="$attrs.to"><slot /></a>' },
+  ConfirmDialog: true,
+  CreateProjectTaskModal: true
 }
 
 const PROJECT = {
@@ -58,7 +65,8 @@ function mountDetail(storeOverrides = {}) {
               ...storeOverrides
             }
           }
-        })
+        }),
+        i18n
       ]
     }
   })

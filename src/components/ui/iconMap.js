@@ -34,7 +34,11 @@ const names = {
   mic: 'MicrophoneIcon',
   bolt: 'BoltIcon',
   'arrow-right': 'ArrowRightIcon',
-  filter: 'FunnelIcon'
+  filter: 'FunnelIcon',
+  x: 'XMarkIcon',
+  trash: 'TrashIcon',
+  pencil: 'PencilSquareIcon',
+  archive: 'ArchiveBoxIcon'
 }
 
 // -- Exports --

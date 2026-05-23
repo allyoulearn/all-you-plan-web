@@ -24,10 +24,16 @@
         {{ PROMPT }}
       </p>
 
+      <label for="journal-editor" class="sr-only">
+        Journal entry
+      </label>
+
       <textarea
+        id="journal-editor"
         v-model="bodyText"
         rows="4"
         placeholder="Write something…"
+        aria-label="Journal entry"
         class="journal-view__editor"
       />
 

@@ -32,31 +32,37 @@
       </div>
 
       <div class="chores-view__actions">
-        <Button variant="primary">
-          New chore
+        <Button variant="primary" icon="plus" @click="showCreate = true">
+          {{ t('chores.newChore') }}
         </Button>
       </div>
     </template>
+
+    <CreateChoreModal v-model="showCreate" />
   </div>
 </template>
 
 <script>
 /** ChoresView — recurring habit list grouped by cadence (daily, weekly, monthly). */
 import { onMounted, computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChoresStore } from '@/stores/chores.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import ChoreRow from '@/components/chores/ChoreRow.vue'
+import CreateChoreModal from '@/components/chores/CreateChoreModal.vue'
 
 export default {
   name: 'ChoresView',
-  components: { ScreenHeading, SectionHeader, Button, ChoreRow },
+  components: { ScreenHeading, SectionHeader, Button, ChoreRow, CreateChoreModal },
   setup() {
     // -- State --
     const store = useChoresStore()
+    const { t } = useI18n()
     /** True once the store has completed at least one load, preventing empty-state flash. */
     const loaded = ref(false)
+    const showCreate = ref(false)
 
     // -- Computed --
 
@@ -84,7 +90,7 @@ export default {
       if (isLoading) loaded.value = false
     })
 
-    return { store, groups, loaded, isEmpty }
+    return { store, groups, loaded, isEmpty, showCreate, t }
   }
 }
 </script>

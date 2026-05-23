@@ -12,8 +12,8 @@
 
     <template v-else>
       <div class="projects-view__actions">
-        <Button variant="primary">
-          New project
+        <Button variant="primary" icon="plus" @click="showCreate = true">
+          {{ t('projects.newProject') }}
         </Button>
       </div>
 
@@ -27,29 +27,41 @@
         />
       </div>
     </template>
+
+    <CreateProjectModal v-model="showCreate" @created="handleCreated" />
   </div>
 </template>
 
 <script>
 /** ProjectsView — lists active projects in a two-column card grid with a new-project action. */
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import ProjectCard from '@/components/projects/ProjectCard.vue'
+import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
 
 export default {
   name: 'ProjectsView',
-  components: { ScreenHeading, SectionHeader, Button, ProjectCard },
+  components: { ScreenHeading, SectionHeader, Button, ProjectCard, CreateProjectModal },
   setup() {
     // -- State --
     const store = useProjectsStore()
+    const router = useRouter()
+    const { t } = useI18n()
+    const showCreate = ref(false)
 
     // -- Lifecycle --
     onMounted(() => store.loadProjects())
 
-    return { store }
+    function handleCreated(project) {
+      if (project?.id) router.push(`/projects/${project.id}`)
+    }
+
+    return { store, t, showCreate, handleCreated }
   }
 }
 </script>
