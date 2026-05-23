@@ -75,7 +75,8 @@ describe('i18n/index.js', () => {
 
   it('resolves common.loading key to English text', async () => {
     const { default: i18n } = await import('@/i18n/index.js')
-    expect(i18n.global.t('common.loading')).toBe('Loading...')
+    // WEB-W4-12: harmonised to the ellipsis glyph so views can reuse one key.
+    expect(i18n.global.t('common.loading')).toBe('Loading…')
   })
 
   it('returns the key itself for unknown keys (fallback behaviour)', async () => {

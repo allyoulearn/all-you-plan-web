@@ -89,6 +89,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -101,6 +102,7 @@ export default {
     const route = useRoute()
     const router = useRouter()
     const authStore = useAuthStore()
+    const { resolveErrorMessage } = useErrorToast()
 
     const newPassword = ref('')
     const confirmPassword = ref('')
@@ -172,7 +174,9 @@ export default {
         await authStore.resetPassword(token.value, newPassword.value)
         router.push('/')
       } catch (err) {
-        error.value = err?.graphQLErrors?.[0]?.message || t('auth.resetTokenInvalid')
+        // WEB-W4-16: use the shared resolver so the fallback-message logic
+        // lives in one place (LoginView/RegisterView already do this).
+        error.value = resolveErrorMessage(err, t('auth.resetTokenInvalid'))
       } finally {
         loading.value = false
       }

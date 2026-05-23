@@ -3,12 +3,12 @@
     <ScreenHeading eyebrow="System · Settings" title="Tune the" emphasis="experience." />
 
     <!-- Coach -->
-    <SectionHeader label="Coach" />
+    <SectionHeader :label="t('settings.sectionCoach')" />
 
     <div class="settings-view__section-card">
       <SettingRow
-        label="Wren's personality"
-        description="How Wren speaks and coaches you."
+        :label="t('settings.personalityLabel')"
+        :description="t('settings.personalityDescription')"
       >
         <SegmentedControl
           :model-value="settings.coachPersonality ?? 'gentle'"
@@ -18,25 +18,25 @@
       </SettingRow>
 
       <SettingRow
-        label="Proactive check-ins"
-        description="When Wren pings you during the day."
+        :label="t('settings.checkInsLabel')"
+        :description="t('settings.checkInsDescription')"
       >
         <div class="settings-view__check-in-row">
           <Button
-            v-for="opt in CHECK_IN_OPTIONS"
-            :key="opt"
+            v-for="opt in checkInOptions"
+            :key="opt.value"
             size="sm"
-            :variant="hasCheckIn(opt) ? 'accent' : 'default'"
-            @click="toggleCheckIn(opt)"
+            :variant="hasCheckIn(opt.value) ? 'accent' : 'default'"
+            @click="toggleCheckIn(opt.value)"
           >
-            {{ opt.charAt(0).toUpperCase() + opt.slice(1) }}
+            {{ opt.label }}
           </Button>
         </div>
       </SettingRow>
 
       <SettingRow
-        label="Stalled-project nudges"
-        description="Remind you when a project has gone quiet."
+        :label="t('settings.nudgeLabel')"
+        :description="t('settings.nudgeDescription')"
       >
         <SegmentedControl
           :model-value="stalledNudge"
@@ -47,12 +47,12 @@
     </div>
 
     <!-- Look -->
-    <SectionHeader label="Look" />
+    <SectionHeader :label="t('settings.sectionLook')" />
 
     <div class="settings-view__section-card">
       <SettingRow
-        label="Theme"
-        description="The color palette used across the app."
+        :label="t('settings.themeLabel')"
+        :description="t('settings.themeDescription')"
       >
         <SegmentedControl
           :model-value="settings.theme ?? 'warm'"
@@ -62,8 +62,8 @@
       </SettingRow>
 
       <SettingRow
-        label="Appearance"
-        description="Light or dark interface."
+        :label="t('settings.modeLabel')"
+        :description="t('settings.modeDescription')"
       >
         <SegmentedControl
           :model-value="settings.mode ?? 'light'"
@@ -74,12 +74,12 @@
     </div>
 
     <!-- Privacy -->
-    <SectionHeader label="Privacy" />
+    <SectionHeader :label="t('settings.sectionPrivacy')" />
 
     <div class="settings-view__section-card">
       <SettingRow
-        label="Journal visibility"
-        description="Who can see your journal entries."
+        :label="t('settings.visibilityLabel')"
+        :description="t('settings.visibilityDescription')"
       >
         <SegmentedControl
           :model-value="settings.journalVisibility ?? 'private'"
@@ -94,6 +94,7 @@
 <script>
 /** SettingsView — user preferences for coach personality, check-ins, theme, and privacy. */
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { useTheme } from '@/composables/useTheme.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
@@ -103,47 +104,16 @@ import Button from '@/components/ui/Button.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 import SettingRow from '@/components/settings/SettingRow.vue'
 
-// -- Coach --
-const personalityOptions = [
-  { value: 'gentle', label: 'Gentle' },
-  { value: 'direct', label: 'Direct' },
-  { value: 'reflective', label: 'Reflective' },
-]
-
-const CHECK_IN_OPTIONS = ['morning', 'midday', 'evening', 'stuck']
-
-const nudgeOptions = [
-  { value: 4, label: '4 days' },
-  { value: 7, label: '7 days' },
-  { value: 10, label: '10 days' },
-  { value: null, label: 'Never' },
-]
-
-// -- Look --
-const themeOptions = [
-  { value: 'warm', label: 'Warm' },
-  { value: 'ink', label: 'Ink' },
-  { value: 'blueprint', label: 'Blueprint' },
-  { value: 'rose', label: 'Rose' },
-]
-
-const modeOptions = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-]
-
-// -- Privacy --
-const visibilityOptions = [
-  { value: 'private', label: 'Private' },
-  { value: 'themed', label: 'Themed' },
-  { value: 'open', label: 'Open' },
-]
+// Internal check-in slot values; labels are resolved via i18n inside setup
+// so they react to locale changes (WEB-W4-09).
+const CHECK_IN_VALUES = ['morning', 'midday', 'evening', 'stuck']
 
 export default {
   name: 'SettingsView',
   components: { ScreenHeading, SectionHeader, Button, SegmentedControl, SettingRow },
   setup() {
     // -- State --
+    const { t } = useI18n()
     const authStore = useAuthStore()
     const { setTheme, setMode } = useTheme()
     const { toastError } = useErrorToast()
@@ -155,6 +125,45 @@ export default {
 
     /** Current stalled-nudge days value derived from settings. */
     const stalledNudge = computed(() => settings.value.stalledNudgeDays ?? null)
+
+    /** Localised SegmentedControl option lists (WEB-W4-09). */
+    const personalityOptions = computed(() => [
+      { value: 'gentle', label: t('settings.personalityGentle') },
+      { value: 'direct', label: t('settings.personalityDirect') },
+      { value: 'reflective', label: t('settings.personalityReflective') },
+    ])
+
+    const checkInOptions = computed(() => [
+      { value: 'morning', label: t('settings.checkInMorning') },
+      { value: 'midday', label: t('settings.checkInMidday') },
+      { value: 'evening', label: t('settings.checkInEvening') },
+      { value: 'stuck', label: t('settings.checkInStuck') },
+    ])
+
+    const nudgeOptions = computed(() => [
+      { value: 4, label: t('settings.nudge4Days') },
+      { value: 7, label: t('settings.nudge7Days') },
+      { value: 10, label: t('settings.nudge10Days') },
+      { value: null, label: t('settings.nudgeNever') },
+    ])
+
+    const themeOptions = computed(() => [
+      { value: 'warm', label: t('settings.themeWarm') },
+      { value: 'ink', label: t('settings.themeInk') },
+      { value: 'blueprint', label: t('settings.themeBlueprint') },
+      { value: 'rose', label: t('settings.themeRose') },
+    ])
+
+    const modeOptions = computed(() => [
+      { value: 'light', label: t('settings.modeLight') },
+      { value: 'dark', label: t('settings.modeDark') },
+    ])
+
+    const visibilityOptions = computed(() => [
+      { value: 'private', label: t('settings.visibilityPrivate') },
+      { value: 'themed', label: t('settings.visibilityThemed') },
+      { value: 'open', label: t('settings.visibilityOpen') },
+    ])
 
     // -- Function definitions --
 
@@ -175,7 +184,7 @@ export default {
       try {
         await authStore.updateSettings({ coachPersonality: val })
       } catch (e) {
-        toastError(e, 'Failed to update personality setting')
+        toastError(e, t('settings.errorPersonality'))
       }
     }
 
@@ -191,7 +200,7 @@ export default {
       try {
         await authStore.updateSettings({ checkIns: next })
       } catch (e) {
-        toastError(e, 'Failed to update check-in setting')
+        toastError(e, t('settings.errorCheckIn'))
       }
     }
 
@@ -203,7 +212,7 @@ export default {
       try {
         await authStore.updateSettings({ stalledNudgeDays: val })
       } catch (e) {
-        toastError(e, 'Failed to update nudge setting')
+        toastError(e, t('settings.errorNudge'))
       }
     }
 
@@ -216,7 +225,7 @@ export default {
       try {
         await authStore.updateSettings({ theme: val })
       } catch (e) {
-        toastError(e, 'Failed to update theme setting')
+        toastError(e, t('settings.errorTheme'))
       }
     }
 
@@ -229,7 +238,7 @@ export default {
       try {
         await authStore.updateSettings({ mode: val })
       } catch (e) {
-        toastError(e, 'Failed to update appearance setting')
+        toastError(e, t('settings.errorMode'))
       }
     }
 
@@ -241,15 +250,20 @@ export default {
       try {
         await authStore.updateSettings({ journalVisibility: val })
       } catch (e) {
-        toastError(e, 'Failed to update visibility setting')
+        toastError(e, t('settings.errorVisibility'))
       }
     }
 
     return {
+      t,
       authStore,
       settings,
       personalityOptions,
-      CHECK_IN_OPTIONS,
+      // CHECK_IN_OPTIONS retained for backwards-compatible tests that still
+      // reference the raw value list (WEB-W4-09 keeps the slot names internal
+      // but exposes the localised labels via checkInOptions).
+      CHECK_IN_OPTIONS: CHECK_IN_VALUES,
+      checkInOptions,
       nudgeOptions,
       stalledNudge,
       themeOptions,

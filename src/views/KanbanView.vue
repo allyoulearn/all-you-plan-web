@@ -5,11 +5,11 @@
       :to="`/projects/${route.params.id}`"
       class="kanban-view__back-link"
     >
-      &larr; {{ project.name }}
+      ← {{ project.name }}
     </RouterLink>
 
     <div v-if="store.loadingBoard" class="kanban-view__status kanban-view__status--mt">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.errorBoard" class="kanban-view__status kanban-view__status--mt kanban-view__status--error">
@@ -17,7 +17,7 @@
     </div>
 
     <template v-else-if="project">
-      <ScreenHeading :title="project.name" emphasis="by status." />
+      <ScreenHeading :title="project.name" :emphasis="t('kanban.byStatus')" />
 
       <div class="kanban-view__board">
         <div
@@ -43,16 +43,16 @@
           />
 
           <p v-if="!col.tasks.length" class="kanban-view__empty-col">
-            Empty
+            {{ t('kanban.emptyColumn') }}
           </p>
         </div>
       </div>
     </template>
 
     <div v-else class="kanban-view__status kanban-view__status--mt">
-      Project not found.
+      {{ t('kanban.notFound') }}
       <RouterLink to="/projects" class="kanban-view__back-link">
-        Back to projects
+        {{ t('kanban.notFoundBack') }}
       </RouterLink>
     </div>
   </div>
@@ -62,6 +62,7 @@
 /** KanbanView — project board with four status columns (backlog, this week, doing, done). */
 import { onMounted, computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import KanbanCard from '@/components/projects/KanbanCard.vue'
@@ -73,24 +74,25 @@ export default {
     // -- State --
     const route = useRoute()
     const store = useProjectsStore()
+    const { t } = useI18n()
 
     // -- Computed --
 
     /** The project object from the loaded board, or null if not yet loaded. */
     const project = computed(() => store.board?.project ?? null)
 
-    /** The four kanban columns with their tasks. */
+    /** The four kanban columns with their tasks, labelled via i18n (WEB-W4-05). */
     const columns = computed(() => [
-      { key: 'backlog', label: 'Backlog', tasks: store.board?.backlog ?? [] },
-      { key: 'thisWeek', label: 'This week', tasks: store.board?.thisWeek ?? [] },
-      { key: 'doing', label: 'Doing', tasks: store.board?.doing ?? [] },
-      { key: 'done', label: 'Done', tasks: store.board?.done ?? [] },
+      { key: 'backlog', label: t('kanban.columnBacklog'), tasks: store.board?.backlog ?? [] },
+      { key: 'thisWeek', label: t('kanban.columnThisWeek'), tasks: store.board?.thisWeek ?? [] },
+      { key: 'doing', label: t('kanban.columnDoing'), tasks: store.board?.doing ?? [] },
+      { key: 'done', label: t('kanban.columnDone'), tasks: store.board?.done ?? [] },
     ])
 
     // -- Lifecycle --
     onMounted(() => store.loadBoard(route.params.id))
 
-    return { route, store, project, columns }
+    return { route, store, project, columns, t }
   }
 }
 </script>

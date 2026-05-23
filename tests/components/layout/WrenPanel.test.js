@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import WrenPanel from '@/components/layout/WrenPanel.vue'
 import { useWrenStore } from '@/stores/wren.store.js'
 import { QUICK_PROMPTS } from '@/composables/useWrenChat.js'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 vi.mock('@/api/apollo.js', () => ({
   apolloClient: { query: vi.fn(), mutate: vi.fn() }
@@ -37,6 +41,7 @@ function mountPanel(storeOverrides = {}) {
 
   return mount(WrenPanel, {
     global: {
+      plugins: [i18n],
       stubs: {
         WrenBubble: {
           props: ['message'],
@@ -156,6 +161,7 @@ describe('WrenPanel', () => {
 
       const wrapper = mount(WrenPanel, {
         global: {
+          plugins: [i18n],
           stubs: {
             WrenBubble: {
               props: ['message'],

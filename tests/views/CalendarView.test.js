@@ -1,8 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import CalendarView from '@/views/CalendarView.vue'
 import { useCalendarStore } from '@/stores/calendar.store'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   ScreenHeading: true,
@@ -25,7 +29,8 @@ function mountCalendar(storeState = {}) {
         createTestingPinia({
           createSpy: vi.fn,
           initialState: { calendar: { events: [], loading: false, error: '', ...storeState } }
-        })
+        }),
+        i18n
       ]
     }
   })

@@ -3,7 +3,7 @@
     <ScreenHeading eyebrow="Workspaces · Projects" title="Six things you're" emphasis="becoming." />
 
     <div v-if="store.loadingProjects" class="projects-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.errorProjects" class="projects-view__status projects-view__status--error">
@@ -17,7 +17,7 @@
         </Button>
       </div>
 
-      <SectionHeader label="Active" :count="store.projects.length" />
+      <SectionHeader :label="t('projects.activeSection')" :count="store.projects.length" />
 
       <div class="projects-view__grid">
         <ProjectCard

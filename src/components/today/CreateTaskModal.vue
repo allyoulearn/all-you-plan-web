@@ -2,6 +2,7 @@
   <Modal
     :model-value="modelValue"
     :title="t('tasks.createTitle')"
+    :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <form class="create-task-modal__form" @submit.prevent="handleSubmit">
@@ -29,6 +30,9 @@
         type="number"
         :label="t('tasks.effort')"
         :placeholder="t('tasks.effortPlaceholder')"
+        min="1"
+        step="1"
+        :invalid="submitted && effortInvalid"
       />
     </form>
 
@@ -39,7 +43,7 @@
 
       <Button
         variant="primary"
-        :disabled="saving || !title.trim()"
+        :disabled="saving || !title.trim() || effortInvalid"
         @click="handleSubmit"
       >
         {{ saving ? t('tasks.creating') : t('tasks.create') }}
@@ -50,7 +54,7 @@
 
 <script>
 /** CreateTaskModal — form to create a new task for the today view. */
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTodayStore } from '@/stores/today.store.js'
 import Modal from '@/components/ui/Modal.vue'
@@ -75,6 +79,17 @@ export default {
     const submitted = ref(false)
     const saving = ref(false)
 
+    /**
+     * True when the effort field is non-empty AND not a positive integer.
+     * Empty effort is allowed (optional), but if provided it must be a
+     * finite integer >= 1 (WEB-W3-03).
+     */
+    const effortInvalid = computed(() => {
+      if (effortMinutes.value === '' || effortMinutes.value == null) return false
+      const n = Number(effortMinutes.value)
+      return !Number.isFinite(n) || !Number.isInteger(n) || n < 1
+    })
+
     function reset() {
       title.value = ''
       scheduledTime.value = ''
@@ -97,7 +112,7 @@ export default {
 
     async function handleSubmit() {
       submitted.value = true
-      if (!title.value.trim() || saving.value) return
+      if (!title.value.trim() || effortInvalid.value || saving.value) return
       saving.value = true
       try {
         await store.createTask({
@@ -114,7 +129,18 @@ export default {
       }
     }
 
-    return { t, title, scheduledTime, tag, effortMinutes, submitted, saving, cancel, handleSubmit }
+    return {
+      t,
+      title,
+      scheduledTime,
+      tag,
+      effortMinutes,
+      effortInvalid,
+      submitted,
+      saving,
+      cancel,
+      handleSubmit
+    }
   }
 }
 </script>

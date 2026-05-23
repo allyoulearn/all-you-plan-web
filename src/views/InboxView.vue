@@ -7,7 +7,7 @@
     />
 
     <div v-if="store.loading" class="inbox-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="inbox-view__status inbox-view__status--error">
@@ -30,16 +30,16 @@
           :disabled="!captureText.trim() || capturing"
           @click="capture"
         >
-          Capture
+          {{ t('inbox.captureCta') }}
         </Button>
       </div>
     </Card>
 
     <!-- To triage list -->
-    <SectionHeader label="To triage" :count="store.items.length" />
+    <SectionHeader :label="t('inbox.toTriageSection')" :count="store.items.length" />
 
     <div v-if="store.items.length === 0 && !store.loading" class="inbox-view__status">
-      Nothing to triage. Capture something above.
+      {{ t('inbox.emptyState') }}
     </div>
 
     <div v-else class="inbox-view__list">
@@ -66,7 +66,7 @@
 
         <!-- Triage action -->
         <Button size="sm" variant="ghost" @click="store.triage(item.id)">
-          Triage
+          {{ t('inbox.triageCta') }}
         </Button>
       </div>
     </div>
@@ -112,7 +112,9 @@ export default {
     }
 
     /**
-     * Formats a date string as a human-readable relative time.
+     * Formats a date string as a human-readable relative time using i18n
+     * keys (WEB-W4-08). Returns 'just now' under one minute, then minutes,
+     * hours, and days.
      * @param {string} dateStr
      * @returns {string}
      */
@@ -122,12 +124,12 @@ export default {
       const then = new Date(dateStr).getTime()
       const diffMs = now - then
       const diffMins = Math.floor(diffMs / 60000)
-      if (diffMins < 1) return 'just now'
-      if (diffMins < 60) return `${diffMins}m ago`
+      if (diffMins < 1) return t('inbox.relJustNow')
+      if (diffMins < 60) return t('inbox.relMinutesAgo', { count: diffMins })
       const diffHrs = Math.floor(diffMins / 60)
-      if (diffHrs < 24) return `${diffHrs}h ago`
+      if (diffHrs < 24) return t('inbox.relHoursAgo', { count: diffHrs })
       const diffDays = Math.floor(diffHrs / 24)
-      return `${diffDays}d ago`
+      return t('inbox.relDaysAgo', { count: diffDays })
     }
 
     return { t, store, captureText, capturing, capture, relativeTime }

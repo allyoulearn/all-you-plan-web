@@ -57,6 +57,19 @@ export default {
     values: { type: Array, required: true }
   },
   setup(props) {
+    // -- Anchor: most-recent Sunday at local midnight (WEB-W3-07).
+    // Computed once at setup so every cellLabel call indexes off the same
+    // stable base rather than re-deriving from `new Date()` per call.
+    // The grid layout is: column 26 = current week, row 1 = Sunday.
+    const gridAnchor = (() => {
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+      const sundayOffset = now.getDay() // 0..6, where 0=Sunday
+      // Subtract today's day-of-week to land on the most-recent Sunday.
+      now.setDate(now.getDate() - sundayOffset)
+      return now
+    })()
+
     // -- Function definitions --
 
     /**
@@ -74,6 +87,9 @@ export default {
     /**
      * Returns an accessible label for a grid cell.
      * col is 1-indexed (1=oldest week, 26=most recent), row is 1-indexed (1=Sun, 7=Sat).
+     * Dates are derived from a fixed gridAnchor (most-recent Sunday at local
+     * midnight) to avoid the fragile per-cell `new Date()` arithmetic that
+     * silently relied on today's weekday matching today's calendar position.
      * @param {number} col - Column index (1–26)
      * @param {number} row - Row index (1–7)
      * @returns {string}
@@ -81,9 +97,17 @@ export default {
     function cellLabel(col, row) {
       const count = props.values[(col - 1) * 7 + (row - 1)] ?? 0
       const weeksAgo = 26 - col
-      const date = new Date()
-      date.setDate(date.getDate() - weeksAgo * 7 - (date.getDay() - (row - 1)))
-      const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      const cellDate = new Date(gridAnchor)
+      // gridAnchor is the most-recent Sunday; offset back `weeksAgo` weeks
+      // then add `row - 1` days to reach the cell's actual date.
+      cellDate.setDate(gridAnchor.getDate() - weeksAgo * 7 + (row - 1))
+      // Use the browser's default locale (undefined) for parity with
+      // AppTopBar after WEB-T07-014 instead of the previous hardcoded 'en-US'.
+      const dateStr = cellDate.toLocaleDateString(undefined, {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      })
       const dayName = DAY_NAMES[row - 1]
       const completions = count === 1 ? '1 completion' : `${count} completions`
       return `${dayName}, ${dateStr}: ${completions}`

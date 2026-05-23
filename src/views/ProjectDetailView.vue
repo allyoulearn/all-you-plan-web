@@ -1,11 +1,11 @@
 <template>
   <div>
     <RouterLink to="/projects" class="project-detail-view__back-link">
-      &larr; Projects
+      {{ t('projects.backToProjects') }}
     </RouterLink>
 
     <div v-if="store.loadingBoard" class="project-detail-view__status project-detail-view__status--mt">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.errorBoard" class="project-detail-view__status project-detail-view__status--mt project-detail-view__status--error">
@@ -19,7 +19,7 @@
         <!-- Progress card -->
         <Card>
           <p class="project-detail-view__card-label">
-            Progress
+            {{ t('projects.progressLabel') }}
           </p>
 
           <p class="project-detail-view__card-value">
@@ -32,7 +32,7 @@
         <!-- Done / open card -->
         <Card>
           <p class="project-detail-view__card-label">
-            Done · open
+            {{ t('projects.doneOpenLabel') }}
           </p>
 
           <p class="project-detail-view__card-value">
@@ -43,11 +43,11 @@
         <!-- Wren's read card -->
         <Card variant="accent">
           <p class="project-detail-view__card-label project-detail-view__card-label--accent">
-            Wren's read
+            {{ t('projects.wrenReadLabel') }}
           </p>
 
           <p class="project-detail-view__wren-text">
-            {{ project.nudge || project.blurb || 'No notes yet.' }}
+            {{ project.nudge || project.blurb || t('projects.noNotesYet') }}
           </p>
         </Card>
       </div>
@@ -84,7 +84,7 @@
         </div>
 
         <p v-else class="project-detail-view__section-empty">
-          No tasks here.
+          {{ t('projects.noTasksHere') }}
         </p>
       </template>
 
@@ -97,7 +97,7 @@
           :to="`/projects/${route.params.id}/board`"
           class="project-detail-view__board-link"
         >
-          Switch to board view
+          {{ t('projects.switchToBoard') }}
         </RouterLink>
 
         <Button
@@ -112,9 +112,9 @@
     </template>
 
     <div v-else class="project-detail-view__status project-detail-view__status--mt">
-      Project not found.
+      {{ t('projects.notFound') }}
       <RouterLink to="/projects" class="project-detail-view__back-link">
-        Back to projects
+        {{ t('projects.notFoundBack') }}
       </RouterLink>
     </div>
 
@@ -209,12 +209,12 @@ export default {
     /** Completion percentage (0–100). */
     const percent = computed(() => project.value?.progress?.percent ?? 0)
 
-    /** Task sections ordered for display. */
+    /** Task sections ordered for display; labels resolved via i18n (WEB-W4-03). */
     const sections = computed(() => [
-      { key: 'thisWeek', label: 'This week', tasks: store.board?.thisWeek ?? [] },
-      { key: 'doing', label: 'Doing', tasks: store.board?.doing ?? [] },
-      { key: 'backlog', label: 'Backlog', tasks: store.board?.backlog ?? [] },
-      { key: 'done', label: 'Done', tasks: store.board?.done ?? [] },
+      { key: 'thisWeek', label: t('projects.columnThisWeek'), tasks: store.board?.thisWeek ?? [] },
+      { key: 'doing', label: t('projects.columnDoing'), tasks: store.board?.doing ?? [] },
+      { key: 'backlog', label: t('projects.columnBacklog'), tasks: store.board?.backlog ?? [] },
+      { key: 'done', label: t('projects.columnDone'), tasks: store.board?.done ?? [] },
     ])
 
     // -- Lifecycle --

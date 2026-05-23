@@ -7,7 +7,7 @@
     />
 
     <div v-if="store.loading" class="journal-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="journal-view__status journal-view__status--error">
@@ -17,23 +17,23 @@
     <!-- Today's prompt card -->
     <Card>
       <p class="journal-view__prompt-label">
-        Today's prompt
+        {{ t('journal.promptLabel') }}
       </p>
 
       <p class="journal-view__prompt-text">
-        {{ PROMPT }}
+        {{ prompt }}
       </p>
 
       <label for="journal-editor" class="sr-only">
-        Journal entry
+        {{ t('journal.editorLabel') }}
       </label>
 
       <textarea
         id="journal-editor"
         v-model="bodyText"
         rows="4"
-        placeholder="Write something…"
-        aria-label="Journal entry"
+        :placeholder="t('journal.placeholder')"
+        :aria-label="t('journal.editorLabel')"
         class="journal-view__editor"
       />
 
@@ -43,16 +43,16 @@
           :disabled="!bodyText.trim() || saving"
           @click="saveEntry"
         >
-          Save entry
+          {{ t('journal.saveEntry') }}
         </Button>
       </div>
     </Card>
 
     <!-- Entries list -->
-    <SectionHeader label="Entries" :count="store.entries.length" />
+    <SectionHeader :label="t('journal.entriesSection')" :count="store.entries.length" />
 
     <div v-if="store.entries.length === 0 && !store.loading" class="journal-view__status">
-      No entries yet. Write your first one above.
+      {{ t('journal.emptyState') }}
     </div>
 
     <div class="journal-view__entries">
@@ -95,7 +95,8 @@
 
 <script>
 /** JournalView — daily prompt with a save form and a chronological entries list. */
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useJournalStore } from '@/stores/journal.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
@@ -103,19 +104,21 @@ import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Pill from '@/components/ui/Pill.vue'
 
-const PROMPT = 'What did you do today that you are quietly proud of?'
-
 export default {
   name: 'JournalView',
   components: { ScreenHeading, SectionHeader, Button, Card, Pill },
   setup() {
     // -- State --
     const store = useJournalStore()
+    const { t } = useI18n()
     const bodyText = ref('')
     const saving = ref(false)
 
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+    /** Localised daily prompt (WEB-W4-07). */
+    const prompt = computed(() => t('journal.prompt'))
 
     // -- Lifecycle --
     onMounted(() => store.load())
@@ -139,7 +142,7 @@ export default {
       try {
         await store.createEntry({
           date: todayStr,
-          prompt: PROMPT,
+          prompt: prompt.value,
           pullQuote: pullQuoteFrom(bodyText.value),
           body: bodyText.value.trim(),
           tags: [],
@@ -160,7 +163,7 @@ export default {
     }
 
     /**
-     * Formats a YYYY-MM-DD date string as "Mon YYYY".
+     * Formats a YYYY-MM-DD date string as "Mon YYYY" in the browser's locale (WEB-W4-07).
      * @param {string} dateStr
      * @returns {string}
      */
@@ -168,10 +171,10 @@ export default {
       if (!dateStr) return ''
       const [y, m, d] = dateStr.split('-')
       const date = new Date(Number(y), Number(m) - 1, Number(d))
-      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
     }
 
-    return { PROMPT, store, bodyText, saving, saveEntry, dayNumber, formatDate }
+    return { t, prompt, store, bodyText, saving, saveEntry, dayNumber, formatDate }
   }
 }
 </script>

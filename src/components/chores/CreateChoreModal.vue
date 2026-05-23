@@ -2,6 +2,7 @@
   <Modal
     :model-value="modelValue"
     :title="t('chores.createTitle')"
+    :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <form class="create-chore-modal__form" @submit.prevent="handleSubmit">
@@ -20,7 +21,7 @@
         <SegmentedControl
           v-model="cadenceType"
           :options="cadenceOptions"
-          group-label="Cadence"
+          :group-label="t('chores.cadenceLabel')"
         />
       </label>
 
@@ -37,6 +38,7 @@
             class="create-chore-modal__dow-btn"
             :class="daysOfWeek.includes(idx) ? 'create-chore-modal__dow-btn--active' : ''"
             :aria-pressed="daysOfWeek.includes(idx)"
+            :aria-label="dayFullLabels[idx]"
             @click="toggleDay(idx)"
           >
             {{ label }}
@@ -50,6 +52,9 @@
         type="number"
         :label="t('chores.intervalLabel')"
         placeholder="1"
+        min="1"
+        step="1"
+        :invalid="submitted && !cadenceValid"
       />
 
       <TextField
@@ -58,6 +63,10 @@
         type="number"
         :label="t('chores.dayOfMonthLabel')"
         placeholder="1"
+        min="1"
+        max="31"
+        step="1"
+        :invalid="submitted && !cadenceValid"
       />
     </form>
 
@@ -86,6 +95,19 @@ import Modal from '@/components/ui/Modal.vue'
 import TextField from '@/components/ui/TextField.vue'
 import Button from '@/components/ui/Button.vue'
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
+
+// Full day names parallel to dayLabels so screen readers announce the
+// distinguishing word (Sunday vs. Saturday) instead of the duplicated
+// single-letter abbreviations (WEB-W3-22).
+const DAY_FULL_LABELS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday'
+]
 
 export default {
   name: 'CreateChoreModal',
@@ -195,6 +217,7 @@ export default {
       cadenceOptions,
       daysOfWeek,
       dayLabels,
+      dayFullLabels: DAY_FULL_LABELS,
       interval,
       dayOfMonth,
       submitted,

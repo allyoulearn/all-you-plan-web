@@ -2,6 +2,7 @@
   <Modal
     :model-value="modelValue"
     :title="t('projects.createTitle')"
+    :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <form class="create-project-modal__form" @submit.prevent="handleSubmit">
@@ -26,6 +27,7 @@
         <textarea
           v-model="blurb"
           rows="3"
+          maxlength="500"
           :placeholder="t('projects.blurbPlaceholder')"
           class="create-project-modal__textarea"
         />

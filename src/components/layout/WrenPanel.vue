@@ -8,24 +8,24 @@
 
       <div>
         <p class="wren-panel__name">
-          Wren
+          {{ t('wren.coachName') }}
         </p>
 
         <p class="wren-panel__role">
-          Your coach
+          {{ t('wren.coachRole') }}
         </p>
       </div>
 
       <span class="wren-panel__status">
         <span class="wren-panel__status-dot" />
-        live
+        {{ t('wren.liveStatus') }}
       </span>
     </div>
 
     <!-- Messages body -->
     <div ref="bodyRef" class="wren-panel__body">
       <div v-if="store.loading" class="wren-panel__loading">
-        Loading…
+        {{ t('common.loading') }}
       </div>
 
       <template v-else-if="store.messages.length">
@@ -39,7 +39,7 @@
 
       <div v-else class="wren-panel__empty">
         <p class="wren-panel__empty-text">
-          Say hello to Wren.
+          {{ t('wren.panelEmptyState') }}
         </p>
       </div>
     </div>
@@ -62,8 +62,8 @@
       <div class="wren-panel__input-row">
         <input
           v-model="draft"
-          placeholder="Tell Wren anything…"
-          aria-label="Message to Wren"
+          :placeholder="t('wren.inputPlaceholder')"
+          :aria-label="t('wren.panelInputAriaLabel')"
           class="wren-panel__input"
           @keydown="handleKeydown"
         />
@@ -72,10 +72,10 @@
           type="button"
           class="wren-panel__send"
           :disabled="!draft.trim() || store.sending"
-          aria-label="Send message"
+          :aria-label="t('wren.sendAriaLabel')"
           @click="sendMessage"
         >
-          SEND
+          {{ t('wren.send') }}
         </button>
       </div>
     </div>
@@ -85,6 +85,7 @@
 <script>
 /** WrenPanel — right-side AI coach panel with message feed, quick-prompt chips, and input. */
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
 import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat.js'
 
@@ -93,10 +94,11 @@ export default {
   components: { WrenBubble },
   setup() {
     // -- State --
+    const { t } = useI18n()
     const bodyRef = ref(null)
     const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
 
-    return { bodyRef, store, draft, sendMessage, handleKeydown, fillFromChip, QUICK_PROMPTS }
+    return { t, bodyRef, store, draft, sendMessage, handleKeydown, fillFromChip, QUICK_PROMPTS }
   }
 }
 </script>

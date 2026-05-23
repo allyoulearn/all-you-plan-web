@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import SettingsView from '@/views/SettingsView.vue'
 import { useAuthStore } from '@/stores/auth.store'
+import en from '@/i18n/locales/en.json'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 // ── Stubs ─────────────────────────────────────────────────────────────────────
 
@@ -75,7 +79,8 @@ function mountSettings(userSettings = {}) {
               error: ''
             }
           }
-        })
+        }),
+        i18n
       ]
     }
   })
@@ -131,7 +136,8 @@ describe('SettingsView', () => {
           createTestingPinia({
             createSpy: vi.fn,
             initialState: { auth: { user: null, accessToken: null, loading: false, error: '' } }
-          })
+          }),
+          i18n
         ]
       }
     })
@@ -153,7 +159,8 @@ describe('SettingsView', () => {
                 error: ''
               }
             }
-          })
+          }),
+          i18n
         ]
       }
     })

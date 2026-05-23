@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import KanbanView from '@/views/KanbanView.vue'
 import { useProjectsStore } from '@/stores/projects.store'
+import en from '@/i18n/locales/en.json'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +15,8 @@ vi.mock('vue-router', () => ({
 }))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   ScreenHeading: true,
@@ -45,7 +49,8 @@ function mountKanban(storeOverrides = {}) {
               ...storeOverrides
             }
           }
-        })
+        }),
+        i18n
       ]
     }
   })

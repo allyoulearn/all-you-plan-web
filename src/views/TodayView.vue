@@ -7,7 +7,7 @@
     </ScreenHeading>
 
     <div v-if="store.loading" class="today-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="today-view__status today-view__status--error">
@@ -17,7 +17,7 @@
     <template v-else-if="store.view">
       <KpiRow :kpis="store.view.kpis" />
 
-      <template v-for="group in groups" :key="group.label">
+      <template v-for="group in groups" :key="group.key">
         <SectionHeader v-if="group.items.length" :label="group.label" :count="group.items.length" />
 
         <div v-if="group.items.length" class="today-view__task-group">
@@ -34,7 +34,7 @@
         v-if="!groups.some((g) => g.items.length)"
         class="today-view__empty"
       >
-        Nothing scheduled for today. Add a task or plan with Wren.
+        {{ t('today.emptyState') }}
       </div>
 
       <div class="today-view__actions">
@@ -88,13 +88,14 @@ export default {
     /**
      * Tasks grouped into Morning, Afternoon, and Evening based on scheduled hour.
      * Tasks with no scheduledTime default to hour 12 (Afternoon).
+     * Labels are sourced from i18n so they react to locale changes (WEB-W4-01).
      */
     const groups = computed(() => {
       const tasks = store.view?.tasks ?? []
       return [
-        { label: 'Morning', items: tasks.filter((t) => hourOf(t) < 12) },
-        { label: 'Afternoon', items: tasks.filter((t) => hourOf(t) >= 12 && hourOf(t) < 17) },
-        { label: 'Evening', items: tasks.filter((t) => hourOf(t) >= 17) },
+        { key: 'morning', label: t('today.morning'), items: tasks.filter((task) => hourOf(task) < 12) },
+        { key: 'afternoon', label: t('today.afternoon'), items: tasks.filter((task) => hourOf(task) >= 12 && hourOf(task) < 17) },
+        { key: 'evening', label: t('today.evening'), items: tasks.filter((task) => hourOf(task) >= 17) },
       ]
     })
 

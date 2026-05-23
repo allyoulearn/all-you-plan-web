@@ -12,7 +12,7 @@
     <!-- Messages area -->
     <div ref="bodyRef" class="wren-view__messages">
       <div v-if="store.loading" class="wren-view__loading">
-        Loading…
+        {{ t('common.loading') }}
       </div>
 
       <template v-else-if="store.messages.length">
@@ -26,7 +26,7 @@
 
       <div v-else class="wren-view__empty">
         <p class="wren-view__empty-text">
-          Start a conversation with Wren.
+          {{ t('wren.emptyState') }}
         </p>
       </div>
     </div>
@@ -46,32 +46,35 @@
 
     <!-- Input bar -->
     <div class="wren-view__input-bar">
-      <div class="wren-view__input-container">
+      <form
+        class="wren-view__input-container"
+        @submit.prevent="sendMessage"
+      >
         <input
           v-model="draft"
-          placeholder="Tell Wren anything…"
-          aria-label="Message Wren"
+          :placeholder="t('wren.inputPlaceholder')"
+          :aria-label="t('wren.messageAriaLabel')"
           class="wren-view__input"
           @keydown="handleKeydown"
         />
 
         <button
-          type="button"
+          type="submit"
           class="wren-view__send"
           :disabled="!draft.trim() || store.sending"
-          aria-label="Send message"
-          @click="sendMessage"
+          :aria-label="t('wren.sendAriaLabel')"
         >
-          SEND
+          {{ t('wren.send') }}
         </button>
-      </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script>
 /** WrenView — full-screen AI chat interface with message history, quick-prompt chips, and input bar. */
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
 import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat.js'
@@ -81,17 +84,20 @@ export default {
   components: { ScreenHeading, WrenBubble },
   setup() {
     // -- State --
+    const { t } = useI18n()
     const bodyRef = ref(null)
     const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
 
-    // -- Computed --
-
-    /** Formatted date label shown above the message thread. */
-    const today = computed(() =>
-      new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    )
+    // Captured once at setup; the divider never needs to react mid-session
+    // (WEB-W4-18 parallels the WEB-T08-011 fix for ReviewView).
+    const today = new Date().toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric'
+    })
 
     return {
+      t,
       QUICK_PROMPTS,
       bodyRef,
       store,

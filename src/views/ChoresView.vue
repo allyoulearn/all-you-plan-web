@@ -3,7 +3,7 @@
     <ScreenHeading eyebrow="Workspaces · Chores" title="Small habits," emphasis="kept." />
 
     <div v-if="store.loading" class="chores-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="chores-view__status chores-view__status--error">
@@ -11,7 +11,7 @@
     </div>
 
     <template v-else>
-      <template v-for="group in groups" :key="group.label">
+      <template v-for="group in groups" :key="group.key">
         <SectionHeader v-if="group.items.length" :label="group.label" :count="group.items.length" />
 
         <div v-if="group.items.length" class="chores-view__group-list">
@@ -28,7 +28,7 @@
         v-if="isEmpty"
         class="chores-view__empty"
       >
-        No chores yet. Add your first recurring habit below.
+        {{ t('chores.emptyState') }}
       </div>
 
       <div class="chores-view__actions">
@@ -66,13 +66,13 @@ export default {
 
     // -- Computed --
 
-    /** Chores grouped into daily, weekly, and monthly buckets. */
+    /** Chores grouped into daily, weekly, and monthly buckets, with labels from i18n (WEB-W4-02). */
     const groups = computed(() => {
       const chores = store.chores ?? []
       return [
-        { label: 'Daily', items: chores.filter((c) => c.cadence.type === 'daily') },
-        { label: 'Weekly', items: chores.filter((c) => c.cadence.type === 'weekly') },
-        { label: 'Monthly', items: chores.filter((c) => c.cadence.type === 'monthly') },
+        { key: 'daily', label: t('chores.cadenceDaily'), items: chores.filter((c) => c.cadence.type === 'daily') },
+        { key: 'weekly', label: t('chores.cadenceWeekly'), items: chores.filter((c) => c.cadence.type === 'weekly') },
+        { key: 'monthly', label: t('chores.cadenceMonthly'), items: chores.filter((c) => c.cadence.type === 'monthly') },
       ]
     })
 

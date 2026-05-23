@@ -2,10 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import JournalView from '@/views/JournalView.vue'
 import { useJournalStore } from '@/stores/journal.store'
+import en from '@/i18n/locales/en.json'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   ScreenHeading: true,
@@ -44,7 +48,8 @@ function mountJournal(storeOverrides = {}) {
         createTestingPinia({
           createSpy: vi.fn,
           initialState: { journal: { entries: [], loading: false, error: '', ...storeOverrides } }
-        })
+        }),
+        i18n
       ]
     }
   })

@@ -2,10 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import WrenView from '@/views/WrenView.vue'
+import en from '@/i18n/locales/en.json'
 
 // ── Stubs ─────────────────────────────────────────────────────────────────────
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   ScreenHeading: true,
@@ -84,7 +88,7 @@ function mountWren(storeOverrides = {}) {
   return mount(WrenView, {
     global: {
       stubs: globalStubs,
-      plugins: [createTestingPinia({ createSpy: vi.fn })]
+      plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
     }
   })
 }
@@ -234,14 +238,13 @@ describe('WrenView', () => {
     expect(sendBtn.attributes('disabled')).toBeDefined()
   })
 
-  it('@click on the send button is wired to sendMessage', async () => {
-    // Draft must be non-empty so the button is not disabled;
-    // but even disabled buttons receive events via trigger()
-    // We use draft='Hello' to ensure the button is not disabled
+  it('submitting the form (or clicking send) calls sendMessage (WEB-W4-15)', async () => {
+    // The send button is now type="submit" inside a <form @submit.prevent>,
+    // so the native browser submit flow is what reaches sendMessage. We
+    // trigger the form submit directly to exercise that wiring.
     const wrapper = mountWren({ sending: false, draft: 'Hello' })
-    const sendBtn = wrapper.find('.wren-view__send')
-    // Use trigger to bypass the disabled attribute check at the browser level
-    await sendBtn.trigger('click')
+    const form = wrapper.find('.wren-view__input-container')
+    await form.trigger('submit.prevent')
     expect(mockSendMessage).toHaveBeenCalledTimes(1)
   })
 

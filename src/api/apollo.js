@@ -13,6 +13,17 @@ import { REFRESH_TOKEN } from '@/api/operations/index.js'
 import { createMockLink } from '@/mocks/mockLink.js'
 import { mockRegistry } from '@/mocks/index.js'
 
+// Single source of truth for the mock-mode predicate (WEB-W4-23). The DEV
+// guard keeps the mock branch from ever shipping into production builds; the
+// VITE_USE_MOCKS env var must additionally be 'true' to opt in.
+//
+// Evaluated lazily inside both call sites (link composition at module init and
+// refreshAccessToken at call time) so vitest's vi.stubEnv() can flip the
+// branch in tests without re-importing the module.
+function useMocks() {
+  return import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true'
+}
+
 let accessToken = null
 
 // Single in-flight refresh promise — prevents concurrent UNAUTHENTICATED
@@ -106,8 +117,19 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
 })
 
 export async function refreshAccessToken() {
-  if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true') {
-    const payload = mockRegistry.refreshToken().refreshToken
+  if (useMocks()) {
+    // WEB-W4-22: surface a clear, mockLink-style error if the fixture is
+    // missing instead of letting a generic `Cannot read properties of
+    // undefined` slip through.
+    const fn = mockRegistry.refreshToken
+    if (typeof fn !== 'function') {
+      throw new Error('[mock] No fixture registered for root field "refreshToken"')
+    }
+    const result = fn()
+    const payload = result?.refreshToken
+    if (!payload) {
+      throw new Error('[mock] Fixture for "refreshToken" returned no payload')
+    }
     setAccessToken(payload.accessToken)
     resetWsConnection()
     return payload
@@ -137,7 +159,7 @@ export async function refreshAccessToken() {
 }
 
 let link = errorLink.concat(splitLink)
-if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true') {
+if (useMocks()) {
   link = createMockLink(mockRegistry).concat(link)
 }
 

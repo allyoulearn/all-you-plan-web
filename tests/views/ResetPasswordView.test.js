@@ -276,9 +276,13 @@ describe('ResetPasswordView', () => {
     expect(wrapper.text()).toContain('Token expired')
   })
 
-  it('shows resetTokenInvalid fallback error when no graphQLErrors', async () => {
+  it('shows resetTokenInvalid fallback error when no graphQLErrors and no err.message', async () => {
     const { wrapper, store } = mountReset()
-    store.resetPassword.mockRejectedValue(new Error('network'))
+    // After WEB-W4-16 the view routes through resolveErrorMessage, which
+    // prefers err.message before the fallback. To exercise the fallback
+    // branch we reject with an object that has neither graphQLErrors nor
+    // a message string.
+    store.resetPassword.mockRejectedValue({})
 
     const inputs = wrapper.findAll('input[type="password"]')
     await inputs[0].setValue(STRONG_PW)

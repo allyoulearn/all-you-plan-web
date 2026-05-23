@@ -2,12 +2,12 @@
   <div>
     <ScreenHeading
       eyebrow="Looking back · Calendar"
-      :title="MONTH_NAMES[currentMonth]"
+      :title="monthLong(currentMonth)"
       :emphasis="`${currentYear}.`"
     />
 
     <div v-if="store.loading" class="calendar-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="calendar-view__status calendar-view__status--error">
@@ -20,19 +20,19 @@
         icon="chevron-left"
         :size="30"
         variant="ghost"
-        aria-label="Previous month"
+        :aria-label="t('calendar.prevMonth')"
         @click="prevMonth"
       />
 
       <span class="calendar-view__nav-title">
-        {{ MONTH_NAMES[currentMonth] }} {{ currentYear }}
+        {{ monthLong(currentMonth) }} {{ currentYear }}
       </span>
 
       <IconButton
         icon="chevron-right"
         :size="30"
         variant="ghost"
-        aria-label="Next month"
+        :aria-label="t('calendar.nextMonth')"
         @click="nextMonth"
       />
     </div>
@@ -42,7 +42,7 @@
       <!-- Weekday headers -->
       <div class="calendar-view__weekday-row">
         <div
-          v-for="h in DAY_HEADERS"
+          v-for="h in dayHeaders"
           :key="h"
           class="calendar-view__weekday-header"
         >
@@ -99,7 +99,7 @@
       </div>
 
       <div v-if="agendaEvents.length === 0" class="calendar-view__status">
-        No events for this day.
+        {{ t('calendar.noEvents') }}
       </div>
 
       <div v-else class="calendar-view__agenda-list">
@@ -126,16 +126,11 @@
 <script>
 /** CalendarView — monthly grid with event dots and a day-level agenda panel. */
 import { onMounted, ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCalendarStore } from '@/stores/calendar.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 import Card from '@/components/ui/Card.vue'
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
-const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default {
   name: 'CalendarView',
@@ -143,6 +138,7 @@ export default {
   setup() {
     // -- State --
     const store = useCalendarStore()
+    const { t } = useI18n()
 
     const today = new Date()
     const currentYear = ref(today.getFullYear())
@@ -150,6 +146,24 @@ export default {
     const selectedDay = ref(today.getDate())
 
     // -- Computed --
+
+    /**
+     * Localised weekday header row ("Sun, Mon, …") sourced from Intl so the
+     * row honours the user's browser locale instead of hardcoded English
+     * (WEB-W4-06).
+     */
+    const dayHeaders = computed(() => {
+      const fmt = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
+      const headers = []
+      // Pick an arbitrary Sunday as the base and step through the week.
+      const base = new Date(2024, 0, 7) // 2024-01-07 was a Sunday
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(base)
+        d.setDate(base.getDate() + i)
+        headers.push(fmt.format(d))
+      }
+      return headers
+    })
 
     /** Builds the 6-row calendar grid (always 42 cells). */
     const calendarDays = computed(() => {
@@ -204,11 +218,11 @@ export default {
       return store.events.filter((e) => e.date === dayStr)
     })
 
-    /** Formatted label for the agenda header. */
+    /** Formatted label for the agenda header (browser-default locale, WEB-W4-06). */
     const agendaLabel = computed(() => {
       if (!selectedDay.value) return ''
       const date = new Date(currentYear.value, currentMonth.value, selectedDay.value)
-      return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+      return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
     })
 
     // -- Lifecycle --
@@ -217,6 +231,16 @@ export default {
     })
 
     // -- Function definitions --
+
+    /**
+     * Returns the localised long month name for a 0-indexed month.
+     * @param {number} month - 0-indexed month (0=Jan).
+     * @returns {string}
+     */
+    function monthLong(month) {
+      const date = new Date(2024, month, 1)
+      return new Intl.DateTimeFormat(undefined, { month: 'long' }).format(date)
+    }
 
     /**
      * Returns the YYYY-MM key for a given year and 0-indexed month.
@@ -311,8 +335,9 @@ export default {
     }
 
     return {
-      MONTH_NAMES,
-      DAY_HEADERS,
+      t,
+      dayHeaders,
+      monthLong,
       store,
       currentYear,
       currentMonth,

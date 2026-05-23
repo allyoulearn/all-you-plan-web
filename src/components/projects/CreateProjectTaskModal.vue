@@ -2,6 +2,7 @@
   <Modal
     :model-value="modelValue"
     :title="t('projects.addTask')"
+    :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <form class="create-project-task-modal__form" @submit.prevent="handleSubmit">
@@ -14,13 +15,13 @@
 
       <label class="create-project-task-modal__field">
         <span class="create-project-task-modal__label">
-          Column
+          {{ t('projects.columnLabel') }}
         </span>
 
         <SegmentedControl
           v-model="column"
           :options="columnOptions"
-          group-label="Initial column"
+          :group-label="t('projects.initialColumnGroupLabel')"
         />
       </label>
 
@@ -38,7 +39,7 @@
 
       <Button
         variant="primary"
-        :disabled="saving || !title.trim()"
+        :disabled="saving || !title.trim() || !projectId"
         @click="handleSubmit"
       >
         {{ saving ? t('tasks.creating') : t('tasks.create') }}
@@ -49,7 +50,7 @@
 
 <script>
 /** CreateProjectTaskModal — add a new task to a project's board. */
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
 import Modal from '@/components/ui/Modal.vue'
@@ -62,7 +63,12 @@ export default {
   components: { Modal, TextField, Button, SegmentedControl },
   props: {
     modelValue: { type: Boolean, default: false },
-    projectId: { type: String, required: true }
+    /** Required: the project id to create the task under. Must be a non-empty string. */
+    projectId: {
+      type: String,
+      required: true,
+      validator: v => typeof v === 'string' && v.length > 0
+    }
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
@@ -75,11 +81,11 @@ export default {
     const submitted = ref(false)
     const saving = ref(false)
 
-    const columnOptions = [
-      { value: 'backlog', label: 'Backlog' },
-      { value: 'this_week', label: 'This week' },
-      { value: 'doing', label: 'Doing' }
-    ]
+    const columnOptions = computed(() => [
+      { value: 'backlog', label: t('projects.columnBacklog') },
+      { value: 'this_week', label: t('projects.columnThisWeek') },
+      { value: 'doing', label: t('projects.columnDoing') }
+    ])
 
     function reset() {
       title.value = ''
@@ -102,7 +108,7 @@ export default {
 
     async function handleSubmit() {
       submitted.value = true
-      if (!title.value.trim() || saving.value) return
+      if (!title.value.trim() || !props.projectId || saving.value) return
       saving.value = true
       try {
         await store.createTask({

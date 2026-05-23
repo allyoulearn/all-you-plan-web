@@ -7,7 +7,7 @@
     />
 
     <div v-if="store.loading" class="stats-view__status">
-      Loading…
+      {{ t('common.loading') }}
     </div>
 
     <div v-else-if="store.error" class="stats-view__status stats-view__status--error">
@@ -17,25 +17,25 @@
     <template v-else-if="store.stats">
       <!-- KPI strip -->
       <div class="stats-view__kpi-strip">
-        <KpiTile label="Streak" :value="topStreak" unit="days" />
+        <KpiTile :label="t('stats.kpiStreak')" :value="topStreak" :unit="t('stats.unitDays')" />
 
-        <KpiTile label="Best" :value="topBest" unit="days" />
+        <KpiTile :label="t('stats.kpiBest')" :value="topBest" :unit="t('stats.unitDays')" />
 
-        <KpiTile label="Habits" :value="store.stats.rankedHabits.length" unit="tracked" />
+        <KpiTile :label="t('stats.kpiHabits')" :value="store.stats.rankedHabits.length" :unit="t('stats.unitTracked')" />
       </div>
 
       <!-- Activity grid -->
-      <SectionHeader label="Activity grid" />
+      <SectionHeader :label="t('stats.activityGrid')" />
 
       <Card>
         <Heatmap :values="heatmapValues" />
       </Card>
 
       <!-- Habits ranked -->
-      <SectionHeader label="Habits ranked" :count="store.stats.rankedHabits.length" />
+      <SectionHeader :label="t('stats.habitsRanked')" :count="store.stats.rankedHabits.length" />
 
       <div v-if="store.stats.rankedHabits.length === 0" class="stats-view__status">
-        No habits tracked yet.
+        {{ t('stats.noHabits') }}
       </div>
 
       <div v-else class="stats-view__habits-list">
@@ -54,7 +54,7 @@
             </span>
 
             <span class="stats-view__habit-sub">
-              {{ habit.streak }} days · best {{ habit.bestStreak }}
+              {{ t('stats.habitSub', { streak: habit.streak, best: habit.bestStreak }) }}
             </span>
           </div>
 
@@ -70,6 +70,7 @@
 <script>
 /** StatsView — six-month activity heatmap and ranked habits list with KPI summary tiles. */
 import { onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useStatsStore } from '@/stores/stats.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
@@ -83,6 +84,7 @@ export default {
   setup() {
     // -- State --
     const store = useStatsStore()
+    const { t } = useI18n()
 
     // -- Computed --
 
@@ -104,7 +106,7 @@ export default {
     // -- Lifecycle --
     onMounted(() => store.load())
 
-    return { store, heatmapValues, topStreak, topBest }
+    return { t, store, heatmapValues, topStreak, topBest }
   }
 }
 </script>
