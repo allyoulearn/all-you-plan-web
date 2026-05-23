@@ -1,11 +1,10 @@
 <template>
   <Modal
-    :model-value="modelValue"
+    v-model="open"
     :title="title"
     :role="role"
     :close-label="closeLabel"
     :aria-describedby="messageId"
-    @update:model-value="$emit('update:modelValue', $event)"
   >
     <div class="confirm-dialog">
       <p :id="messageId" class="confirm-dialog__message">
@@ -39,8 +38,13 @@
  * (WEB-W2-09). Focus is moved to the cancel (safer) button on open so an
  * accidental Enter dismisses without performing the destructive action
  * (WEB-W2-11).
+ *
+ * The English defaults on `title`, `confirmLabel`, and `cancelLabel` are
+ * intended to be overridden by consumers with i18n-routed strings — they
+ * exist only so the primitive remains usable in a no-i18n smoke test or
+ * Storybook context (WEB-W2-10).
  */
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Modal from './Modal.vue'
 import Button from './Button.vue'
 
@@ -85,6 +89,13 @@ export default {
     const cancelRef = ref(null)
     const messageId = `confirm-dialog-message-${++confirmUid}`
 
+    // Computed proxy so we can `v-model="open"` on the inner Modal without
+    // the brittle manual `@update:model-value` forward (WEB-W2-13).
+    const open = computed({
+      get: () => props.modelValue,
+      set: v => emit('update:modelValue', v)
+    })
+
     function confirm() {
       emit('confirm')
     }
@@ -98,8 +109,8 @@ export default {
     // Two `nextTick`s defer past Modal's own focus(panel) on the same tick.
     watch(
       () => props.modelValue,
-      async open => {
-        if (!open) return
+      async opened => {
+        if (!opened) return
         await nextTick()
         await nextTick()
         // The Button component exposes the underlying <button> via $el.
@@ -108,7 +119,7 @@ export default {
       }
     )
 
-    return { confirm, cancel, cancelRef, messageId }
+    return { confirm, cancel, cancelRef, messageId, open }
   }
 }
 </script>

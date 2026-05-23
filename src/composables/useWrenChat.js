@@ -20,6 +20,11 @@ export const QUICK_PROMPTS = [
 
 /**
  * Composable that wires the Wren chat panel to the wren store.
+ *
+ * Must be called from a component's `setup()` so Vue can auto-clean up the
+ * internal `watch` on unmount. Calling it from outside a component scope
+ * (e.g., from a Pinia store) would leak the watcher (WEB-W2-19).
+ *
  * @param {import('vue').Ref<HTMLElement|null>} bodyRef - Scrollable message container ref
  * @returns {{ store: object, draft: import('vue').Ref<string>, sendMessage: () => Promise<void>, handleKeydown: (e: KeyboardEvent) => void, fillFromChip: (prompt: string) => void }}
  */
@@ -47,7 +52,10 @@ export function useWrenChat(bodyRef) {
     })
   }
 
-  watch(() => store.messages.length, scrollToBottom)
+  // Deep-watch the array itself so we also re-scroll on in-place edits
+  // (optimistic-replace patterns that leave the array length unchanged)
+  // (WEB-W2-18).
+  watch(() => store.messages, scrollToBottom, { deep: true })
 
   // -- Actions --
 

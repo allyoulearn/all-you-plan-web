@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
+import { createI18n } from 'vue-i18n'
+import en from '@/i18n/locales/en.json'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 
 vi.mock('@/api/apollo', () => ({
@@ -22,9 +24,11 @@ vi.mock('@/composables/useErrorToast', () => ({
   useErrorToast: () => ({ toastError: vi.fn() })
 }))
 
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+
 const globalConfig = {
   stubs: { RouterLink: { template: '<a><slot /></a>' }, Icon: true },
-  plugins: [createTestingPinia({ createSpy: vi.fn })]
+  plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
 }
 
 describe('AppSidebar', () => {
@@ -99,7 +103,7 @@ describe('AppSidebar', () => {
     const wrapper = mount(AppSidebar, {
       global: {
         stubs: { RouterLink: { template: '<a><slot /></a>' }, Icon: true },
-        plugins: [pinia]
+        plugins: [pinia, i18n]
       }
     })
     expect(wrapper.text()).toContain('Ada')
@@ -113,15 +117,17 @@ describe('AppSidebar', () => {
     const wrapper = mount(AppSidebar, {
       global: {
         stubs: { RouterLink: { template: '<a><slot /></a>' }, Icon: true },
-        plugins: [pinia]
+        plugins: [pinia, i18n]
       }
     })
     expect(wrapper.find('.app-sidebar__avatar').text()).toBe('A')
   })
 
-  it('shows U as avatar when user name is empty', () => {
+  it('shows the first letter of the localized "You" fallback when user name is empty (WEB-W3-10)', () => {
     const wrapper = mount(AppSidebar, { global: globalConfig })
-    expect(wrapper.find('.app-sidebar__avatar').text()).toBe('U')
+    // English locale: "You" → "Y". A different locale would naturally surface
+    // a different letter, which is the intended i18n behavior.
+    expect(wrapper.find('.app-sidebar__avatar').text()).toBe('Y')
   })
 
   it('renders the user panel at the bottom', () => {

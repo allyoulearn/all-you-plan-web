@@ -8,10 +8,21 @@
         {{ t('review.step1Label') }}
       </p>
 
-      <div class="review-view__mood-row">
+      <!--
+        WEB-W4-37: wrap the buttons in role="radiogroup" + role="radio" so
+        screen readers announce a single-selection group instead of five
+        independent buttons. aria-checked tracks the active mood.
+      -->
+      <div
+        class="review-view__mood-row"
+        role="radiogroup"
+        :aria-label="t('review.step1Label')"
+      >
         <Button
           v-for="m in MOODS"
           :key="m"
+          role="radio"
+          :aria-checked="mood === m ? 'true' : 'false'"
           :variant="mood === m ? 'accent' : 'default'"
           size="sm"
           @click="mood = m"
@@ -116,6 +127,7 @@ import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import { useTodayStore } from '@/stores/today.store.js'
 import { useReviewStore } from '@/stores/review.store.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 
 const MOODS = ['heavy', 'low', 'ok', 'good', 'alight']
 
@@ -125,6 +137,7 @@ export default {
   setup() {
     // -- State --
     const { t } = useI18n()
+    const { toastSuccess } = useErrorToast()
     const todayStore = useTodayStore()
     const reviewStore = useReviewStore()
     const mood = ref('')
@@ -151,12 +164,22 @@ export default {
 
     // -- Function definitions --
 
-    /** Persists the review with the selected mood and task lists. */
+    /**
+     * Persists the review with the selected mood and task lists. Surfaces a
+     * success toast on completion so the save is discoverable beyond the
+     * inline "Review saved." paragraph that appears once `review.id`
+     * populates (WEB-W4-29).
+     */
     async function finishReview() {
-      await reviewStore.save(todayDate, mood.value, {
-        moved: doneTasks.value.map((t) => t.id),
-        pending: pendingTasks.value.map((t) => t.id),
-      })
+      try {
+        await reviewStore.save(todayDate, mood.value, {
+          moved: doneTasks.value.map(task => task.id),
+          pending: pendingTasks.value.map(task => task.id)
+        })
+        toastSuccess(t('review.reviewSaved'))
+      } catch {
+        // The store already toasts the error via useErrorToast.
+      }
     }
 
     return {

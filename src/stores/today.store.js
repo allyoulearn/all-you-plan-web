@@ -102,20 +102,27 @@ export const useTodayStore = defineStore('today', () => {
   }
 
   /**
-   * Create a new task scheduled for the current view's date (or today).
-   * After the mutation resolves, the today view is reloaded so the new task
-   * is visible immediately.
+   * Create a new task scheduled for the requested date.
+   *
+   * Date resolution (WEB-W1-20): prefers an explicit `input.scheduledDate`,
+   * then the currently-viewed date, then today's local date — so a
+   * "schedule for tomorrow" affordance can use this store action.
+   *
+   * After the mutation resolves, the today view is reloaded only when the
+   * new task lands on the currently-viewed date (otherwise the reload would
+   * not surface the new task and wastes a round-trip).
+   *
    * Only fields with real values are sent — the server's zod schema rejects
    * `null` for optional fields, so omitting them is the safe shape.
    * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
-   * @param {{ title: string, scheduledTime?: string, note?: string, effortMinutes?: number, tag?: string }} input
+   * @param {{ title: string, scheduledDate?: string, scheduledTime?: string, note?: string, effortMinutes?: number, tag?: string }} input
    * @returns {Promise<object>} Created task
    */
   async function createTask(input) {
     const { toastError } = useErrorToast()
     const today = new Date()
     const localDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const date = view.value?.date ?? localDateString
+    const date = input.scheduledDate ?? view.value?.date ?? localDateString
     const taskInput = { title: input.title, scheduledDate: date }
     if (input.scheduledTime) taskInput.scheduledTime = input.scheduledTime
     if (input.note) taskInput.note = input.note
@@ -128,7 +135,10 @@ export const useTodayStore = defineStore('today', () => {
         mutation: CREATE_TASK,
         variables: { input: taskInput }
       })
-      await load(date)
+      // Only reload when the new task lands on the currently-viewed date.
+      if (view.value?.date === date) {
+        await load(date)
+      }
       return data.createTask
     } catch (e) {
       error.value = e.message

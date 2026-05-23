@@ -123,7 +123,11 @@ export default {
   props: {
     /** Open/close state (v-model) */
     modelValue: { type: Boolean, default: false },
-    /** Dialog title shown in the header (used only when the `header` slot is not provided) */
+    /**
+     * Dialog title shown in the header. Used only when the `header` slot is
+     * not provided — if a consumer passes both a custom header slot and a
+     * `title`, the title prop is silently ignored (WEB-W2-14).
+     */
     title: { type: String, default: '' },
     /** Allow closing by clicking the backdrop */
     closeOnBackdrop: { type: Boolean, default: true },
@@ -144,7 +148,14 @@ export default {
     /** Whether to render the close button (WEB-W2-06). */
     showClose: { type: Boolean, default: true },
     /** Id of an element that describes the dialog (used with aria-describedby). */
-    ariaDescribedby: { type: String, default: '' }
+    ariaDescribedby: { type: String, default: '' },
+    /**
+     * Optional CSS selector matched against the panel's descendants on open.
+     * When provided and a matching focusable element is found, focus moves
+     * to that element instead of the panel itself — so form modals can land
+     * on the first input rather than requiring an extra Tab (WEB-W3-23).
+     */
+    initialFocusSelector: { type: String, default: '' }
   },
   emits: ['update:modelValue'],
   setup(props, { emit, slots }) {
@@ -237,7 +248,22 @@ export default {
           attachKeyHandler()
           lockBodyScroll()
           await nextTick()
-          panelRef.value?.focus()
+          // WEB-W3-23: prefer the consumer-supplied initial focus target if
+          // it resolves to something focusable inside the panel; otherwise
+          // fall back to focusing the panel itself (existing behavior).
+          let focused = false
+          if (props.initialFocusSelector && panelRef.value) {
+            const target = panelRef.value.querySelector(props.initialFocusSelector)
+            if (target && typeof target.focus === 'function') {
+              try {
+                target.focus()
+                focused = true
+              } catch {
+                // Element became unfocusable mid-transition — fall through.
+              }
+            }
+          }
+          if (!focused) panelRef.value?.focus()
         } else if (wasOpen) {
           detachKeyHandler()
           unlockBodyScroll()
@@ -273,6 +299,10 @@ export default {
 .modal {
   @apply fixed inset-0 z-50 flex items-center justify-center p-4;
 
+  // Static rgba fallback for browsers without color-mix support (older
+  // Safari, embedded WebViews on older OSes) — kept first so the modern
+  // declaration cascades on top in supporting browsers (WEB-W2-37).
+  background-color: rgba(14, 14, 14, 0.4);
   background-color: color-mix(in oklab, var(--ink) 40%, transparent);
 
   &__panel {
@@ -312,10 +342,39 @@ export default {
 .modal-enter-active,
 .modal-leave-active {
   @apply transition-opacity duration-150;
+
+  // Subtle panel lift on enter/leave for a sense of motion (WEB-W2-38).
+  .modal__panel {
+    @apply transition-all duration-150 ease-out;
+  }
 }
 
 .modal-enter-from,
 .modal-leave-to {
   @apply opacity-0;
+
+  .modal__panel {
+    @apply scale-[0.96] opacity-0;
+  }
+}
+
+// Honor user motion preferences (WEB-W2-39): collapse the transitions to a
+// near-instant duration and skip the scale animation entirely.
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-active,
+  .modal-leave-active {
+    transition-duration: 0.01ms;
+
+    .modal__panel {
+      transition-duration: 0.01ms;
+      transform: none;
+    }
+  }
+  .modal-enter-from,
+  .modal-leave-to {
+    .modal__panel {
+      transform: none;
+    }
+  }
 }
 </style>

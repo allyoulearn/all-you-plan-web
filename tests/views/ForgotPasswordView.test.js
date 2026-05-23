@@ -134,6 +134,7 @@ describe('ForgotPasswordView', () => {
   // ── Submission: error does NOT reveal account existence ───────────────
 
   it('transitions to success state even when forgotPassword throws (prevent enumeration)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { wrapper, store } = mountForgot()
     store.forgotPassword.mockRejectedValue(new Error('user not found'))
 
@@ -145,6 +146,9 @@ describe('ForgotPasswordView', () => {
     expect(wrapper.find('.forgot-password-view__success').exists()).toBe(true)
     // No error paragraph should be shown
     expect(wrapper.find('.forgot-password-view__error').exists()).toBe(false)
+    // The mutation failure IS logged for dev diagnostics (WEB-W4-17)
+    expect(errorSpy).toHaveBeenCalledWith('[forgotPassword] mutation failed', expect.any(Error))
+    errorSpy.mockRestore()
   })
 
   // ── Loading state ─────────────────────────────────────────────────────

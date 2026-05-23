@@ -34,11 +34,32 @@ const names = {
   mic: 'MicrophoneIcon',
   bolt: 'BoltIcon',
   'arrow-right': 'ArrowRightIcon',
+  'arrow-left': 'ArrowLeftIcon',
   filter: 'FunnelIcon',
   x: 'XMarkIcon',
+  // Reserved for upcoming task/project row actions (delete, edit, archive)
+  // (WEB-W2-23). Consumers will appear in the next slice; the dev-only
+  // assertion below catches typos in either set.
   trash: 'TrashIcon',
   pencil: 'PencilSquareIcon',
   archive: 'ArchiveBoxIcon'
+}
+
+// Dev-only sanity check (WEB-W2-22): every value in `names` must resolve to
+// a real Heroicons export in BOTH the outline and solid sets. A typo here
+// (e.g. `HomeIcons` with a trailing 's') would otherwise silently render
+// nothing — the dev console error makes it obvious immediately.
+if (import.meta.env.DEV) {
+  for (const [k, v] of Object.entries(names)) {
+    if (!Outline[v]) {
+      console.error(
+        `[iconMap] Outline icon "${v}" (key "${k}") is not in @heroicons/vue/24/outline`
+      )
+    }
+    if (!Solid[v]) {
+      console.error(`[iconMap] Solid icon "${v}" (key "${k}") is not in @heroicons/vue/24/solid`)
+    }
+  }
 }
 
 // -- Exports --

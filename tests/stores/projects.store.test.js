@@ -401,4 +401,28 @@ describe('projects.store', () => {
       expect(store.loadingBoard).toBe(false)
     })
   })
+
+  describe('updateProject reload skip when only board fields change (WEB-W1-19)', () => {
+    it('reloads projects when a list-visible field (name) changes', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+      await store.updateProject('p1', { name: 'New' })
+      // One projects query call expected
+      const projectsCalls = apolloClient.query.mock.calls.filter(
+        c => c[0]?.query === 'PROJECTS_QUERY'
+      )
+      expect(projectsCalls.length).toBe(1)
+    })
+
+    it('does not reload projects when only board-only fields (nudge) change', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
+      const store = useProjectsStore()
+      await store.updateProject('p1', { nudge: 'be bold' })
+      const projectsCalls = apolloClient.query.mock.calls.filter(
+        c => c[0]?.query === 'PROJECTS_QUERY'
+      )
+      expect(projectsCalls.length).toBe(0)
+    })
+  })
 })

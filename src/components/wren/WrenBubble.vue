@@ -30,10 +30,11 @@
 
       <div v-if="message.actions && message.actions.length" class="wren-bubble__actions">
         <Button
-          v-for="action in message.actions"
-          :key="action"
+          v-for="(action, idx) in message.actions"
+          :key="`${message.id}-${idx}`"
           variant="ghost"
           size="sm"
+          class="wren-bubble__action-btn"
           @click="$emit('action', action)"
         >
           {{ action }}
@@ -118,6 +119,12 @@ export default {
 
   &__actions {
     @apply mt-2 flex flex-wrap gap-2;
+  }
+
+  // Clamp long action labels so a very-long action text can't overflow the
+  // bubble's max-width (WEB-W3-20).
+  &__action-btn {
+    @apply max-w-full truncate;
   }
 }
 </style>

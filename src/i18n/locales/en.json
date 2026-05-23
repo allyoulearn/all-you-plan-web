@@ -2,7 +2,12 @@
   "nav": {
     "dashboard": "Dashboard",
     "briefing": "Briefing",
-    "settings": "Settings"
+    "settings": "Settings",
+    "workspaces": "Workspaces",
+    "lookingBack": "Looking back",
+    "withWren": "With Wren",
+    "system": "System",
+    "youFallback": "You"
   },
   "auth": {
     "login": "Sign in",
@@ -68,6 +73,17 @@
     "evening": "Evening",
     "emptyState": "Nothing scheduled for today. Add a task or plan with Wren."
   },
+  "kpi": {
+    "streak": "Streak",
+    "today": "Today",
+    "projects": "Projects",
+    "focus": "Focus",
+    "unitDays": "days",
+    "unitComplete": "complete",
+    "unitActive": "active",
+    "unitLogged": "logged",
+    "hoursMinutes": "{h}h {m}m"
+  },
   "chores": {
     "newChore": "New chore",
     "createTitle": "New chore",
@@ -88,7 +104,9 @@
     "dayShortThu": "T",
     "dayShortFri": "F",
     "dayShortSat": "S",
-    "emptyState": "No chores yet. Add your first recurring habit below."
+    "emptyState": "No chores yet. Add your first recurring habit below.",
+    "streakShort": "{count}d",
+    "streakDays": "{count} days"
   },
   "projects": {
     "newProject": "New project",
@@ -120,8 +138,13 @@
     "noTasksHere": "No tasks here.",
     "switchToBoard": "Switch to board view",
     "backToProjects": "← Projects",
+    "backToProjectsText": "Projects",
     "notFound": "Project not found.",
-    "notFoundBack": "Back to projects"
+    "notFoundBack": "Back to projects",
+    "statusOnTrack": "On track",
+    "statusHot": "Hot",
+    "statusStalled": "Stalled",
+    "statusIdle": "Idle"
   },
   "kanban": {
     "columnBacklog": "Backlog",
@@ -168,7 +191,11 @@
     "activityGrid": "Activity grid",
     "habitsRanked": "Habits ranked",
     "noHabits": "No habits tracked yet.",
-    "habitSub": "{streak} days · best {best}"
+    "habitSub": "{streak} days · best {best}",
+    "heatmapAriaLabel": "Activity heatmap, last 26 weeks",
+    "heatmapCaption": "{count} total completions over the last 26 weeks. Each cell represents one day; darker shades indicate more activity (0 to 3+ completions).",
+    "heatmapLegendLess": "less",
+    "heatmapLegendMore": "more"
   },
   "wren": {
     "loading": "Loading…",
@@ -257,6 +284,12 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "loading": "Loading…",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "close": "Close",
+    "closeDialog": "Close dialog",
+    "retry": "Retry",
+    "search": "Search",
+    "add": "Add",
+    "toggleDarkMode": "Toggle dark mode"
   }
 }

@@ -313,9 +313,9 @@ describe('ChoresView', () => {
     expect(wrapper.vm.groups.every(g => g.items.length === 0)).toBe(true)
   })
 
-  // ── watch else branch (isLoading=false path after true) ─────────────────
+  // ── watch both branches (WEB-W4-24: also restore loaded on false) ───────
 
-  it('does not reset loaded when store.loading becomes false (watch else branch)', async () => {
+  it('resets loaded to true when store.loading transitions false → true → false (WEB-W4-24)', async () => {
     const wrapper = mount(ChoresView, {
       global: {
         stubs: globalStubs,
@@ -335,14 +335,15 @@ describe('ChoresView', () => {
     expect(wrapper.vm.loaded).toBe(true)
 
     // Transition loading: false → true → false
-    // This exercises both branches of the if (isLoading) watch
     store.loading = true
     await wrapper.vm.$nextTick()
     expect(wrapper.vm.loaded).toBe(false)
 
     store.loading = false
     await wrapper.vm.$nextTick()
-    // Loaded remains false (only set back to true by the onMounted await)
-    expect(wrapper.vm.loaded).toBe(false)
+    // WEB-W4-24: the watch now also flips `loaded` back to true on the
+    // loading→done transition so the empty-state isn't briefly suppressed
+    // after a completeChore reload.
+    expect(wrapper.vm.loaded).toBe(true)
   })
 })

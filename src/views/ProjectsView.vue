@@ -7,7 +7,13 @@
     </div>
 
     <div v-else-if="store.errorProjects" class="projects-view__status projects-view__status--error">
-      {{ store.errorProjects }}
+      <span>
+        {{ store.errorProjects }}
+      </span>
+
+      <Button size="sm" variant="ghost" @click="store.loadProjects()">
+        {{ t('common.retry') }}
+      </Button>
     </div>
 
     <template v-else>
@@ -34,7 +40,7 @@
 
 <script>
 /** ProjectsView — lists active projects in a two-column card grid with a new-project action. */
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
@@ -57,8 +63,16 @@ export default {
     // -- Lifecycle --
     onMounted(() => store.loadProjects())
 
-    function handleCreated(project) {
-      if (project?.id) router.push(`/projects/${project.id}`)
+    /**
+     * Handle the create-modal's `created` event.
+     *
+     * Awaits one tick before navigating so the modal's close transition and
+     * focus-restoration teardown finish before the view unmounts (WEB-W4-26).
+     */
+    async function handleCreated(project) {
+      if (!project?.id) return
+      await nextTick()
+      router.push(`/projects/${project.id}`)
     }
 
     return { store, t, showCreate, handleCreated }
@@ -69,7 +83,7 @@ export default {
 <style lang="scss" scoped>
 .projects-view {
   &__status {
-    @apply text-[13px] text-muted;
+    @apply flex items-center gap-2 text-[13px] text-muted;
 
     &--error {
       @apply text-bad;

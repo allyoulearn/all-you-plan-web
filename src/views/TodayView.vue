@@ -11,7 +11,13 @@
     </div>
 
     <div v-else-if="store.error" class="today-view__status today-view__status--error">
-      {{ store.error }}
+      <span>
+        {{ store.error }}
+      </span>
+
+      <Button size="sm" variant="ghost" @click="store.load()">
+        {{ t('common.retry') }}
+      </Button>
     </div>
 
     <template v-else-if="store.view">
@@ -31,7 +37,7 @@
       </template>
 
       <div
-        v-if="!groups.some((g) => g.items.length)"
+        v-if="showEmpty"
         class="today-view__empty"
       >
         {{ t('today.emptyState') }}
@@ -58,7 +64,7 @@
 
 <script>
 /** TodayView — daily task board grouped by morning, afternoon, and evening time slots. */
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTodayStore } from '@/stores/today.store.js'
@@ -79,6 +85,22 @@ export default {
     const { t } = useI18n()
     const showCreateTask = ref(false)
 
+    // Prevents the empty-state flash on first mount and between mutation
+    // reload cycles (WEB-W4-20). Mirrors the ChoresView pattern.
+    const loaded = ref(!store.loading)
+    watch(
+      () => store.loading,
+      isLoading => {
+        if (isLoading) loaded.value = false
+        else loaded.value = true
+      }
+    )
+
+    /**
+     * Open the Wren chat. Today this is a plain navigation — a future
+     * iteration may pre-fill a planning prompt or pass context (e.g.
+     * remaining tasks) via query params or a shared composable (WEB-W4-28).
+     */
     function planWithWren() {
       router.push({ name: 'wren' })
     }
@@ -93,11 +115,26 @@ export default {
     const groups = computed(() => {
       const tasks = store.view?.tasks ?? []
       return [
-        { key: 'morning', label: t('today.morning'), items: tasks.filter((task) => hourOf(task) < 12) },
-        { key: 'afternoon', label: t('today.afternoon'), items: tasks.filter((task) => hourOf(task) >= 12 && hourOf(task) < 17) },
-        { key: 'evening', label: t('today.evening'), items: tasks.filter((task) => hourOf(task) >= 17) },
+        {
+          key: 'morning',
+          label: t('today.morning'),
+          items: tasks.filter(task => hourOf(task) < 12)
+        },
+        {
+          key: 'afternoon',
+          label: t('today.afternoon'),
+          items: tasks.filter(task => hourOf(task) >= 12 && hourOf(task) < 17)
+        },
+        {
+          key: 'evening',
+          label: t('today.evening'),
+          items: tasks.filter(task => hourOf(task) >= 17)
+        }
       ]
     })
+
+    /** True only once the initial load has resolved AND no groups have items. */
+    const showEmpty = computed(() => loaded.value && !groups.value.some(g => g.items.length))
 
     // -- Lifecycle --
     onMounted(() => store.load())
@@ -106,16 +143,17 @@ export default {
 
     /**
      * Extracts the hour from a task's scheduledTime string.
-     * Defaults to 12 when scheduledTime is absent.
+     * Defaults to 12 when scheduledTime is absent or malformed (WEB-W4-25).
      * @param {{ scheduledTime?: string|null }} task
      * @returns {number}
      */
     function hourOf(task) {
       if (!task.scheduledTime) return 12
-      return Number(task.scheduledTime.split(':')[0])
+      const h = Number(String(task.scheduledTime).split(':')[0])
+      return Number.isFinite(h) ? h : 12
     }
 
-    return { store, groups, t, showCreateTask, planWithWren }
+    return { store, groups, t, showCreateTask, planWithWren, showEmpty }
   }
 }
 </script>
@@ -123,7 +161,7 @@ export default {
 <style lang="scss" scoped>
 .today-view {
   &__status {
-    @apply text-[13px] text-muted;
+    @apply flex items-center gap-2 text-[13px] text-muted;
 
     &--error {
       @apply text-bad;

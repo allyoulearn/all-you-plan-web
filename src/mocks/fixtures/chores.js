@@ -80,12 +80,20 @@ const chores = [
 
 export const registry = {
   chores: () => ({ chores }),
-  completeChore: variables => ({
-    completeChore: {
-      id: variables.id,
-      streak: 7,
-      bestStreak: 21,
-      lastCompletedOn: '2026-05-22'
+  completeChore: variables => {
+    // Reflect the actual day the mock action ran so the UI sees a sensible
+    // value across shifted mock dates (WEB-W2-27).
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    return {
+      completeChore: {
+        id: variables.id,
+        streak: 7,
+        bestStreak: 21,
+        lastCompletedOn: `${yyyy}-${mm}-${dd}`
+      }
     }
-  })
+  }
 }

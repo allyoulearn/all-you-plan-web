@@ -83,7 +83,10 @@ export const registry = {
     completeTask: {
       id: variables.id,
       done: true,
-      completedAt: '2026-05-22T12:00:00.000Z'
+      // Reflect when the mock action actually fires so any UI that displays
+      // completion time sees a sensible value across shifted mock dates
+      // (WEB-W2-27).
+      completedAt: new Date().toISOString()
     }
   }),
   createTask: () => ({ createTask: { id: 'new-task' } }),

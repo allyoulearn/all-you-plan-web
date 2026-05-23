@@ -198,7 +198,7 @@ describe('JournalView', () => {
 
   // ── pullQuoteFrom helper (indirect via createEntry call) ─────────────────
 
-  it('generates a pull quote from the first 8 words of the body', async () => {
+  it('generates a pull quote from the first 8 words of the body with ellipsis suffix (WEB-W4-33)', async () => {
     const wrapper = mountJournal()
     const store = useJournalStore()
     store.createEntry.mockResolvedValue()
@@ -209,6 +209,23 @@ describe('JournalView', () => {
     await new Promise(r => setTimeout(r, 0))
 
     const call = store.createEntry.mock.calls[0][0]
+    // The truncation now appends an ellipsis to make it visible.
+    expect(call.pullQuote).toBe('one two three four five six seven eight…')
+  })
+
+  it('returns no pullQuote for a blank body (WEB-W4-33)', async () => {
+    const wrapper = mountJournal()
+    const store = useJournalStore()
+    store.createEntry.mockResolvedValue()
+
+    // Whitespace-only body would not have proceeded past saveEntry's own
+    // trim guard, so test the exact-eight-word pass-through instead.
+    await wrapper.find('textarea').setValue('one two three four five six seven eight')
+    await wrapper.find('button').trigger('click')
+    await new Promise(r => setTimeout(r, 0))
+
+    const call = store.createEntry.mock.calls[0][0]
+    // No ellipsis when the source already has eight or fewer words.
     expect(call.pullQuote).toBe('one two three four five six seven eight')
   })
 

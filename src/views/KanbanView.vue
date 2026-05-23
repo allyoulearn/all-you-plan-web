@@ -5,7 +5,7 @@
       :to="`/projects/${route.params.id}`"
       class="kanban-view__back-link"
     >
-      ← {{ project.name }}
+      <Icon name="arrow-left" :size="14" /> {{ project.name }}
     </RouterLink>
 
     <div v-if="store.loadingBoard" class="kanban-view__status kanban-view__status--mt">
@@ -66,10 +66,11 @@ import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import KanbanCard from '@/components/projects/KanbanCard.vue'
+import Icon from '@/components/ui/Icon.vue'
 
 export default {
   name: 'KanbanView',
-  components: { RouterLink, ScreenHeading, KanbanCard },
+  components: { RouterLink, ScreenHeading, KanbanCard, Icon },
   setup() {
     // -- State --
     const route = useRoute()

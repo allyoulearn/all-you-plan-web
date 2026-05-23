@@ -7,7 +7,7 @@
     :disabled="disabled"
     class="checkbox"
     :class="modelValue ? 'checkbox--checked' : 'checkbox--unchecked'"
-    :style="{ width: `${size}px`, height: `${size}px` }"
+    :style="{ '--checkbox-size': `${size}px` }"
     @click="toggle"
   >
     <Icon
@@ -63,6 +63,12 @@ export default {
 
 <style lang="scss" scoped>
 .checkbox {
+  // Width/height driven by a CSS custom property set inline by the consumer
+  // via the `size` prop (WEB-W2-41). Keeps layout declarations in the
+  // stylesheet rather than inline binding.
+  width: var(--checkbox-size, 20px);
+  height: var(--checkbox-size, 20px);
+
   @apply grid place-items-center rounded-pill border transition-colors disabled:opacity-50;
   @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
 

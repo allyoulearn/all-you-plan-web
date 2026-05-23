@@ -168,7 +168,10 @@ export default {
   }
 
   &__send {
-    @apply rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition-opacity disabled:opacity-40;
+    // Lowercase source (`Send` via t()) with CSS uppercase styling — keeps
+    // the visual SEND look while letting screen readers / non-English locales
+    // see a normal-cased word (WEB-W3-24).
+    @apply rounded-pill bg-ink px-3.5 py-1.5 text-[12px] font-semibold uppercase text-paper transition-opacity disabled:opacity-40;
   }
 }
 </style>

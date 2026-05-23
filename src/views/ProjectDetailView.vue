@@ -1,7 +1,8 @@
 <template>
   <div>
     <RouterLink to="/projects" class="project-detail-view__back-link">
-      {{ t('projects.backToProjects') }}
+      <Icon name="arrow-left" :size="14" />
+      {{ t('projects.backToProjectsText') }}
     </RouterLink>
 
     <div v-if="store.loadingBoard" class="project-detail-view__status project-detail-view__status--mt">
@@ -152,6 +153,7 @@ import Pill from '@/components/ui/Pill.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import Icon from '@/components/ui/Icon.vue'
 import CreateProjectTaskModal from '@/components/projects/CreateProjectTaskModal.vue'
 
 export default {
@@ -166,6 +168,7 @@ export default {
     Checkbox,
     ProgressBar,
     ConfirmDialog,
+    Icon,
     CreateProjectTaskModal
   },
   setup() {

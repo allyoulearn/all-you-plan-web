@@ -115,6 +115,13 @@ export default {
      * Formats a date string as a human-readable relative time using i18n
      * keys (WEB-W4-08). Returns 'just now' under one minute, then minutes,
      * hours, and days.
+     *
+     * Note (WEB-W4-31): the value is recomputed on every render but does not
+     * reactively tick with the passage of time — a "5m ago" label stays "5m
+     * ago" until something else triggers a re-render. This is accepted for
+     * the inbox triage flow because items typically move out quickly; a
+     * shared `useRelativeTime` composable would solve it for any
+     * long-display surface.
      * @param {string} dateStr
      * @returns {string}
      */

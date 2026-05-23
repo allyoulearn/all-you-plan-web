@@ -110,12 +110,22 @@ describe('wren.store', () => {
       expect(store.messages).toHaveLength(0)
     })
 
-    it('whitespace-only string is NOT treated as no-op (truthy)', async () => {
-      apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
+    it('whitespace-only string IS a no-op after trim (WEB-W1-18)', async () => {
       const store = useWrenStore()
       await store.send('   ')
-      // The store only checks !text; a space string is truthy so the mutation fires
-      expect(apolloClient.mutate).toHaveBeenCalledTimes(1)
+      // Post-fix: the store trims and rejects whitespace-only so no noise
+      // message ever reaches the API.
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+      expect(store.messages).toHaveLength(0)
+    })
+
+    it('trims surrounding whitespace before sending (WEB-W1-18)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
+      const store = useWrenStore()
+      await store.send('   hello   ')
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { text: 'hello' } })
+      )
     })
 
     it('removes the optimistic message on failure', async () => {

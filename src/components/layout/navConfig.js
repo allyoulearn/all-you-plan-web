@@ -3,13 +3,18 @@
  * Defines the sidebar navigation groups, their labels, and the ordered list
  * of route items (path, icon key, display label, keyboard shortcut) within
  * each group.  Consumed by the AppSidebar and mobile navigation components.
+ *
+ * `labelKey` is the i18n key the consumer (AppSidebar) should resolve via
+ * `t()`; the literal `label` remains as an English fallback for tests and
+ * non-i18n contexts (WEB-W2-21).
  */
 /**
- * @type {Array<{ label: string, items: Array<{ to: string, icon: string, label: string, key: string }> }>}
+ * @type {Array<{ label: string, labelKey: string, items: Array<{ to: string, icon: string, label: string, key: string }> }>}
  */
 export const navGroups = [
   {
     label: 'Workspaces',
+    labelKey: 'nav.workspaces',
     items: [
       { to: '/', icon: 'today', label: 'Today', key: 'T' },
       { to: '/chores', icon: 'chores', label: 'Chores', key: 'C' },
@@ -18,6 +23,7 @@ export const navGroups = [
   },
   {
     label: 'Looking back',
+    labelKey: 'nav.lookingBack',
     items: [
       { to: '/calendar', icon: 'calendar', label: 'Calendar', key: 'K' },
       { to: '/stats', icon: 'stats', label: 'Stats', key: 'S' },
@@ -27,6 +33,7 @@ export const navGroups = [
   },
   {
     label: 'With Wren',
+    labelKey: 'nav.withWren',
     items: [
       { to: '/wren', icon: 'chat', label: 'Chat', key: 'W' },
       { to: '/review', icon: 'review', label: 'Daily review', key: 'R' }
@@ -34,6 +41,7 @@ export const navGroups = [
   },
   {
     label: 'System',
+    labelKey: 'nav.system',
     items: [{ to: '/settings', icon: 'settings', label: 'Settings', key: ',' }]
   }
 ]

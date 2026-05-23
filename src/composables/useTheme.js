@@ -29,15 +29,27 @@ const mode = ref('light')
 
 /**
  * Flush the current theme and mode to the DOM and localStorage.
+ *
+ * The DOM attributes are written first so the active session reflects the new
+ * theme even when storage is unavailable (private browsing, quota exceeded).
+ * The localStorage write is wrapped in try/catch so a storage failure does
+ * not throw into the caller (`setTheme` / `setMode` / `toggleMode`) and turn
+ * a theme toggle into a silent crash (WEB-W2-17).
  */
 function apply() {
   const el = document.documentElement
   el.setAttribute('data-theme', themeName.value)
   el.setAttribute('data-mode', mode.value)
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ themeName: themeName.value, mode: mode.value })
-  )
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ themeName: themeName.value, mode: mode.value })
+    )
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.warn('[useTheme] failed to persist theme:', e?.message)
+    }
+  }
 }
 
 // -- Public API --

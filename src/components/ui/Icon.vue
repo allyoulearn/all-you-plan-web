@@ -2,7 +2,8 @@
   <component
     :is="component"
     v-if="component"
-    :style="{ width: `${size}px`, height: `${size}px` }"
+    :style="{ '--icon-size': `${size}px` }"
+    class="icon"
     aria-hidden="true"
   />
 </template>
@@ -38,3 +39,12 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Size driven by a CSS custom property set inline by the consumer via the
+   `size` prop (WEB-W2-41). Keeps layout declarations in the stylesheet. */
+.icon {
+  width: var(--icon-size, 20px);
+  height: var(--icon-size, 20px);
+}
+</style>

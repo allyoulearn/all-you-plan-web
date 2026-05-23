@@ -26,8 +26,16 @@ export default {
   props: {
     /** Small label above the main title */
     eyebrow: { type: String, default: '' },
-    /** Main heading text */
-    title: { type: String, default: '' },
+    /**
+     * Main heading text. Required and non-empty so a missing title can't
+     * render an empty top-of-screen `<h1>` and leave the landmark unlabeled
+     * (WEB-W2-35).
+     */
+    title: {
+      type: String,
+      required: true,
+      validator: v => typeof v === 'string' && v.trim().length > 0
+    },
     /** Italic emphasis appended to the title */
     emphasis: { type: String, default: '' }
   }

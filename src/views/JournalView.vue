@@ -127,12 +127,19 @@ export default {
 
     /**
      * Derives a short pull-quote from the first eight words of entry text.
+     * Returns `undefined` for blank input so the server doesn't receive an
+     * empty pullQuote field; appends an ellipsis when the source had more
+     * than 8 words to make the truncation visible (WEB-W4-33).
      * @param {string} text
-     * @returns {string}
+     * @returns {string|undefined}
      */
     function pullQuoteFrom(text) {
-      const words = text.trim().split(/\s+/)
-      return words.slice(0, 8).join(' ')
+      const trimmed = (text ?? '').trim()
+      if (!trimmed) return undefined
+      const words = trimmed.split(/\s+/)
+      if (words.length === 0) return undefined
+      const head = words.slice(0, 8).join(' ')
+      return words.length > 8 ? `${head}…` : head
     }
 
     /** Saves the current editor text as a new journal entry. */
@@ -140,13 +147,15 @@ export default {
       if (!bodyText.value.trim()) return
       saving.value = true
       try {
-        await store.createEntry({
+        const pullQuote = pullQuoteFrom(bodyText.value)
+        const entry = {
           date: todayStr,
           prompt: prompt.value,
-          pullQuote: pullQuoteFrom(bodyText.value),
           body: bodyText.value.trim(),
-          tags: [],
-        })
+          tags: []
+        }
+        if (pullQuote !== undefined) entry.pullQuote = pullQuote
+        await store.createEntry(entry)
         bodyText.value = ''
       } finally {
         saving.value = false

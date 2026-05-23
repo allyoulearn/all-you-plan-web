@@ -274,17 +274,39 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Development-only sign-in. Establishes a mock authenticated session with
    * no API call, so the authenticated app can be reached without a running
-   * backend. No-op outside dev builds.
+   * backend. Pinned to dev-with-mocks only — staging/preview builds that
+   * happen to have import.meta.env.DEV true will not expose this entrypoint
+   * (WEB-W1-22).
+   *
+   * The mock user mirrors the shape of the LOGIN payload's UserFields fragment
+   * (timezone, streak, full default settings) so any view that reads them sees
+   * realistic values rather than undefined (WEB-W1-16).
    */
   function devLogin() {
-    if (!import.meta.env.DEV) return
+    if (!import.meta.env.DEV || import.meta.env.VITE_USE_MOCKS !== 'true') return
+    let timezone = 'UTC'
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    } catch {
+      // Older environments without Intl support — fall back to UTC.
+    }
     setAuth({
       accessToken: 'dev-mock-token',
       user: {
         id: 'dev-user',
         name: 'Dev Tester',
         email: 'dev@allyouplan.test',
-        settings: {}
+        timezone,
+        streak: { current: 0, best: 0, lastCompletionDate: null },
+        settings: {
+          theme: 'default',
+          mode: 'auto',
+          density: 'comfortable',
+          coachPersonality: 'gentle',
+          checkIns: ['morning'],
+          stalledNudgeDays: 7,
+          journalVisibility: 'private'
+        }
       }
     })
   }

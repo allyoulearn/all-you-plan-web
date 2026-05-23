@@ -260,6 +260,10 @@ export default {
       } else {
         currentMonth.value--
       }
+      // WEB-W4-30: explicitly clear the selection on month navigation. The
+      // user re-selects in the new month; returning to the original month
+      // intentionally lands with no selection until they pick a day. This
+      // matches the agenda's "no day picked" affordance.
       selectedDay.value = null
       store.load(monthKey(currentYear.value, currentMonth.value))
     }
@@ -272,6 +276,7 @@ export default {
       } else {
         currentMonth.value++
       }
+      // WEB-W4-30: see prevMonth above for the rationale on clearing selection.
       selectedDay.value = null
       store.load(monthKey(currentYear.value, currentMonth.value))
     }

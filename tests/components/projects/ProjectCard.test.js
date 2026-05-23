@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
+import en from '@/i18n/locales/en.json'
 import ProjectCard from '@/components/projects/ProjectCard.vue'
+
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const baseProject = {
   id: 'p1',
@@ -19,7 +23,10 @@ const baseProject = {
 const mountCard = (project = baseProject) =>
   mount(ProjectCard, {
     props: { project },
-    global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } }
+    global: {
+      stubs: { RouterLink: { template: '<a><slot /></a>' } },
+      plugins: [i18n]
+    }
   })
 
 describe('ProjectCard', () => {
@@ -156,7 +163,8 @@ describe('ProjectCard', () => {
               template: '<a :href="to"><slot /></a>',
               props: ['to']
             }
-          }
+          },
+          plugins: [i18n]
         }
       })
       expect(wrapper.find('a').attributes('href')).toBe('/projects/p1')

@@ -43,10 +43,14 @@ export const useWrenStore = defineStore('wren', () => {
    * before the request completes. On success the returned coach message is
    * appended. On failure the optimistic message is removed.
    * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
+   * Trims whitespace from the text and rejects whitespace-only strings so an
+   * untrimmed caller (or a direct store call) cannot produce a noise message
+   * (WEB-W1-18).
    * @param {string} text - The user's message text
    */
   async function send(text) {
-    if (!text || sending.value) return
+    const trimmed = text?.trim()
+    if (!trimmed || sending.value) return
     sending.value = true
     error.value = ''
 
@@ -54,13 +58,19 @@ export const useWrenStore = defineStore('wren', () => {
     const optimisticId = `optimistic-${Date.now()}`
     messages.value = [
       ...messages.value,
-      { id: optimisticId, sender: 'user', text, actions: [], createdAt: new Date().toISOString() }
+      {
+        id: optimisticId,
+        sender: 'user',
+        text: trimmed,
+        actions: [],
+        createdAt: new Date().toISOString()
+      }
     ]
 
     try {
       const { data } = await apolloClient.mutate({
         mutation: SEND_WREN_MESSAGE,
-        variables: { text }
+        variables: { text: trimmed }
       })
       // Append the returned coach message
       messages.value = [...messages.value, data.sendWrenMessage]

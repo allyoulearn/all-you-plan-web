@@ -17,18 +17,16 @@ describe('Icon', () => {
     expect(wrapper.find('svg').exists()).toBe(false)
   })
 
-  it('applies the size as inline styles', () => {
+  it('applies the size via the --icon-size custom property (WEB-W2-41)', () => {
     const wrapper = mount(Icon, { props: { name: 'search', size: 24 } })
     const style = wrapper.find('svg').attributes('style')
-    expect(style).toContain('width: 24px')
-    expect(style).toContain('height: 24px')
+    expect(style).toContain('--icon-size: 24px')
   })
 
-  it('defaults size to 20', () => {
+  it('defaults size to 20 via the --icon-size custom property', () => {
     const wrapper = mount(Icon, { props: { name: 'search' } })
     const style = wrapper.find('svg').attributes('style')
-    expect(style).toContain('width: 20px')
-    expect(style).toContain('height: 20px')
+    expect(style).toContain('--icon-size: 20px')
   })
 
   it('sets aria-hidden on the svg', () => {

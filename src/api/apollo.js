@@ -1,3 +1,29 @@
+/**
+ * Apollo client configuration.
+ *
+ * Architecture (link chain order):
+ *   mockLink? -> errorLink -> splitLink( wsLink | httpLink )
+ *
+ * - mockLink: optional dev-only fixture link, enabled when VITE_USE_MOCKS=true.
+ *   Short-circuits operations against in-memory fixtures (see /src/mocks/).
+ * - errorLink: intercepts UNAUTHENTICATED errors and coordinates a single
+ *   in-flight token refresh — concurrent UNAUTHENTICATED errors all await the
+ *   same refresh promise, then retry their operation via forward().
+ * - splitLink: routes subscription operations to graphql-ws, everything else
+ *   to the HTTP link.
+ *
+ * Auth-token strategy:
+ *   The access token is held in module-scoped `accessToken` (not reactive) so
+ *   the synchronous header getter on httpLink can read it on every request.
+ *   The auth store mirrors the value into a Pinia ref for UI bindings, and
+ *   calls setAccessToken() here whenever it updates. resetWsConnection() is
+ *   called after each refresh so existing subscriptions reconnect with the
+ *   fresh token (WEB-W1-03).
+ *
+ * Mock toggle:
+ *   useMocks() is a function (not a top-level const) so vitest's vi.stubEnv()
+ *   can flip the branch at test time without re-importing the module.
+ */
 import {
   ApolloClient,
   InMemoryCache,
@@ -30,10 +56,21 @@ let accessToken = null
 // errors from triggering multiple simultaneous refresh calls.
 let refreshing = null
 
+/**
+ * Update the in-memory access token used by `httpLink` and `wsLink`.
+ * Called by the auth store after login / register / token refresh / logout.
+ * @param {string|null} token
+ */
 export function setAccessToken(token) {
   accessToken = token
 }
 
+/**
+ * Read the in-memory access token. Intended only for tests and dev tooling —
+ * application code should ask the auth store, which is the canonical owner of
+ * session state (WEB-W1-15).
+ * @returns {string|null}
+ */
 export function getAccessToken() {
   return accessToken
 }
@@ -102,9 +139,21 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
           refreshing.catch(() => {
             setAccessToken(null)
             // Lazy-import router to avoid circular dependency at module init.
-            import('@/router/index.js').then(({ default: router }) => {
-              router.push({ name: 'login' })
-            })
+            // WEB-W1-17: chain .catch so a chunk-load failure does not leave
+            // the user stuck on the current screen with no auth and no
+            // diagnostic; falls back to a hard navigation to /auth/login.
+            import('@/router/index.js')
+              .then(({ default: router }) => {
+                router.push({ name: 'login' })
+              })
+              .catch(routerErr => {
+                console.error('[apollo] failed to redirect to login:', routerErr)
+                try {
+                  window.location.assign('/auth/login')
+                } catch {
+                  // Last-resort fallback failed too — nothing else to do.
+                }
+              })
             return Promise.reject(err)
           })
         ).flatMap(() => forward(operation))

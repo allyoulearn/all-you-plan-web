@@ -24,8 +24,15 @@
 export default {
   name: 'SettingRow',
   props: {
-    /** Primary label for the setting */
-    label: { type: String, required: true },
+    /**
+     * Primary label for the setting. Required and validated non-empty so a
+     * missing localized string can't render an empty `<p>` (WEB-W3-19).
+     */
+    label: {
+      type: String,
+      required: true,
+      validator: v => typeof v === 'string' && v.trim().length > 0
+    },
     /** Optional supporting description displayed below the label */
     description: { type: String, default: '' }
   }

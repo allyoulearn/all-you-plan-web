@@ -7,7 +7,13 @@
     </div>
 
     <div v-else-if="store.error" class="chores-view__status chores-view__status--error">
-      {{ store.error }}
+      <span>
+        {{ store.error }}
+      </span>
+
+      <Button size="sm" variant="ghost" @click="store.load()">
+        {{ t('common.retry') }}
+      </Button>
     </div>
 
     <template v-else>
@@ -85,10 +91,17 @@ export default {
       loaded.value = true
     })
 
-    // Reset loaded if the store starts a fresh load (e.g. after completeChore reload)
-    watch(() => store.loading, (isLoading) => {
-      if (isLoading) loaded.value = false
-    })
+    // Sync `loaded` with the store's loading flag (WEB-W4-24). Reset on
+    // start, restore on finish — so a brief loading→done flicker (e.g. the
+    // completeChore reload) doesn't leave `loaded` stuck at false between
+    // the watch firing and the in-flight reload resolving.
+    watch(
+      () => store.loading,
+      isLoading => {
+        if (isLoading) loaded.value = false
+        else loaded.value = true
+      }
+    )
 
     return { store, groups, loaded, isEmpty, showCreate, t }
   }
@@ -98,7 +111,7 @@ export default {
 <style lang="scss" scoped>
 .chores-view {
   &__status {
-    @apply text-[13px] text-muted;
+    @apply flex items-center gap-2 text-[13px] text-muted;
 
     &--error {
       @apply text-bad;

@@ -42,18 +42,16 @@ describe('Checkbox', () => {
     expect(wrapper.classes()).toContain('checkbox--unchecked')
   })
 
-  it('applies size via inline style', () => {
+  it('applies size via the --checkbox-size custom property (WEB-W2-41)', () => {
     const wrapper = mount(Checkbox, { props: { modelValue: false, size: 28 } })
     const style = wrapper.attributes('style')
-    expect(style).toContain('width: 28px')
-    expect(style).toContain('height: 28px')
+    expect(style).toContain('--checkbox-size: 28px')
   })
 
-  it('defaults size to 20', () => {
+  it('defaults size to 20 via the --checkbox-size custom property', () => {
     const wrapper = mount(Checkbox, { props: { modelValue: false } })
     const style = wrapper.attributes('style')
-    expect(style).toContain('width: 20px')
-    expect(style).toContain('height: 20px')
+    expect(style).toContain('--checkbox-size: 20px')
   })
 
   it('has role="checkbox" for screen readers', () => {

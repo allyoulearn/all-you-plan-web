@@ -24,11 +24,13 @@ describe('TaskRow', () => {
     expect(wrapper.find('.task-row__title--done').exists()).toBe(false)
   })
 
-  it('renders scheduledTime when provided', () => {
+  it('renders scheduledTime when provided (locale-formatted via WEB-W3-15)', () => {
     const task = { id: 't4', title: 'Meeting', done: false, scheduledTime: '09:00' }
     const wrapper = mount(TaskRow, { props: { task } })
     expect(wrapper.find('.task-row__time').exists()).toBe(true)
-    expect(wrapper.find('.task-row__time').text()).toBe('09:00')
+    // Locale-formatted output contains the hour digit (9) regardless of the
+    // user's 12/24h preference.
+    expect(wrapper.find('.task-row__time').text()).toMatch(/9/)
   })
 
   it('does not render time element when scheduledTime is absent', () => {

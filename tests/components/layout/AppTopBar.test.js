@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
+import en from '@/i18n/locales/en.json'
 import AppTopBar from '@/components/layout/AppTopBar.vue'
 import { useRoute } from 'vue-router'
 
@@ -15,8 +17,11 @@ vi.mock('@/composables/useTheme.js', () => ({
   useTheme: () => ({ mode: mockMode, toggleMode: mockToggleMode })
 }))
 
+const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+
 const globalConfig = {
-  stubs: { IconButton: true }
+  stubs: { IconButton: true },
+  plugins: [i18n]
 }
 
 describe('AppTopBar', () => {
@@ -38,10 +43,11 @@ describe('AppTopBar', () => {
     expect(buttons).toHaveLength(3)
   })
 
-  it('falls back to "all you plan" when route has no crumbs', () => {
+  it('renders empty crumbs (no brand fallback) when route has no crumbs (WEB-W3-12)', () => {
     vi.mocked(useRoute).mockReturnValueOnce({ meta: {} })
     const wrapper = mount(AppTopBar, { global: globalConfig })
-    expect(wrapper.text()).toContain('all you plan')
+    // The sidebar already shows the brand; the topbar no longer duplicates it.
+    expect(wrapper.find('.app-top-bar__crumbs').text()).toBe('')
   })
 
   it('renders as a header element', () => {

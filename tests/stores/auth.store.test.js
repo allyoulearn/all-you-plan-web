@@ -530,6 +530,7 @@ describe('auth.store', () => {
   describe('devLogin()', () => {
     it('is a no-op when DEV is false', () => {
       vi.stubEnv('DEV', false)
+      vi.stubEnv('VITE_USE_MOCKS', 'true')
       const store = useAuthStore()
       store.devLogin()
       expect(store.isAuthenticated).toBe(false)
@@ -537,8 +538,19 @@ describe('auth.store', () => {
       vi.unstubAllEnvs()
     })
 
-    it('sets a dev session with expected user fields when DEV is true', () => {
+    it('is a no-op when DEV is true but VITE_USE_MOCKS is not "true" (WEB-W1-22)', () => {
       vi.stubEnv('DEV', true)
+      vi.stubEnv('VITE_USE_MOCKS', 'false')
+      const store = useAuthStore()
+      store.devLogin()
+      expect(store.isAuthenticated).toBe(false)
+      expect(setAccessToken).not.toHaveBeenCalled()
+      vi.unstubAllEnvs()
+    })
+
+    it('sets a dev session with expected user fields when DEV+VITE_USE_MOCKS are true', () => {
+      vi.stubEnv('DEV', true)
+      vi.stubEnv('VITE_USE_MOCKS', 'true')
       const store = useAuthStore()
       store.devLogin()
       expect(store.user).toMatchObject({
@@ -546,6 +558,18 @@ describe('auth.store', () => {
         name: 'Dev Tester',
         email: 'dev@allyouplan.test'
       })
+      // WEB-W1-16: mock user mirrors the LOGIN UserFields shape.
+      expect(store.user.timezone).toBeTypeOf('string')
+      expect(store.user.streak).toEqual({ current: 0, best: 0, lastCompletionDate: null })
+      expect(store.user.settings).toMatchObject({
+        theme: 'default',
+        mode: 'auto',
+        density: 'comfortable',
+        coachPersonality: 'gentle',
+        stalledNudgeDays: 7,
+        journalVisibility: 'private'
+      })
+      expect(Array.isArray(store.user.settings.checkIns)).toBe(true)
       expect(store.accessToken).toBe('dev-mock-token')
       expect(store.isAuthenticated).toBe(true)
       vi.unstubAllEnvs()

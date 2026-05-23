@@ -3,6 +3,11 @@
  * Resolves GraphQL operations from a fixture registry instead of the network,
  * keyed by each operation's root field name (so anonymous operations work too).
  * Used only in mock mode; see `src/api/apollo.js`.
+ *
+ * Limitations (WEB-W2-24): only queries and mutations are supported. The link
+ * emits a single response then completes — a real subscription would push
+ * indefinitely. If a subscription reaches this link the request fails loudly
+ * with a clear error rather than silently hanging.
  */
 import { ApolloLink, Observable } from '@apollo/client/core'
 import { getMainDefinition } from '@apollo/client/utilities'
@@ -29,6 +34,18 @@ function getRootFieldName(query) {
 export function createMockLink(registry) {
   return new ApolloLink(operation => {
     return new Observable(observer => {
+      const def = getMainDefinition(operation.query)
+      // WEB-W2-24: subscriptions cannot be served by a fire-once fixture.
+      // Emit a loud error so the failure is obvious rather than silently
+      // never delivering data.
+      if (def.kind === 'OperationDefinition' && def.operation === 'subscription') {
+        const field = getRootFieldName(operation.query) ?? '(unknown)'
+        const msg = `[mock] Subscriptions are not supported by the mock link (root field "${field}")`
+        console.warn(msg)
+        observer.next({ errors: [{ message: msg }] })
+        observer.complete()
+        return
+      }
       const field = getRootFieldName(operation.query)
       const fixture = field ? registry[field] : null
       if (fixture) {

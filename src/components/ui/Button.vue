@@ -33,8 +33,15 @@ export default {
     icon: { type: String, default: '' },
     /** Trailing icon name; empty for none */
     iconTrailing: { type: String, default: '' },
-    /** Native button type attribute */
-    type: { type: String, default: 'button' },
+    /**
+     * Native button type attribute. Validated so a typo cannot silently
+     * default to `submit` and trigger accidental form submission (WEB-W2-29).
+     */
+    type: {
+      type: String,
+      default: 'button',
+      validator: v => ['button', 'submit', 'reset'].includes(v)
+    },
     /** Whether the button is disabled */
     disabled: { type: Boolean, default: false }
   }

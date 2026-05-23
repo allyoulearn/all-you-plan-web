@@ -129,9 +129,16 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  // Fields that the projects-list view renders. When updateProject's input
+  // touches only board-visible (non-list) fields like `nudge`, we can skip the
+  // loadProjects() refetch (WEB-W1-19).
+  const LIST_VISIBLE_FIELDS = ['name', 'tag', 'status', 'archived', 'blurb']
+
   /**
    * Update a project's fields; if a board is currently loaded for the same
-   * project, refresh it; otherwise refresh the project list.
+   * project, refresh it. The projects list is refreshed only when the update
+   * touched a list-visible field (WEB-W1-19) — board-only edits like
+   * changing `nudge` skip the wasted round-trip.
    *
    * Error surfacing (WEB-W1-06): writes the failure to `errorBoard` only when
    * the active board belongs to the updated project — otherwise writes to
@@ -146,6 +153,7 @@ export const useProjectsStore = defineStore('projects', () => {
     errorProjects.value = ''
     saving.value = true
     const boardLoadedForThisProject = board.value?.project?.id === id
+    const touchedListField = Object.keys(input ?? {}).some(k => LIST_VISIBLE_FIELDS.includes(k))
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_PROJECT,
@@ -154,7 +162,9 @@ export const useProjectsStore = defineStore('projects', () => {
       if (boardLoadedForThisProject) {
         await loadBoard(id)
       }
-      await loadProjects()
+      if (touchedListField) {
+        await loadProjects()
+      }
       return data.updateProject
     } catch (e) {
       if (boardLoadedForThisProject) {

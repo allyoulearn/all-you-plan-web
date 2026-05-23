@@ -20,8 +20,8 @@
       {{ cadenceLabel }}
     </Pill>
 
-    <span class="chore-row__streak">
-      {{ chore.streak }}d
+    <span class="chore-row__streak" :aria-label="streakAria">
+      {{ streakLabel }}
     </span>
   </div>
 </template>
@@ -29,13 +29,19 @@
 <script>
 /** ChoreRow — single chore entry with completion checkbox, cadence pill, and streak counter. */
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import Pill from '@/components/ui/Pill.vue'
 
-const CADENCE_LABEL = {
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly'
+/**
+ * Map from API cadence enum to the matching i18n key (WEB-W3-17). The keys
+ * already live under `chores.cadence*` and are used by CreateChoreModal —
+ * routing through i18n keeps modal and row labels in sync.
+ */
+const CADENCE_KEY = {
+  daily: 'chores.cadenceDaily',
+  weekly: 'chores.cadenceWeekly',
+  monthly: 'chores.cadenceMonthly'
 }
 
 export default {
@@ -47,6 +53,7 @@ export default {
   },
   emits: ['complete'],
   setup(props) {
+    const { t } = useI18n()
     // -- Function definitions --
 
     /**
@@ -62,12 +69,20 @@ export default {
       return lastCompletedOn.slice(0, 10) === today
     }
 
-    /** Human-readable cadence label resolved from the API enum value. */
-    const cadenceLabel = computed(() =>
-      CADENCE_LABEL[props.chore.cadence.type] ?? props.chore.cadence.type
-    )
+    /** Human-readable cadence label resolved from the API enum value via i18n. */
+    const cadenceLabel = computed(() => {
+      const key = CADENCE_KEY[props.chore.cadence.type]
+      return key ? t(key) : props.chore.cadence.type
+    })
 
-    return { isCompletedToday, cadenceLabel }
+    // Streak label (WEB-W3-16). Visible glyph stays the compact "{n}d"
+    // because the row is intentionally dense, but the aria-label expands to
+    // the full localized phrase so screen readers say "5 days" instead of
+    // "5 d".
+    const streakLabel = computed(() => t('chores.streakShort', { count: props.chore.streak }))
+    const streakAria = computed(() => t('chores.streakDays', { count: props.chore.streak }))
+
+    return { isCompletedToday, cadenceLabel, streakLabel, streakAria }
   }
 }
 </script>

@@ -20,7 +20,10 @@ export function useErrorToast() {
   /**
    * Resolve the display message from an error object without showing a toast.
    * Useful when the view wants to display the error inline rather than as a toast.
-   * Priority: GraphQL error → err.message → fallbackMsg → generic message.
+   * Priority: GraphQL error → networkError → err.message → fallbackMsg → generic.
+   * Including `networkError.message` (WEB-W2-20) surfaces the server's
+   * diagnostic on transport-layer failures (502/503/etc.) rather than the
+   * wrapper's generic "Network error" text.
    * @param {Error|object} err - The caught error object
    * @param {string} [fallbackMsg] - Message to display when no specific error text is available
    * @returns {string}
@@ -28,6 +31,7 @@ export function useErrorToast() {
   function resolveErrorMessage(err, fallbackMsg) {
     return (
       err?.graphQLErrors?.[0]?.message ||
+      err?.networkError?.message ||
       err?.message ||
       fallbackMsg ||
       'An unexpected error occurred'

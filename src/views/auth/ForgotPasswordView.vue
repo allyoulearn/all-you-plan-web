@@ -93,8 +93,11 @@ export default {
 
     /**
      * Submit the forgot-password request.
-     * Always transitions to the success state on completion
-     * to avoid leaking whether an email exists.
+     * Always transitions to the success state on completion to avoid leaking
+     * whether an email exists. Server-side failures (5xx, mailer issues) are
+     * still surfaced via `console.error` so developers can diagnose problems
+     * during local testing — the user-facing UI continues to show the success
+     * state regardless (WEB-W4-17).
      */
     async function handleSubmit() {
       error.value = ''
@@ -102,8 +105,9 @@ export default {
       try {
         await authStore.forgotPassword(email.value)
         sent.value = true
-      } catch {
-        // Show success state regardless to prevent email enumeration
+      } catch (err) {
+        // Show success state regardless to prevent email enumeration.
+        console.error('[forgotPassword] mutation failed', err)
         sent.value = true
       } finally {
         loading.value = false

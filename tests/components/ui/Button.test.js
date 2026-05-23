@@ -93,18 +93,16 @@ describe('IconButton', () => {
     expect(wrapper.classes()).toContain('icon-button--ghost')
   })
 
-  it('applies the size as an inline style', () => {
+  it('applies the size via the --icon-button-size custom property (WEB-W2-41)', () => {
     const wrapper = mount(IconButton, { props: { icon: 'plus', size: 48 } })
     const style = wrapper.attributes('style')
-    expect(style).toContain('width: 48px')
-    expect(style).toContain('height: 48px')
+    expect(style).toContain('--icon-button-size: 48px')
   })
 
-  it('defaults size to 34', () => {
+  it('defaults size to 34 via the --icon-button-size custom property', () => {
     const wrapper = mount(IconButton, { props: { icon: 'plus' } })
     const style = wrapper.attributes('style')
-    expect(style).toContain('width: 34px')
-    expect(style).toContain('height: 34px')
+    expect(style).toContain('--icon-button-size: 34px')
   })
 
   it('passes type prop to native button', () => {

@@ -20,8 +20,15 @@ export default {
       default: 'default',
       validator: v => ['default', 'accent'].includes(v)
     },
-    /** HTML element or component to render as */
-    as: { type: String, default: 'div' }
+    /**
+     * HTML element to render as. Validated against a curated semantic list
+     * so a typo can't produce a non-semantic custom-element tag (WEB-W2-34).
+     */
+    as: {
+      type: String,
+      default: 'div',
+      validator: v => ['div', 'section', 'article', 'aside', 'li'].includes(v)
+    }
   }
 }
 </script>

@@ -48,16 +48,22 @@
 /** ProjectCard — project summary card linking to the project detail view. */
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Card from '@/components/ui/Card.vue'
 import Pill from '@/components/ui/Pill.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
 import Icon from '@/components/ui/Icon.vue'
 
-const STATUS_LABEL = {
-  on_track: 'On track',
-  hot: 'Hot',
-  stalled: 'Stalled',
-  idle: 'Idle'
+/**
+ * Map from API status enum to the matching i18n key (WEB-W3-18). Replaces the
+ * previous module-level English-only map so the labels respond to locale
+ * changes. Unknown values fall back to the raw enum.
+ */
+const STATUS_KEY = {
+  on_track: 'projects.statusOnTrack',
+  hot: 'projects.statusHot',
+  stalled: 'projects.statusStalled',
+  idle: 'projects.statusIdle'
 }
 
 export default {
@@ -68,13 +74,16 @@ export default {
     project: { type: Object, required: true }
   },
   setup(props) {
+    const { t } = useI18n()
+
     /** Safe progress object; null when the API returns no progress data. */
     const progress = computed(() => props.project.progress ?? null)
 
-    /** Human-readable status label resolved from the API enum value. */
-    const statusLabel = computed(() =>
-      STATUS_LABEL[props.project.status] ?? props.project.status
-    )
+    /** Human-readable status label resolved from the API enum value via i18n. */
+    const statusLabel = computed(() => {
+      const key = STATUS_KEY[props.project.status]
+      return key ? t(key) : props.project.status
+    })
 
     return { progress, statusLabel }
   }

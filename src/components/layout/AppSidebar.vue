@@ -11,7 +11,7 @@
     <nav class="app-sidebar__nav">
       <div v-for="group in navGroups" :key="group.label">
         <h3 class="app-sidebar__group-label">
-          {{ group.label }}
+          {{ group.labelKey ? t(group.labelKey) : group.label }}
         </h3>
 
         <RouterLink
@@ -36,11 +36,11 @@
 
     <div class="app-sidebar__user">
       <span class="app-sidebar__avatar">
-        {{ (auth.userName || 'U').charAt(0).toUpperCase() }}
+        {{ (auth.userName || avatarFallback).charAt(0).toUpperCase() }}
       </span>
 
       <span class="app-sidebar__user-name">
-        {{ auth.userName || 'You' }}
+        {{ auth.userName || youFallback }}
       </span>
     </div>
   </aside>
@@ -48,7 +48,9 @@
 
 <script>
 /** AppSidebar — persistent left navigation panel with brand, nav groups, and user identity. */
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Icon from '@/components/ui/Icon.vue'
 import { navGroups } from './navConfig.js'
 import { useAuthStore } from '@/stores/auth.store.js'
@@ -59,8 +61,15 @@ export default {
   setup() {
     // -- State --
     const auth = useAuthStore()
+    const { t } = useI18n()
 
-    return { navGroups, auth }
+    // WEB-W3-10: the fallback display name and avatar letter are routed
+    // through i18n. The avatar letter is derived from the localized "You"
+    // string so it stays consistent in any locale (e.g. "T" for "Tú").
+    const youFallback = computed(() => t('nav.youFallback'))
+    const avatarFallback = computed(() => (t('nav.youFallback') || 'U').charAt(0))
+
+    return { navGroups, auth, t, youFallback, avatarFallback }
   }
 }
 </script>

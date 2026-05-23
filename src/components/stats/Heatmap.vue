@@ -1,11 +1,11 @@
 <template>
-  <figure class="heatmap" aria-label="Activity heatmap, last 26 weeks">
+  <figure class="heatmap" :aria-label="t('stats.heatmapAriaLabel')">
     <figcaption class="heatmap__caption">
-      {{ totalCompletions }} total completions over the last 26 weeks
+      {{ t('stats.heatmapCaption', { count: totalCompletions }) }}
     </figcaption>
 
     <!-- Grid: 26 columns, each column is 7 cells tall -->
-    <div class="heatmap__grid" role="grid" :aria-label="'Activity heatmap, last 26 weeks'">
+    <div class="heatmap__grid" role="grid" :aria-label="t('stats.heatmapAriaLabel')">
       <div
         v-for="col in 26"
         :key="col"
@@ -26,7 +26,7 @@
     <!-- Legend -->
     <div class="heatmap__legend" aria-hidden="true">
       <span class="heatmap__legend-label">
-        less
+        {{ t('stats.heatmapLegendLess') }}
       </span>
 
       <div class="heatmap__swatch heatmap__swatch--empty" />
@@ -38,7 +38,7 @@
       <div class="heatmap__swatch heatmap__swatch--full" />
 
       <span class="heatmap__legend-label">
-        more
+        {{ t('stats.heatmapLegendMore') }}
       </span>
     </div>
   </figure>
@@ -47,6 +47,7 @@
 <script>
 /** Heatmap — 26-week x 7-day activity grid with intensity-coded cells and a legend. */
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -57,6 +58,7 @@ export default {
     values: { type: Array, required: true }
   },
   setup(props) {
+    const { t } = useI18n()
     // -- Anchor: most-recent Sunday at local midnight (WEB-W3-07).
     // Computed once at setup so every cellLabel call indexes off the same
     // stable base rather than re-deriving from `new Date()` per call.
@@ -118,7 +120,7 @@ export default {
       props.values.reduce((sum, v) => sum + (v || 0), 0)
     )
 
-    return { intensityClass, cellLabel, totalCompletions }
+    return { intensityClass, cellLabel, totalCompletions, t }
   }
 }
 </script>

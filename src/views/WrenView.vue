@@ -11,7 +11,13 @@
 
     <!-- Messages area -->
     <div ref="bodyRef" class="wren-view__messages">
-      <div v-if="store.loading" class="wren-view__loading">
+      <!--
+        Gate loading/empty/messages so the empty-state copy never flashes
+        before the first store.load() resolves (WEB-W4-19). Until `loaded`
+        flips true we render the loading indicator regardless of the store's
+        loading flag (which starts false).
+      -->
+      <div v-if="!loaded || store.loading" class="wren-view__loading">
         {{ t('common.loading') }}
       </div>
 
@@ -73,7 +79,7 @@
 
 <script>
 /** WrenView — full-screen AI chat interface with message history, quick-prompt chips, and input bar. */
-import { ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
@@ -87,6 +93,25 @@ export default {
     const { t } = useI18n()
     const bodyRef = ref(null)
     const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+
+    // Tracks whether the initial load has resolved so we don't briefly
+    // render the empty state before useWrenChat's onMounted load completes
+    // (WEB-W4-19). Initialise from the current store.loading so a fresh
+    // mount with an already-populated store doesn't have to wait a tick
+    // for `loaded` to flip true (preserves the existing synchronous test
+    // surface).
+    const loaded = ref(!store.loading)
+    onMounted(() => {
+      if (!store.loading) {
+        loaded.value = true
+      }
+    })
+    watch(
+      () => store.loading,
+      isLoading => {
+        if (!isLoading) loaded.value = true
+      }
+    )
 
     // Captured once at setup; the divider never needs to react mid-session
     // (WEB-W4-18 parallels the WEB-T08-011 fix for ReviewView).
@@ -106,6 +131,7 @@ export default {
       handleKeydown,
       fillFromChip,
       today,
+      loaded
     }
   }
 }
