@@ -38,22 +38,100 @@
     <!-- To triage list -->
     <SectionHeader :label="t('inbox.toTriageSection')" :count="store.items.length" />
 
+    <!-- Bulk action bar — appears when ≥1 item is selected -->
+    <div v-if="selectedIds.length" class="inbox-view__bulk-bar">
+      <span class="inbox-view__bulk-count">
+        {{ t('inbox.selectedCount', { count: selectedIds.length }) }}
+      </span>
+
+      <select v-model="projectTarget" class="inbox-view__project-select">
+        <option value="">
+          {{ t('inbox.bulkSendToProject') }}
+        </option>
+
+        <option v-for="p in projectsStore.projects" :key="p.id" :value="p.id">
+          {{ p.name }}
+        </option>
+      </select>
+
+      <Button
+        size="sm"
+        variant="primary"
+        :disabled="!projectTarget || store.saving"
+        @click="bulkSendToProject"
+      >
+        {{ t('inbox.bulkConvert') }}
+      </Button>
+
+      <Button
+        size="sm"
+        variant="ghost"
+        :disabled="store.saving"
+        @click="bulkScheduleToday"
+      >
+        {{ t('inbox.bulkScheduleToday') }}
+      </Button>
+
+      <Button
+        size="sm"
+        variant="ghost"
+        :disabled="store.saving"
+        @click="bulkTriage"
+      >
+        {{ t('inbox.bulkTriage') }}
+      </Button>
+
+      <Button
+        size="sm"
+        variant="ghost"
+        :disabled="store.saving"
+        @click="bulkDelete"
+      >
+        {{ t('inbox.bulkDelete') }}
+      </Button>
+
+      <Button size="sm" variant="ghost" @click="clearSelection">
+        {{ t('inbox.bulkClear') }}
+      </Button>
+    </div>
+
     <div v-if="store.items.length === 0 && !store.loading" class="inbox-view__status">
       {{ t('inbox.emptyState') }}
     </div>
 
     <div v-else class="inbox-view__list">
+      <header v-if="store.items.length" class="inbox-view__list-header">
+        <input
+          type="checkbox"
+          class="inbox-view__select-all"
+          :checked="allSelected"
+          :indeterminate.prop="someSelected && !allSelected"
+          :aria-label="t('inbox.selectAll')"
+          @change="toggleSelectAll"
+        >
+
+        <span class="inbox-view__select-all-label">
+          {{ allSelected ? t('inbox.unselectAll') : t('inbox.selectAll') }}
+        </span>
+      </header>
+
       <div
         v-for="(item, idx) in store.items"
         :key="item.id"
         class="inbox-view__list-item"
       >
-        <!-- Index -->
+        <input
+          type="checkbox"
+          :checked="selectedSet.has(item.id)"
+          class="inbox-view__row-check"
+          :aria-label="t('inbox.selectItem')"
+          @change="toggle(item.id)"
+        >
+
         <span class="inbox-view__index">
           {{ String(idx + 1).padStart(2, '0') }}
         </span>
 
-        <!-- Content -->
         <div class="inbox-view__content">
           <span class="inbox-view__text">
             {{ item.text }}
@@ -64,7 +142,6 @@
           </span>
         </div>
 
-        <!-- Triage action -->
         <Button size="sm" variant="ghost" @click="store.triage(item.id)">
           {{ t('inbox.triageCta') }}
         </Button>
@@ -74,32 +151,123 @@
 </template>
 
 <script>
-/** InboxView — quick-capture panel with a running triage list. */
-import { onMounted, ref } from 'vue'
+/**
+ * InboxView — quick-capture panel with a running triage list. Each row now
+ * carries a checkbox so the user can multi-select; the bulk bar surfaces
+ * Send-to-project, Schedule-today, Triage, and Delete actions. Selection
+ * state stays in the view (not the store) because no other view needs it.
+ */
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useInboxStore } from '@/stores/inbox.store.js'
+import { useProjectsStore } from '@/stores/projects.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import TextField from '@/components/ui/TextField.vue'
 
+function todayIso() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default {
   name: 'InboxView',
   components: { ScreenHeading, SectionHeader, Button, Card, TextField },
   setup() {
-    // -- State --
     const { t } = useI18n()
     const store = useInboxStore()
+    const projectsStore = useProjectsStore()
     const captureText = ref('')
     const capturing = ref(false)
+    const selectedIds = ref([])
+    const projectTarget = ref('')
 
-    // -- Lifecycle --
-    onMounted(() => store.load())
+    const selectedSet = computed(() => new Set(selectedIds.value))
 
-    // -- Function definitions --
+    const allSelected = computed(
+      () => store.items.length > 0 && selectedIds.value.length === store.items.length
+    )
 
-    /** Submits the current capture text to the store and clears the input. */
+    const someSelected = computed(() => selectedIds.value.length > 0)
+
+    onMounted(() => {
+      store.load()
+      // Bring the projects list in so the "Send to project" picker has data.
+      projectsStore.loadProjects()
+    })
+
+    // Drop any stale selections when the items list shifts (e.g. after a
+    // successful bulk action that triaged the selected rows away).
+    watch(
+      () => store.items,
+      items => {
+        const ids = new Set(items.map(i => i.id))
+        selectedIds.value = selectedIds.value.filter(id => ids.has(id))
+      },
+      { deep: false }
+    )
+
+    function toggle(id) {
+      const set = selectedSet.value
+      if (set.has(id)) {
+        selectedIds.value = selectedIds.value.filter(x => x !== id)
+      } else {
+        selectedIds.value = [...selectedIds.value, id]
+      }
+    }
+
+    function toggleSelectAll() {
+      if (allSelected.value) {
+        selectedIds.value = []
+      } else {
+        selectedIds.value = store.items.map(i => i.id)
+      }
+    }
+
+    function clearSelection() {
+      selectedIds.value = []
+      projectTarget.value = ''
+    }
+
+    async function bulkTriage() {
+      try {
+        await store.triageMany(selectedIds.value)
+        clearSelection()
+      } catch {
+        // Toast surfaced by the store.
+      }
+    }
+
+    async function bulkDelete() {
+      try {
+        await store.deleteMany(selectedIds.value)
+        clearSelection()
+      } catch {
+        // Toast surfaced.
+      }
+    }
+
+    async function bulkSendToProject() {
+      if (!projectTarget.value) return
+      try {
+        await store.convertToTasks(selectedIds.value, { projectId: projectTarget.value })
+        clearSelection()
+      } catch {
+        // Toast surfaced.
+      }
+    }
+
+    async function bulkScheduleToday() {
+      try {
+        await store.convertToTasks(selectedIds.value, { scheduledDate: todayIso() })
+        clearSelection()
+      } catch {
+        // Toast surfaced.
+      }
+    }
+
     async function capture() {
       if (!captureText.value.trim()) return
       capturing.value = true
@@ -111,20 +279,6 @@ export default {
       }
     }
 
-    /**
-     * Formats a date string as a human-readable relative time using i18n
-     * keys (WEB-W4-08). Returns 'just now' under one minute, then minutes,
-     * hours, and days.
-     *
-     * Note (WEB-W4-31): the value is recomputed on every render but does not
-     * reactively tick with the passage of time — a "5m ago" label stays "5m
-     * ago" until something else triggers a re-render. This is accepted for
-     * the inbox triage flow because items typically move out quickly; a
-     * shared `useRelativeTime` composable would solve it for any
-     * long-display surface.
-     * @param {string} dateStr
-     * @returns {string}
-     */
     function relativeTime(dateStr) {
       if (!dateStr) return ''
       const now = Date.now()
@@ -139,7 +293,27 @@ export default {
       return t('inbox.relDaysAgo', { count: diffDays })
     }
 
-    return { t, store, captureText, capturing, capture, relativeTime }
+    return {
+      t,
+      store,
+      projectsStore,
+      captureText,
+      capturing,
+      selectedIds,
+      selectedSet,
+      allSelected,
+      someSelected,
+      projectTarget,
+      toggle,
+      toggleSelectAll,
+      clearSelection,
+      bulkTriage,
+      bulkDelete,
+      bulkSendToProject,
+      bulkScheduleToday,
+      capture,
+      relativeTime
+    }
   }
 }
 </script>
@@ -166,12 +340,37 @@ export default {
     @apply flex-1;
   }
 
+  &__bulk-bar {
+    @apply sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-rule-soft bg-paper p-2 shadow-sm;
+  }
+
+  &__bulk-count {
+    @apply font-mono text-[11px] text-muted;
+  }
+
+  &__project-select {
+    @apply rounded-md border border-rule-soft bg-paper px-2 py-1 text-[13px] text-ink;
+  }
+
   &__list {
     @apply rounded-md bg-paper-2 px-2.5 py-1 shadow-sm;
   }
 
+  &__list-header {
+    @apply flex items-center gap-2 border-b border-rule-soft py-2;
+  }
+
+  &__select-all,
+  &__row-check {
+    @apply h-4 w-4 accent-accent;
+  }
+
+  &__select-all-label {
+    @apply text-[12px] text-muted;
+  }
+
   &__list-item {
-    @apply flex items-center gap-4 border-b border-rule-soft py-3.5 last:border-0;
+    @apply flex items-center gap-3 border-b border-rule-soft py-3.5 last:border-0;
   }
 
   &__index {

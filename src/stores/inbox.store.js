@@ -6,7 +6,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo.js'
-import { INBOX_ITEMS_QUERY, CREATE_INBOX_ITEM, TRIAGE_INBOX_ITEM } from '@/api/operations/index.js'
+import {
+  INBOX_ITEMS_QUERY,
+  CREATE_INBOX_ITEM,
+  TRIAGE_INBOX_ITEM,
+  DELETE_INBOX_ITEM,
+  TRIAGE_INBOX_ITEMS_BULK,
+  DELETE_INBOX_ITEMS_BULK,
+  CONVERT_INBOX_ITEMS_TO_TASKS
+} from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useInboxStore = defineStore('inbox', () => {
@@ -87,5 +95,91 @@ export const useInboxStore = defineStore('inbox', () => {
     }
   }
 
-  return { items, loading, saving, error, load, capture, triage }
+  /** Delete a single inbox item then refresh. */
+  async function deleteItem(id) {
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({ mutation: DELETE_INBOX_ITEM, variables: { id } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to delete item')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Triage many items in one round trip. */
+  async function triageMany(ids) {
+    if (!ids?.length) return
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({ mutation: TRIAGE_INBOX_ITEMS_BULK, variables: { ids } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to triage items')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Delete many items in one round trip. */
+  async function deleteMany(ids) {
+    if (!ids?.length) return
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({ mutation: DELETE_INBOX_ITEMS_BULK, variables: { ids } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to delete items')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Convert selected items to tasks (optionally pinning project + date). */
+  async function convertToTasks(ids, { projectId = null, scheduledDate = null } = {}) {
+    if (!ids?.length) return
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({
+        mutation: CONVERT_INBOX_ITEMS_TO_TASKS,
+        variables: { ids, projectId, scheduledDate }
+      })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to convert items')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  return {
+    items,
+    loading,
+    saving,
+    error,
+    load,
+    capture,
+    triage,
+    deleteItem,
+    triageMany,
+    deleteMany,
+    convertToTasks
+  }
 })

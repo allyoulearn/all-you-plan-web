@@ -225,7 +225,17 @@
     "relJustNow": "just now",
     "relMinutesAgo": "{count}m ago",
     "relHoursAgo": "{count}h ago",
-    "relDaysAgo": "{count}d ago"
+    "relDaysAgo": "{count}d ago",
+    "selectAll": "Select all",
+    "unselectAll": "Unselect all",
+    "selectItem": "Select item",
+    "selectedCount": "{count} selected",
+    "bulkSendToProject": "Send to project…",
+    "bulkConvert": "Add to project",
+    "bulkScheduleToday": "Schedule today",
+    "bulkTriage": "Triage",
+    "bulkDelete": "Delete",
+    "bulkClear": "Clear"
   },
   "stats": {
     "kpiStreak": "Streak",
