@@ -1,40 +1,54 @@
 /** Mock fixtures for the Wren coach screen. */
 import { Observable } from '@apollo/client/core'
 
+// Sender values mirror the WrenSender enum in the API schema:
+// `coach | user`. Earlier fixtures used `'wren'` which never matched the
+// enum — the bubble defaulted to the coach branch because the WrenBubble
+// template only special-cases `sender === 'user'`. Aligning the values
+// here makes the mock data trustworthy for schema-shape assertions.
+//
+// `actions` is `[WrenAction!]!` in the schema (non-null array), so the
+// fixture seeds [] rather than null. `status` is `String!`; 'complete'
+// matches the canonical finished-turn state.
 const wrenMessages = [
   {
     id: 'wm1',
-    sender: 'wren',
+    sender: 'coach',
     text: 'Good morning. You have five tasks lined up today and your streak is at six days. What feels most important to protect?',
-    actions: null,
+    actions: [],
+    status: 'complete',
     createdAt: '2026-05-22T06:00:00.000Z'
   },
   {
     id: 'wm2',
     sender: 'user',
     text: 'The mentor call prep. Everything else can slip but that cannot.',
-    actions: null,
+    actions: [],
+    status: 'complete',
     createdAt: '2026-05-22T06:05:00.000Z'
   },
   {
     id: 'wm3',
-    sender: 'wren',
+    sender: 'coach',
     text: 'Solid priority. I will nudge you at 14:30 so you have 30 minutes to prepare before the call. Anything blocking you on the writing task?',
     actions: ['Set a reminder', 'Skip the nudge'],
+    status: 'complete',
     createdAt: '2026-05-22T06:05:30.000Z'
   },
   {
     id: 'wm4',
     sender: 'user',
     text: 'Not blocking, just procrastinating. I know what I need to write.',
-    actions: null,
+    actions: [],
+    status: 'complete',
     createdAt: '2026-05-22T06:07:00.000Z'
   },
   {
     id: 'wm5',
-    sender: 'wren',
+    sender: 'coach',
     text: 'Then start with two sentences. Momentum usually takes care of the rest. You have got this.',
-    actions: null,
+    actions: [],
+    status: 'complete',
     createdAt: '2026-05-22T06:07:30.000Z'
   }
 ]
@@ -108,9 +122,12 @@ export const registry = {
   sendWrenMessage: variables => ({
     sendWrenMessage: {
       id: 'wm-new',
-      sender: 'wren',
+      sender: 'coach',
       text: `Got it. You said: "${variables.text}". I am processing that now.`,
-      actions: null,
+      // status mirrors the schema's WrenMessage.status non-null contract;
+      // 'complete' matches the legacy scripted path (no streaming).
+      status: 'complete',
+      actions: [],
       createdAt: new Date().toISOString()
     }
   }),
