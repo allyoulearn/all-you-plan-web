@@ -35,12 +35,18 @@
             </span>
           </div>
 
-          <KanbanCard
-            v-for="task in col.tasks"
-            :key="task.id"
-            :task="task"
-            @complete="store.completeTask"
-          />
+          <TransitionGroup
+            name="task-complete"
+            tag="div"
+            class="kanban-view__column-tasks"
+          >
+            <KanbanCard
+              v-for="task in col.tasks"
+              :key="task.id"
+              :task="task"
+              @complete="store.completeTask"
+            />
+          </TransitionGroup>
 
           <p v-if="!col.tasks.length" class="kanban-view__empty-col">
             {{ t('kanban.emptyColumn') }}
@@ -136,8 +142,53 @@ export default {
     @apply font-mono text-[11px] text-muted;
   }
 
+  &__column-tasks {
+    @apply flex flex-col gap-2;
+  }
+
   &__empty-col {
     @apply text-[12px] text-muted;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .task-complete-leave-active {
+    transition:
+      opacity 220ms ease-out,
+      transform 220ms ease-out,
+      max-height 220ms ease-out 80ms,
+      margin 220ms ease-out 80ms,
+      padding 220ms ease-out 80ms;
+    overflow: hidden;
+  }
+
+  .task-complete-leave-from {
+    max-height: 200px;
+  }
+
+  .task-complete-leave-to {
+    opacity: 0;
+    transform: translateX(8px);
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .task-complete-enter-active {
+    transition:
+      opacity 180ms ease-out 120ms,
+      transform 180ms ease-out 120ms;
+  }
+
+  .task-complete-enter-from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  .task-complete-move {
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 </style>
