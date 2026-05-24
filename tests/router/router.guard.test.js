@@ -83,17 +83,24 @@ describe('router guard', () => {
     }
   })
 
-  it('every named route with a lazy component factory resolves to a Promise', () => {
+  it('every named route with a lazy component factory resolves to a Promise', async () => {
     // Calling the factory functions covers the `() => import(...)` lines in
     // router/index.js, bringing statement and function coverage to the threshold.
+    // We await every factory's promise so the transitive view imports settle
+    // before this test's environment is torn down — without the await, the
+    // dynamic-import chain of a heavier view (e.g. KanbanView) can outlive the
+    // jsdom environment and surface as an unhandled rejection from vitest.
     const namedRoutes = router
       .getRoutes()
       .filter(r => r.name && typeof r.components?.default === 'function')
+    const promises = []
     for (const route of namedRoutes) {
       const factory = route.components.default
       const result = factory()
       expect(result).toBeInstanceOf(Promise)
+      promises.push(result)
     }
+    await Promise.allSettled(promises)
   })
 
   // -- afterEach title sync pattern --

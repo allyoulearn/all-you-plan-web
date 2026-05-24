@@ -62,7 +62,19 @@
     "tagPlaceholder": "e.g. deep, errand, family",
     "effortPlaceholder": "30",
     "create": "Add task",
-    "creating": "Adding…"
+    "creating": "Adding…",
+    "detailTitle": "Task details",
+    "noteLabel": "Note",
+    "notePlaceholder": "Add details, context, or links…",
+    "dateLabel": "Date",
+    "columnLabel": "Column",
+    "priorityLabel": "Priority",
+    "priorityUrgent": "Urgent",
+    "priorityHigh": "High",
+    "priorityNormal": "Normal",
+    "priorityLow": "Low",
+    "subtasksLabel": "Subtasks",
+    "subtaskPlaceholder": "Add a step…"
   },
   "today": {
     "addTask": "Add to today",

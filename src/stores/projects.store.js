@@ -27,6 +27,11 @@ import {
   UPDATE_PROJECT,
   DELETE_PROJECT,
   CREATE_TASK,
+  UPDATE_TASK,
+  DELETE_TASK,
+  ADD_SUBTASK,
+  UPDATE_SUBTASK,
+  DELETE_SUBTASK,
   CREATE_COLUMN,
   UPDATE_COLUMN,
   REORDER_COLUMNS,
@@ -444,6 +449,135 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Patch a task and update local state with the result. Used by the task
+   * detail modal which sends a diff of changed fields.
+   */
+  async function updateTask(id, input) {
+    const { toastError } = useErrorToast()
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_TASK,
+        variables: { id, input }
+      })
+      const updated = data?.updateTask
+      if (updated && board.value) {
+        // Reload from server when a column-changing edit may have moved the
+        // task off the current view; otherwise patch the existing entry to
+        // avoid a perceived flash.
+        if (input.columnId && input.columnId !== updated.columnId) {
+          await loadBoard(board.value.project.id)
+        } else {
+          board.value = {
+            ...board.value,
+            tasksByColumn: board.value.tasksByColumn.map(entry => ({
+              columnId: entry.columnId,
+              tasks: entry.tasks.map(t => (t.id === id ? { ...t, ...updated } : t))
+            }))
+          }
+        }
+      }
+      return updated
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to save task')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Delete a task and remove it from local state. Reloads the board on
+   *  success so progress + columns reflect the deletion. */
+  async function deleteTask(id) {
+    const { toastError } = useErrorToast()
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({ mutation: DELETE_TASK, variables: { id } })
+      if (board.value?.project?.id) {
+        await loadBoard(board.value.project.id)
+      }
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to delete task')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
+   * Subtask helpers — all return the parent task's updated subtasks array
+   * so callers can patch local state without refetching the whole board.
+   */
+  function patchTaskSubtasks(taskId, subtasks) {
+    if (!board.value) return
+    board.value = {
+      ...board.value,
+      tasksByColumn: board.value.tasksByColumn.map(entry => ({
+        columnId: entry.columnId,
+        tasks: entry.tasks.map(t => (t.id === taskId ? { ...t, subtasks } : t))
+      }))
+    }
+  }
+
+  async function addSubtask(taskId, text) {
+    const { toastError } = useErrorToast()
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: ADD_SUBTASK,
+        variables: { taskId, text }
+      })
+      patchTaskSubtasks(taskId, data?.addSubtask?.subtasks ?? [])
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to add step')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function updateSubtask(taskId, subtaskId, patch) {
+    const { toastError } = useErrorToast()
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_SUBTASK,
+        variables: { taskId, subtaskId, ...patch }
+      })
+      patchTaskSubtasks(taskId, data?.updateSubtask?.subtasks ?? [])
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to update step')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function deleteSubtask(taskId, subtaskId) {
+    const { toastError } = useErrorToast()
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DELETE_SUBTASK,
+        variables: { taskId, subtaskId }
+      })
+      patchTaskSubtasks(taskId, data?.deleteSubtask?.subtasks ?? [])
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to delete step')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
   /** Persist a within-column reorder. */
   async function reorderTasksInColumn(columnId, taskIds, nextTasksByColumn) {
     const { toastError } = useErrorToast()
@@ -483,6 +617,11 @@ export const useProjectsStore = defineStore('projects', () => {
     archiveProject,
     deleteProject,
     createTask,
+    updateTask,
+    deleteTask,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
     createColumn,
     renameColumn,
     reorderColumns,

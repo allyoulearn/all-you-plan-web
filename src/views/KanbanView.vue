@@ -57,7 +57,11 @@
               @end="onTaskDragEnd"
             >
               <template #item="{ element: task }">
-                <KanbanCard :task="task" @complete="store.completeTask" />
+                <KanbanCard
+                  :task="task"
+                  @complete="store.completeTask"
+                  @open="openTaskDetail"
+                />
               </template>
             </draggable>
 
@@ -96,6 +100,18 @@
       :saving="store.saving"
       @confirm="onDeleteConfirm"
     />
+
+    <TaskDetailModal
+      v-model="detailOpen"
+      :task="detailTask"
+      :columns="localBoard?.columns ?? []"
+      :busy="store.saving"
+      @save="onTaskSave"
+      @delete-task="onTaskDelete"
+      @add-subtask="onAddSubtask"
+      @update-subtask="onUpdateSubtask"
+      @delete-subtask="onDeleteSubtask"
+    />
   </div>
 </template>
 
@@ -118,6 +134,7 @@ import ColumnHeaderMenu from '@/components/projects/ColumnHeaderMenu.vue'
 import RenameColumnModal from '@/components/projects/RenameColumnModal.vue'
 import DeleteColumnDialog from '@/components/projects/DeleteColumnDialog.vue'
 import AddColumnButton from '@/components/projects/AddColumnButton.vue'
+import TaskDetailModal from '@/components/tasks/TaskDetailModal.vue'
 
 /**
  * Deep-clone a board so vuedraggable can mutate the local copy without
@@ -147,7 +164,8 @@ export default {
     ColumnHeaderMenu,
     RenameColumnModal,
     DeleteColumnDialog,
-    AddColumnButton
+    AddColumnButton,
+    TaskDetailModal
   },
   setup() {
     const route = useRoute()
@@ -286,6 +304,57 @@ export default {
       }
     }
 
+    // Task detail modal — opens when a card is clicked. We keep a separate
+    // ref for the active task so the modal contents survive a store-side
+    // refresh (which would otherwise unmount the row mid-edit).
+    const detailOpen = ref(false)
+    const detailTaskId = ref(null)
+    const detailTask = computed(() => {
+      if (!detailTaskId.value || !localBoard.value) return null
+      for (const entry of localBoard.value.tasksByColumn ?? []) {
+        const t = entry.tasks.find(x => x.id === detailTaskId.value)
+        if (t) return t
+      }
+      return null
+    })
+    function openTaskDetail(task) {
+      detailTaskId.value = task.id
+      detailOpen.value = true
+    }
+    async function onTaskSave(updates) {
+      if (!detailTaskId.value || Object.keys(updates).length === 0) {
+        detailOpen.value = false
+        return
+      }
+      try {
+        await store.updateTask(detailTaskId.value, updates)
+        detailOpen.value = false
+      } catch {
+        // Toast surfaced; keep modal open.
+      }
+    }
+    async function onTaskDelete() {
+      if (!detailTaskId.value) return
+      try {
+        await store.deleteTask(detailTaskId.value)
+        detailOpen.value = false
+      } catch {
+        // Toast surfaced.
+      }
+    }
+    function onAddSubtask({ text }) {
+      if (!detailTaskId.value) return
+      store.addSubtask(detailTaskId.value, text).catch(() => {})
+    }
+    function onUpdateSubtask({ subtaskId, ...patch }) {
+      if (!detailTaskId.value) return
+      store.updateSubtask(detailTaskId.value, subtaskId, patch).catch(() => {})
+    }
+    function onDeleteSubtask({ subtaskId }) {
+      if (!detailTaskId.value) return
+      store.deleteSubtask(detailTaskId.value, subtaskId).catch(() => {})
+    }
+
     onMounted(() => store.loadBoard(route.params.id))
 
     return {
@@ -308,6 +377,14 @@ export default {
       openDeleteFor,
       onDeleteConfirm,
       onAddColumn,
+      detailOpen,
+      detailTask,
+      openTaskDetail,
+      onTaskSave,
+      onTaskDelete,
+      onAddSubtask,
+      onUpdateSubtask,
+      onDeleteSubtask,
       t
     }
   }

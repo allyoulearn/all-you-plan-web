@@ -74,7 +74,12 @@ const boardTasks = [
     tag: 'work',
     done: false,
     columnId: 'col-bl',
-    order: 0
+    order: 0,
+    priority: 'normal',
+    scheduledDate: null,
+    scheduledTime: null,
+    effortMinutes: 45,
+    subtasks: []
   },
   {
     id: 'bt2',
@@ -83,7 +88,15 @@ const boardTasks = [
     tag: 'work',
     done: false,
     columnId: 'col-bl',
-    order: 1
+    order: 1,
+    priority: 'high',
+    scheduledDate: null,
+    scheduledTime: null,
+    effortMinutes: null,
+    subtasks: [
+      { id: 'st1', text: 'Audit existing components', done: true },
+      { id: 'st2', text: 'Pick breakpoint values', done: false }
+    ]
   },
   {
     id: 'bt3',
@@ -92,7 +105,12 @@ const boardTasks = [
     tag: 'work',
     done: false,
     columnId: 'col-tw',
-    order: 0
+    order: 0,
+    priority: 'urgent',
+    scheduledDate: '2026-05-26',
+    scheduledTime: null,
+    effortMinutes: 30,
+    subtasks: []
   },
   {
     id: 'bt4',
@@ -101,7 +119,12 @@ const boardTasks = [
     tag: 'work',
     done: false,
     columnId: 'col-tw',
-    order: 1
+    order: 1,
+    priority: 'normal',
+    scheduledDate: null,
+    scheduledTime: null,
+    effortMinutes: 90,
+    subtasks: []
   },
   {
     id: 'bt5',
@@ -110,7 +133,12 @@ const boardTasks = [
     tag: 'work',
     done: false,
     columnId: 'col-do',
-    order: 0
+    order: 0,
+    priority: 'high',
+    scheduledDate: null,
+    scheduledTime: null,
+    effortMinutes: null,
+    subtasks: []
   },
   {
     id: 'bt6',
@@ -119,7 +147,12 @@ const boardTasks = [
     tag: 'work',
     done: true,
     columnId: 'col-dn',
-    order: 0
+    order: 0,
+    priority: 'normal',
+    scheduledDate: null,
+    scheduledTime: null,
+    effortMinutes: null,
+    subtasks: []
   },
   {
     id: 'bt7',
@@ -128,7 +161,12 @@ const boardTasks = [
     tag: 'work',
     done: true,
     columnId: 'col-dn',
-    order: 1
+    order: 1,
+    priority: 'low',
+    scheduledDate: null,
+    scheduledTime: null,
+    effortMinutes: null,
+    subtasks: []
   }
 ]
 

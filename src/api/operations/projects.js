@@ -68,6 +68,15 @@ export const PROJECT_BOARD_QUERY = gql`
           done
           columnId
           order
+          priority
+          scheduledDate
+          scheduledTime
+          effortMinutes
+          subtasks {
+            id
+            text
+            done
+          }
         }
       }
     }
@@ -134,13 +143,77 @@ export const REORDER_TASKS_IN_COLUMN = gql`
   }
 `
 
-/** Update a task; primarily used to move it to a different Kanban column. */
+/** Update a task. Returns every field the task detail modal reads so callers
+ *  can rely on a single round trip after a save. */
 export const UPDATE_TASK = gql`
   mutation UpdateTask($id: ID!, $input: UpdateTaskInput!) {
     updateTask(id: $id, input: $input) {
       id
+      title
+      note
+      tag
+      done
       columnId
+      order
+      priority
+      scheduledDate
+      scheduledTime
+      effortMinutes
+      subtasks {
+        id
+        text
+        done
+      }
     }
+  }
+`
+
+/** Append a subtask checklist item to a task. */
+export const ADD_SUBTASK = gql`
+  mutation AddSubtask($taskId: ID!, $text: String!) {
+    addSubtask(taskId: $taskId, text: $text) {
+      id
+      subtasks {
+        id
+        text
+        done
+      }
+    }
+  }
+`
+
+/** Update a subtask's text or completion state. */
+export const UPDATE_SUBTASK = gql`
+  mutation UpdateSubtask($taskId: ID!, $subtaskId: ID!, $text: String, $done: Boolean) {
+    updateSubtask(taskId: $taskId, subtaskId: $subtaskId, text: $text, done: $done) {
+      id
+      subtasks {
+        id
+        text
+        done
+      }
+    }
+  }
+`
+
+/** Remove a subtask from its parent task. */
+export const DELETE_SUBTASK = gql`
+  mutation DeleteSubtask($taskId: ID!, $subtaskId: ID!) {
+    deleteSubtask(taskId: $taskId, subtaskId: $subtaskId) {
+      id
+      subtasks {
+        id
+        text
+        done
+      }
+    }
+  }
+`
+
+/** Permanently delete a task. */
+export const DELETE_TASK = gql`
+  mutation DeleteTask($id: ID!) {
+    deleteTask(id: $id)
   }
 `
 
