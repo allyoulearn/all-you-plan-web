@@ -79,22 +79,74 @@ export const useProjectsStore = defineStore('projects', () => {
   }
 
   /**
-   * Mark a project task as complete, then refresh the active board.
-   * Resets `errorBoard.value` at the start so a stale message from a prior
-   * failure does not persist past a successful mutation (WEB-W1-05 / WEB-W1-13).
+   * Mark a project task as complete with an optimistic local update.
+   *
+   * Moves the task from its source column (`thisWeek` | `doing` | `backlog`)
+   * to the front of `done`, recomputes `project.progress`, and fires the
+   * mutation in the background — so the views never flip to a loading state
+   * during completion. On failure, the captured snapshot is restored, the
+   * error is surfaced via `errorBoard` + toast (WEB-W1-05 / WEB-W1-13), and
+   * rethrown for callers (WEB-W1-01).
+   *
+   * No-ops when `board` is null, when the task id is not found in any column,
+   * or when the task is already in `done` (idempotent — protects against
+   * double-clicks while the mutation is in flight).
    * @param {string} id - The task ID to complete
    * @throws Re-throws the API error after surfacing it via errorBoard + toast.
    */
   async function completeTask(id) {
+    if (!board.value) return
+
+    const SOURCE_COLUMNS = ['thisWeek', 'doing', 'backlog']
+    let sourceCol = null
+    let task = null
+    for (const col of SOURCE_COLUMNS) {
+      const found = board.value[col]?.find(t => t.id === id)
+      if (found) {
+        sourceCol = col
+        task = found
+        break
+      }
+    }
+    if (!task) {
+      const inDone = board.value.done?.some(t => t.id === id)
+      if (inDone) return
+      return
+    }
+
     const { toastError } = useErrorToast()
+    const snapshot = {
+      thisWeek: [...(board.value.thisWeek ?? [])],
+      doing: [...(board.value.doing ?? [])],
+      backlog: [...(board.value.backlog ?? [])],
+      done: [...(board.value.done ?? [])],
+      progress: board.value.project?.progress ? { ...board.value.project.progress } : null
+    }
+
+    board.value[sourceCol] = board.value[sourceCol].filter(t => t.id !== id)
+    board.value.done = [{ ...task, done: true }, ...(board.value.done ?? [])]
+    if (board.value.project?.progress) {
+      const total = board.value.project.progress.total ?? 0
+      const done = (board.value.project.progress.done ?? 0) + 1
+      board.value.project.progress = {
+        ...board.value.project.progress,
+        done,
+        percent: total > 0 ? Math.round((done / total) * 100) : 0
+      }
+    }
+
     errorBoard.value = ''
     saving.value = true
     try {
       await apolloClient.mutate({ mutation: COMPLETE_PROJECT_TASK, variables: { id } })
-      if (board.value?.project?.id) {
-        await loadBoard(board.value.project.id)
-      }
     } catch (e) {
+      board.value.thisWeek = snapshot.thisWeek
+      board.value.doing = snapshot.doing
+      board.value.backlog = snapshot.backlog
+      board.value.done = snapshot.done
+      if (snapshot.progress && board.value.project) {
+        board.value.project.progress = snapshot.progress
+      }
       errorBoard.value = e.message
       toastError(e, 'Failed to complete task')
       throw e

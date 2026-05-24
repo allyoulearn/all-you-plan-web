@@ -39,6 +39,21 @@ const fakeBoard = {
   ]
 }
 
+function makeOptimisticBoard() {
+  return {
+    project: {
+      id: 'p1',
+      title: 'Alpha',
+      status: 'on_track',
+      progress: { done: 1, total: 4, percent: 25 }
+    },
+    thisWeek: [{ id: 't1', title: 'Task A', done: false, tag: null }],
+    doing: [{ id: 't2', title: 'Task B', done: false, tag: null }],
+    backlog: [{ id: 't3', title: 'Task C', done: false, tag: null }],
+    done: [{ id: 't4', title: 'Task D', done: true, tag: null }]
+  }
+}
+
 describe('projects.store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -238,71 +253,117 @@ describe('projects.store', () => {
   })
 
   describe('completeTask()', () => {
-    it('calls the mutation and reloads the board', async () => {
+    it('moves the task to done locally without calling loadBoard (no reload flash)', async () => {
       apolloClient.mutate.mockResolvedValueOnce({})
-      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
       const store = useProjectsStore()
-      store.board = fakeBoard
+      store.board = makeOptimisticBoard()
+
       await store.completeTask('t1')
 
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { id: 't1' } })
       )
-      expect(apolloClient.query).toHaveBeenCalledWith(
-        expect.objectContaining({ variables: { id: 'p1' } })
-      )
+      expect(apolloClient.query).not.toHaveBeenCalled()
+      expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
+      expect(store.board.done[0]).toMatchObject({ id: 't1', done: true })
+      expect(store.board.project.progress.done).toBe(2)
+      expect(store.board.project.progress.percent).toBe(50)
+      expect(store.loadingBoard).toBe(false)
     })
 
-    it('does not reload the board when board.project is absent', async () => {
+    it('moves a task from doing to done', async () => {
       apolloClient.mutate.mockResolvedValueOnce({})
       const store = useProjectsStore()
-      store.board = null
-      await store.completeTask('t1')
+      store.board = makeOptimisticBoard()
 
+      await store.completeTask('t2')
+
+      expect(store.board.doing.find(t => t.id === 't2')).toBeUndefined()
+      expect(store.board.done[0]).toMatchObject({ id: 't2', done: true })
+    })
+
+    it('moves a task from backlog to done', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.completeTask('t3')
+
+      expect(store.board.backlog.find(t => t.id === 't3')).toBeUndefined()
+      expect(store.board.done[0]).toMatchObject({ id: 't3', done: true })
+    })
+
+    it('is a no-op when the task is already done (idempotent)', async () => {
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      const beforeDone = [...store.board.done]
+
+      await store.completeTask('t4')
+
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+      expect(store.board.done).toEqual(beforeDone)
+      expect(store.board.project.progress.done).toBe(1)
+    })
+
+    it('is a no-op when the task id is not found', async () => {
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.completeTask('nope')
+
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('is a no-op when board is null', async () => {
+      const store = useProjectsStore()
+      store.board = null
+
+      await store.completeTask('t1').catch(() => {})
+
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
       expect(apolloClient.query).not.toHaveBeenCalled()
     })
 
-    it('sets errorBoard and shows toast on failure', async () => {
+    it('rolls back state and surfaces error on mutation failure', async () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
       const store = useProjectsStore()
-      store.board = fakeBoard
+      store.board = makeOptimisticBoard()
+      const originalThisWeek = [...store.board.thisWeek]
+      const originalDone = [...store.board.done]
+      const originalProgress = { ...store.board.project.progress }
+
       await store.completeTask('t1').catch(() => {})
 
+      expect(store.board.thisWeek).toEqual(originalThisWeek)
+      expect(store.board.done).toEqual(originalDone)
+      expect(store.board.project.progress).toEqual(originalProgress)
       expect(store.errorBoard).toBe('complete failed')
       expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to complete task')
-    })
-
-    it('does not reload board when mutation fails', async () => {
-      apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
-      const store = useProjectsStore()
-      store.board = fakeBoard
-      await store.completeTask('t1').catch(() => {})
-
-      expect(apolloClient.query).not.toHaveBeenCalled()
     })
 
     it('re-throws the error on mutation failure (WEB-W1-01)', async () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
       const store = useProjectsStore()
-      store.board = fakeBoard
+      store.board = makeOptimisticBoard()
       await expect(store.completeTask('t1')).rejects.toThrow('complete failed')
     })
 
     it('clears a stale errorBoard before running (WEB-W1-05)', async () => {
       apolloClient.mutate.mockResolvedValueOnce({})
-      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
       const store = useProjectsStore()
-      store.board = fakeBoard
+      store.board = makeOptimisticBoard()
       store.errorBoard = 'stale error'
+
       await store.completeTask('t1')
+
       expect(store.errorBoard).toBe('')
     })
 
     it('toggles saving true → false (WEB-W1-11)', async () => {
       apolloClient.mutate.mockResolvedValueOnce({})
-      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
       const store = useProjectsStore()
-      store.board = fakeBoard
+      store.board = makeOptimisticBoard()
+
       const promise = store.completeTask('t1')
       expect(store.saving).toBe(true)
       await promise
@@ -312,9 +373,21 @@ describe('projects.store', () => {
     it('resets saving on failure (WEB-W1-11)', async () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
       const store = useProjectsStore()
-      store.board = fakeBoard
+      store.board = makeOptimisticBoard()
+
       await store.completeTask('t1').catch(() => {})
       expect(store.saving).toBe(false)
+    })
+
+    it('never sets loadingBoard during completion', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      const promise = store.completeTask('t1')
+      expect(store.loadingBoard).toBe(false)
+      await promise
+      expect(store.loadingBoard).toBe(false)
     })
   })
 
