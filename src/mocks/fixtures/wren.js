@@ -1,4 +1,5 @@
 /** Mock fixtures for the Wren coach screen. */
+import { Observable } from '@apollo/client/core'
 
 const wrenMessages = [
   {
@@ -38,8 +39,72 @@ const wrenMessages = [
   }
 ]
 
+const wrenConversation = {
+  id: 'mock-conv-1',
+  userId: 'mock-user-1',
+  startedAt: '2026-05-22T06:00:00.000Z',
+  closedAt: null
+}
+
+const wrenSettings = {
+  displayName: null,
+  tone: 'warm',
+  enabled: true,
+  dailyTurnCap: null
+}
+
+const wrenMemoryNotes = []
+
+/**
+ * Build a mocked WrenStream Observable that emits a couple of token deltas
+ * followed by a complete event. Used by the mock link to validate the
+ * streaming code path end-to-end in mock mode.
+ * @returns {Observable<unknown>}
+ */
+function wrenStream() {
+  return new Observable(observer => {
+    const t1 = setTimeout(() => {
+      observer.next({
+        data: {
+          wrenStream: {
+            __typename: 'WrenTokenDelta',
+            messageId: 'mock-msg',
+            text: 'Hi from mock'
+          }
+        }
+      })
+    }, 10)
+    const t2 = setTimeout(() => {
+      observer.next({
+        data: {
+          wrenStream: {
+            __typename: 'WrenComplete',
+            message: {
+              id: 'mock-msg',
+              sender: 'coach',
+              text: 'Hi from mock',
+              status: 'complete',
+              actions: [],
+              createdAt: new Date().toISOString()
+            }
+          }
+        }
+      })
+    }, 30)
+    const t3 = setTimeout(() => observer.complete(), 50)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  })
+}
+
 export const registry = {
   wrenMessages: () => ({ wrenMessages }),
+  wrenConversation: () => ({ wrenConversation }),
+  wrenSettings: () => ({ wrenSettings }),
+  wrenMemoryNotes: () => ({ wrenMemoryNotes }),
   sendWrenMessage: variables => ({
     sendWrenMessage: {
       id: 'wm-new',
@@ -48,5 +113,26 @@ export const registry = {
       actions: null,
       createdAt: new Date().toISOString()
     }
-  })
+  }),
+  updateWrenSettings: variables => ({
+    updateWrenSettings: {
+      displayName: variables.displayName ?? null,
+      tone: variables.tone ?? 'warm',
+      enabled: variables.enabled ?? true,
+      dailyTurnCap: variables.dailyTurnCap ?? null
+    }
+  }),
+  exportWrenConversation: variables => ({
+    exportWrenConversation: {
+      format: variables.format ?? 'markdown',
+      filename: `wren-conversation.${variables.format === 'json' ? 'json' : 'md'}`,
+      content:
+        variables.format === 'json'
+          ? JSON.stringify({ messages: wrenMessages }, null, 2)
+          : wrenMessages.map(m => `**${m.sender}** (${m.createdAt}): ${m.text}`).join('\n\n')
+    }
+  }),
+  // Subscription fixture: must return an Observable. The mock link forwards
+  // its emissions to subscribers (multiple events before complete).
+  wrenStream
 }

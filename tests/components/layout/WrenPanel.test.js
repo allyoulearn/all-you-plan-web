@@ -298,4 +298,37 @@ describe('WrenPanel', () => {
       expect(store.send).toHaveBeenCalledWith('click send')
     })
   })
+
+  describe('export button', () => {
+    it('renders an export button in the header', () => {
+      const wrapper = mountPanel()
+      expect(wrapper.find('.wren-panel__export-btn').exists()).toBe(true)
+    })
+
+    it('has type="button"', () => {
+      const wrapper = mountPanel()
+      expect(wrapper.find('.wren-panel__export-btn').attributes('type')).toBe('button')
+    })
+
+    it('clicking export calls store.exportConversation with markdown', async () => {
+      const wrapper = mountPanel()
+      const store = useWrenStore()
+      store.exportConversation = vi
+        .fn()
+        .mockResolvedValue({ format: 'markdown', filename: 'wren.md', content: '# hi' })
+      // Stub URL.createObjectURL / revokeObjectURL for jsdom
+      const origCreate = URL.createObjectURL
+      const origRevoke = URL.revokeObjectURL
+      URL.createObjectURL = vi.fn(() => 'blob:fake')
+      URL.revokeObjectURL = vi.fn()
+      try {
+        await wrapper.find('.wren-panel__export-btn').trigger('click')
+        await new Promise(r => setTimeout(r, 0))
+        expect(store.exportConversation).toHaveBeenCalledWith('markdown')
+      } finally {
+        URL.createObjectURL = origCreate
+        URL.revokeObjectURL = origRevoke
+      }
+    })
+  })
 })

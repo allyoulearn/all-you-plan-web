@@ -20,6 +20,17 @@
         <span class="wren-panel__status-dot" />
         {{ t('wren.liveStatus') }}
       </span>
+
+      <button
+        type="button"
+        class="wren-panel__export-btn"
+        title="Export conversation"
+        aria-label="Export conversation"
+        :disabled="exporting"
+        @click="onExport"
+      >
+        <ArrowDownTrayIcon class="wren-panel__export-icon" aria-hidden="true" />
+      </button>
     </div>
 
     <!-- Messages body -->
@@ -34,6 +45,9 @@
           :key="msg.id"
           :message="msg"
           @action="fillFromChip"
+          @undo="token => store.undo(token)"
+          @confirm="token => store.confirm(token)"
+          @cancel="token => store.cancel(token)"
         />
       </template>
 
@@ -86,19 +100,56 @@
 /** WrenPanel — right-side AI coach panel with message feed, quick-prompt chips, and input. */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
 import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat.js'
 
 export default {
   name: 'WrenPanel',
-  components: { WrenBubble },
+  components: { WrenBubble, ArrowDownTrayIcon },
   setup() {
     // -- State --
     const { t } = useI18n()
     const bodyRef = ref(null)
     const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+    const exporting = ref(false)
 
-    return { t, bodyRef, store, draft, sendMessage, handleKeydown, fillFromChip, QUICK_PROMPTS }
+    /**
+     * Download the current Wren conversation as a markdown file.
+     * Uses an in-memory Blob so the export works without server-side file storage.
+     */
+    async function onExport() {
+      exporting.value = true
+      try {
+        const exp = await store.exportConversation('markdown')
+        const blob = new Blob([exp.content], { type: 'text/markdown' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = exp.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } catch (e) {
+        store.error = e?.message || 'Export failed'
+      } finally {
+        exporting.value = false
+      }
+    }
+
+    return {
+      t,
+      bodyRef,
+      store,
+      draft,
+      sendMessage,
+      handleKeydown,
+      fillFromChip,
+      QUICK_PROMPTS,
+      exporting,
+      onExport
+    }
   }
 }
 </script>
@@ -129,6 +180,14 @@ export default {
 
   &__status-dot {
     @apply h-[7px] w-[7px] rounded-pill bg-ok;
+  }
+
+  &__export-btn {
+    @apply ml-2 inline-flex items-center justify-center rounded-pill border border-transparent bg-transparent p-1 text-muted transition-colors hover:bg-paper-3 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  &__export-icon {
+    @apply h-[18px] w-[18px];
   }
 
   &__body {
