@@ -2,7 +2,7 @@
   <div>
     <ScreenHeading
       eyebrow="Looking back · Journal"
-      title="Notes to"
+      title="Notes to "
       emphasis="yourself."
     />
 
@@ -37,6 +37,36 @@
         class="journal-view__editor"
       />
 
+      <div class="journal-view__tag-row">
+        <Icon name="tag" :size="14" />
+
+        <ul v-if="composeTags.length" class="journal-view__compose-tags">
+          <li v-for="tag in composeTags" :key="tag" class="journal-view__compose-tag">
+            <span>
+              {{ tag }}
+            </span>
+
+            <button
+              type="button"
+              class="journal-view__compose-tag-remove"
+              :aria-label="t('common.delete')"
+              @click="removeComposeTag(tag)"
+            >
+              <Icon name="x" :size="10" />
+            </button>
+          </li>
+        </ul>
+
+        <input
+          v-model="tagInput"
+          type="text"
+          class="journal-view__tag-input"
+          :placeholder="t('journal.tagPlaceholder')"
+          @keydown="onTagInputKeydown"
+          @blur="commitTagInput"
+        >
+      </div>
+
       <div class="journal-view__save-row">
         <Button
           variant="primary"
@@ -48,11 +78,33 @@
       </div>
     </Card>
 
-    <!-- Entries list -->
+    <!-- Entries list with tag filter pill row -->
     <SectionHeader :label="t('journal.entriesSection')" :count="store.entries.length" />
 
+    <div v-if="availableTags.length" class="journal-view__filter">
+      <button
+        type="button"
+        class="journal-view__filter-pill"
+        :class="{ 'journal-view__filter-pill--active': !activeTag }"
+        @click="setActiveTag(null)"
+      >
+        {{ t('journal.filterAll') }}
+      </button>
+
+      <button
+        v-for="tag in availableTags"
+        :key="tag"
+        type="button"
+        class="journal-view__filter-pill"
+        :class="{ 'journal-view__filter-pill--active': activeTag === tag }"
+        @click="setActiveTag(tag)"
+      >
+        {{ tag }}
+      </button>
+    </div>
+
     <div v-if="store.entries.length === 0 && !store.loading" class="journal-view__status">
-      {{ t('journal.emptyState') }}
+      {{ activeTag ? t('journal.emptyFiltered') : t('journal.emptyState') }}
     </div>
 
     <div class="journal-view__entries">
@@ -83,9 +135,17 @@
           </p>
 
           <div v-if="entry.tags && entry.tags.length" class="journal-view__tags">
-            <Pill v-for="tag in entry.tags" :key="tag">
-              {{ tag }}
-            </Pill>
+            <button
+              v-for="tag in entry.tags"
+              :key="tag"
+              type="button"
+              class="journal-view__tag-button"
+              @click="setActiveTag(tag)"
+            >
+              <Pill>
+                {{ tag }}
+              </Pill>
+            </button>
           </div>
         </div>
       </div>
@@ -94,8 +154,15 @@
 </template>
 
 <script>
-/** JournalView — daily prompt with a save form and a chronological entries list. */
-import { onMounted, ref, computed } from 'vue'
+/**
+ * JournalView — daily prompt with a save form, a chronological entries list,
+ * and a tag filter row. Compose-time tags are added by typing + Enter (or
+ * comma), removed via the X on each chip. The filter row aggregates every
+ * unique tag across recently loaded entries; clicking a pill triggers a
+ * server-side refetch with the tag arg so the result set stays accurate
+ * even after paging.
+ */
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useJournalStore } from '@/stores/journal.store.js'
 import ScreenHeading from '@/components/ui/ScreenHeading.vue'
@@ -103,36 +170,78 @@ import SectionHeader from '@/components/ui/SectionHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Pill from '@/components/ui/Pill.vue'
+import Icon from '@/components/ui/Icon.vue'
 
 export default {
   name: 'JournalView',
-  components: { ScreenHeading, SectionHeader, Button, Card, Pill },
+  components: { ScreenHeading, SectionHeader, Button, Card, Pill, Icon },
   setup() {
-    // -- State --
     const store = useJournalStore()
     const { t } = useI18n()
     const bodyText = ref('')
+    const tagInput = ref('')
+    const composeTags = ref([])
     const saving = ref(false)
+    const activeTag = ref(null)
+    /** Tags discovered across all loaded entries — used to populate the
+     *  filter pill row. We keep a separate ref (rather than re-computing
+     *  from `store.entries`) so filtering doesn't shrink the pill row to
+     *  only the active tag. */
+    const knownTags = ref([])
 
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-    /** Localised daily prompt (WEB-W4-07). */
     const prompt = computed(() => t('journal.prompt'))
 
-    // -- Lifecycle --
-    onMounted(() => store.load())
+    const availableTags = computed(() => [...knownTags.value].sort())
 
-    // -- Function definitions --
+    function rememberTagsFrom(entries) {
+      const set = new Set(knownTags.value)
+      for (const entry of entries ?? []) {
+        for (const tag of entry.tags ?? []) set.add(tag)
+      }
+      knownTags.value = [...set]
+    }
 
-    /**
-     * Derives a short pull-quote from the first eight words of entry text.
-     * Returns `undefined` for blank input so the server doesn't receive an
-     * empty pullQuote field; appends an ellipsis when the source had more
-     * than 8 words to make the truncation visible (WEB-W4-33).
-     * @param {string} text
-     * @returns {string|undefined}
-     */
+    onMounted(async () => {
+      await store.load()
+      rememberTagsFrom(store.entries)
+    })
+
+    function commitTagInput() {
+      const value = tagInput.value.trim().replace(/,$/, '').trim()
+      if (!value) {
+        tagInput.value = ''
+        return
+      }
+      if (!composeTags.value.includes(value)) {
+        composeTags.value = [...composeTags.value, value]
+      }
+      tagInput.value = ''
+    }
+
+    /** Commit on Enter or comma — Vue's v-on doesn't recognize a `.comma`
+     *  modifier, so we match on the key value directly. */
+    function onTagInputKeydown(e) {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault()
+        commitTagInput()
+      }
+    }
+
+    function removeComposeTag(tag) {
+      composeTags.value = composeTags.value.filter(t => t !== tag)
+    }
+
+    async function setActiveTag(tag) {
+      activeTag.value = tag
+      await store.load({ tag })
+      // Filtered fetches shouldn't shrink the pill row; only union new tags
+      // into the existing set.
+      rememberTagsFrom(store.entries)
+    }
+
     function pullQuoteFrom(text) {
       const trimmed = (text ?? '').trim()
       if (!trimmed) return undefined
@@ -142,8 +251,9 @@ export default {
       return words.length > 8 ? `${head}…` : head
     }
 
-    /** Saves the current editor text as a new journal entry. */
     async function saveEntry() {
+      // Commit any tag still sitting in the input before saving.
+      commitTagInput()
       if (!bodyText.value.trim()) return
       saving.value = true
       try {
@@ -152,33 +262,22 @@ export default {
           date: todayStr,
           prompt: prompt.value,
           body: bodyText.value.trim(),
-          tags: []
+          tags: [...composeTags.value]
         }
         if (pullQuote !== undefined) entry.pullQuote = pullQuote
         await store.createEntry(entry)
         bodyText.value = ''
+        composeTags.value = []
+        rememberTagsFrom(store.entries)
       } finally {
         saving.value = false
       }
     }
 
-    /**
-     * Extracts the numeric day from a YYYY-MM-DD date string. Tolerates a full
-     * ISO 8601 timestamp (e.g. "2026-05-20T03:00:00.000Z") by reading only the
-     * date portion.
-     * @param {string} dateStr
-     * @returns {number}
-     */
     function dayNumber(dateStr) {
       return Number(dateStr?.slice(0, 10).split('-')[2] ?? 0)
     }
 
-    /**
-     * Formats a YYYY-MM-DD (or full ISO) date string as "Mon YYYY" in the
-     * browser's locale (WEB-W4-07).
-     * @param {string} dateStr
-     * @returns {string}
-     */
     function formatDate(dateStr) {
       if (!dateStr) return ''
       const [y, m, d] = dateStr.slice(0, 10).split('-')
@@ -186,7 +285,24 @@ export default {
       return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
     }
 
-    return { t, prompt, store, bodyText, saving, saveEntry, dayNumber, formatDate }
+    return {
+      t,
+      prompt,
+      store,
+      bodyText,
+      tagInput,
+      composeTags,
+      saving,
+      activeTag,
+      availableTags,
+      saveEntry,
+      commitTagInput,
+      onTagInputKeydown,
+      removeComposeTag,
+      setActiveTag,
+      dayNumber,
+      formatDate
+    }
   }
 }
 </script>
@@ -214,8 +330,41 @@ export default {
     @apply font-serif text-[15px] text-ink placeholder:text-muted outline-none focus:border-muted;
   }
 
+  &__tag-row {
+    @apply mt-2 flex flex-wrap items-center gap-2 rounded-sm border border-rule-soft bg-paper px-2.5 py-1.5;
+  }
+
+  &__compose-tags {
+    @apply flex flex-wrap items-center gap-1.5;
+  }
+
+  &__compose-tag {
+    @apply inline-flex items-center gap-1 rounded-pill bg-paper-2 px-2 py-0.5 text-[12px] text-ink;
+  }
+
+  &__compose-tag-remove {
+    @apply inline-flex h-4 w-4 items-center justify-center rounded-pill text-muted hover:bg-paper-3 hover:text-ink;
+  }
+
+  &__tag-input {
+    @apply min-w-[120px] flex-1 bg-transparent text-[13px] text-ink placeholder:text-muted focus:outline-none;
+  }
+
   &__save-row {
     @apply flex justify-end;
+  }
+
+  &__filter {
+    @apply mt-2 flex flex-wrap items-center gap-1.5;
+  }
+
+  &__filter-pill {
+    @apply inline-flex items-center rounded-pill border border-rule-soft bg-paper-2 px-2.5 py-1 text-[12px] text-muted transition-colors hover:bg-paper-3 hover:text-ink;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+
+    &--active {
+      @apply bg-ink text-paper hover:bg-ink hover:text-paper;
+    }
   }
 
   &__entries {
@@ -252,6 +401,11 @@ export default {
 
   &__tags {
     @apply flex flex-wrap gap-1.5;
+  }
+
+  &__tag-button {
+    @apply inline-flex bg-transparent p-0;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
   }
 }
 </style>

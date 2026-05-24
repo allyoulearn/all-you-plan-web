@@ -7,10 +7,14 @@
  */
 import { gql } from '@apollo/client/core'
 
-/** Fetch every journal entry (most recent first server-side). */
+/**
+ * Fetch journal entries (most recent first server-side). Optional `tag`
+ * filters server-side to entries that include the tag. `limit` and `before`
+ * cap pagination; defaults match the API's own defaults.
+ */
 export const JOURNAL_ENTRIES_QUERY = gql`
-  query JournalEntries {
-    journalEntries {
+  query JournalEntries($limit: Int, $before: String, $tag: String) {
+    journalEntries(limit: $limit, before: $before, tag: $tag) {
       id
       date
       prompt

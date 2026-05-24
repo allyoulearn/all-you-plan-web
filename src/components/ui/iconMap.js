@@ -42,7 +42,9 @@ const names = {
   // assertion below catches typos in either set.
   trash: 'TrashIcon',
   pencil: 'PencilSquareIcon',
-  archive: 'ArchiveBoxIcon'
+  archive: 'ArchiveBoxIcon',
+  tag: 'TagIcon',
+  clock: 'ClockIcon'
 }
 
 // Dev-only sanity check (WEB-W2-22): every value in `names` must resolve to

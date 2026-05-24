@@ -21,14 +21,18 @@ export const useJournalStore = defineStore('journal', () => {
   // -- Actions --
 
   /**
-   * Fetch all journal entries from the API and replace the local list.
+   * Fetch journal entries. Pass `{ tag }` to filter to entries tagged with
+   * the given string; omit to fetch the full recent list.
    */
-  async function load() {
+  async function load({ tag = null } = {}) {
     loading.value = true
     error.value = ''
     try {
+      const variables = {}
+      if (tag) variables.tag = tag
       const { data } = await apolloClient.query({
         query: JOURNAL_ENTRIES_QUERY,
+        variables,
         fetchPolicy: 'network-only'
       })
       entries.value = data.journalEntries

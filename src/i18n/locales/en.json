@@ -202,7 +202,10 @@
     "saveEntry": "Save entry",
     "entriesSection": "Entries",
     "emptyState": "No entries yet. Write your first one above.",
-    "editorLabel": "Journal entry"
+    "emptyFiltered": "No entries match that tag.",
+    "editorLabel": "Journal entry",
+    "tagPlaceholder": "Add tags — press Enter",
+    "filterAll": "All"
   },
   "inbox": {
     "captureLabel": "Capture",
