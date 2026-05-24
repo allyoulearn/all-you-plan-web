@@ -11,7 +11,10 @@ import {
   COMPLETE_CHORE,
   CREATE_CHORE,
   UPDATE_CHORE,
-  DELETE_CHORE
+  DELETE_CHORE,
+  SNOOZE_CHORE,
+  SKIP_NEXT_CHORE,
+  RESUME_CHORE
 } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
@@ -144,6 +147,73 @@ export const useChoresStore = defineStore('chores', () => {
     }
   }
 
+  /**
+   * Snooze a chore until the given ISO date or datetime, hiding it from
+   * daily materialization while the snooze window is open. Refreshes the
+   * chores list on success so the UI reflects the new snoozedUntil.
+   */
+  async function snoozeChore(id, until) {
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: SNOOZE_CHORE,
+        variables: { id, until }
+      })
+      await load()
+      return data.snoozeChore
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to snooze chore')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Skip just the next occurrence of a chore. */
+  async function skipNextChore(id) {
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: SKIP_NEXT_CHORE,
+        variables: { id }
+      })
+      await load()
+      return data.skipNextChore
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to skip chore')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Clear snoozedUntil so the chore resumes immediately. */
+  async function resumeChore(id) {
+    const { toastError } = useErrorToast()
+    error.value = ''
+    saving.value = true
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: RESUME_CHORE,
+        variables: { id }
+      })
+      await load()
+      return data.resumeChore
+    } catch (e) {
+      error.value = e.message
+      toastError(e, 'Failed to resume chore')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
   return {
     chores,
     loading,
@@ -153,6 +223,9 @@ export const useChoresStore = defineStore('chores', () => {
     completeChore,
     createChore,
     updateChore,
-    deleteChore
+    deleteChore,
+    snoozeChore,
+    skipNextChore,
+    resumeChore
   }
 })

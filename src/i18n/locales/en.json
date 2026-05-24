@@ -118,7 +118,15 @@
     "dayShortSat": "S",
     "emptyState": "No chores yet. Add your first recurring habit below.",
     "streakShort": "{count}d",
-    "streakDays": "{count} days"
+    "streakDays": "{count} days",
+    "actionsLabel": "Chore actions",
+    "snooze1d": "Snooze 1 day",
+    "snooze3d": "Snooze 3 days",
+    "snooze7d": "Snooze 7 days",
+    "skipNext": "Skip next",
+    "resume": "Resume",
+    "snoozedUntil": "Snoozed until {date}",
+    "skipNextScheduled": "Skipping {date}"
   },
   "projects": {
     "newProject": "New project",

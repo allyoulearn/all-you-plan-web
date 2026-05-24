@@ -26,6 +26,9 @@
             :key="chore.id"
             :chore="chore"
             @complete="store.completeChore"
+            @snooze="onSnooze"
+            @skip-next="store.skipNextChore"
+            @resume="store.resumeChore"
           />
         </div>
       </template>
@@ -103,7 +106,12 @@ export default {
       }
     )
 
-    return { store, groups, loaded, isEmpty, showCreate, t }
+    /** Translate ChoreRow's snooze event ({ id, until }) into the store call. */
+    function onSnooze({ id, until }) {
+      store.snoozeChore(id, until).catch(() => {})
+    }
+
+    return { store, groups, loaded, isEmpty, showCreate, t, onSnooze }
   }
 }
 </script>

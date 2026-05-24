@@ -24,6 +24,8 @@ export const CHORES_QUERY = gql`
       bestStreak
       lastCompletedOn
       active
+      snoozedUntil
+      skipNextDate
       order
     }
   }
@@ -83,5 +85,38 @@ export const UPDATE_CHORE = gql`
 export const DELETE_CHORE = gql`
   mutation DeleteChore($id: ID!) {
     deleteChore(id: $id)
+  }
+`
+
+/** Snooze a chore until the given ISO date/datetime. */
+export const SNOOZE_CHORE = gql`
+  mutation SnoozeChore($id: ID!, $until: String!) {
+    snoozeChore(id: $id, until: $until) {
+      id
+      snoozedUntil
+      skipNextDate
+    }
+  }
+`
+
+/** Skip the chore's next due date once. */
+export const SKIP_NEXT_CHORE = gql`
+  mutation SkipNextChore($id: ID!) {
+    skipNextChore(id: $id) {
+      id
+      snoozedUntil
+      skipNextDate
+    }
+  }
+`
+
+/** Clear snoozedUntil so the chore resumes immediately. */
+export const RESUME_CHORE = gql`
+  mutation ResumeChore($id: ID!) {
+    resumeChore(id: $id) {
+      id
+      snoozedUntil
+      skipNextDate
+    }
   }
 `
