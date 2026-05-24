@@ -130,6 +130,21 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Wipe all per-conversation state. Called from the auth store on logout so
+   * a subsequent login does not reuse the previous user's conversation id,
+   * message history, settings, or in-flight subscription (WEB-W4-26).
+   */
+  function reset() {
+    teardown()
+    messages.value = []
+    settings.value = null
+    conversationId.value = null
+    error.value = ''
+    loading.value = false
+    sending.value = false
+  }
+
   function applyStreamEvent(evt) {
     const messageId = evt.messageId ?? evt.message?.id
     const idx = messageId ? messages.value.findIndex(m => m.id === messageId) : -1
@@ -302,6 +317,7 @@ export const useWrenStore = defineStore('wren', () => {
     updateSettings,
     exportConversation,
     teardown,
+    reset,
     ensureConversation
   }
 })

@@ -322,3 +322,45 @@ describe('useWrenStore — streaming events', () => {
     expect(store.error).toMatch(/PROVIDER_DOWN|oops/i)
   })
 })
+
+describe('useWrenStore — reset()', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('clears all per-conversation state so re-login starts fresh (WEB-W4-26)', () => {
+    const store = useWrenStore()
+    store.messages = [{ id: 'm1', sender: 'user', text: 'x', actions: [], createdAt: '' }]
+    store.settings = { tone: 'warm', enabled: true, dailyTurnCap: null, displayName: 'old' }
+    store.conversationId = 'cached-conv'
+    store.error = 'stale'
+    store.loading = true
+    store.sending = true
+
+    store.reset()
+
+    expect(store.messages).toEqual([])
+    expect(store.settings).toBeNull()
+    expect(store.conversationId).toBeNull()
+    expect(store.error).toBe('')
+    expect(store.loading).toBe(false)
+    expect(store.sending).toBe(false)
+  })
+
+  it('reset() unsubscribes any active subscription via teardown', () => {
+    const store = useWrenStore()
+    const unsub = vi.fn()
+    // Simulate an active subscription by stubbing apolloClient.subscribe to
+    // return an observable whose subscribe returns our unsubscribe spy.
+    apolloClient.subscribe.mockReturnValueOnce({
+      subscribe: () => ({ unsubscribe: unsub })
+    })
+    apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
+    apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
+
+    return store.send('hi').then(() => {
+      store.reset()
+      expect(unsub).toHaveBeenCalled()
+    })
+  })
+})

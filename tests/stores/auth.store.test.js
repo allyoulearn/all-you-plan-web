@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { flushPromises } from '@vue/test-utils'
 import { useAuthStore } from '@/stores/auth.store'
 
 vi.mock('@/api/apollo', () => ({
@@ -101,6 +102,22 @@ describe('auth.store', () => {
       expect(store.user).toBeNull()
       expect(localStorage.getItem('ayp_user')).toBeNull()
       expect(setAccessToken).toHaveBeenLastCalledWith(null)
+    })
+
+    it('also resets the wren store so a re-login does not inherit stale conversation state (WEB-W4-26)', async () => {
+      const { useWrenStore } = await import('@/stores/wren.store.js')
+      const wren = useWrenStore()
+      wren.conversationId = 'old-conv'
+      wren.messages = [{ id: 'm1', sender: 'user', text: 'x', actions: [], createdAt: '' }]
+      const auth = useAuthStore()
+      auth.setAuth({ accessToken: fakeToken, user: fakeUser })
+
+      auth.clearAuth()
+      // clearAuth dynamically imports the wren store and calls reset() inside
+      // a .then() — flushPromises waits for the entire microtask queue.
+      await flushPromises()
+      expect(wren.conversationId).toBeNull()
+      expect(wren.messages).toEqual([])
     })
   })
 

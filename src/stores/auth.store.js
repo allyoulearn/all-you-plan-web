@@ -82,13 +82,29 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Wipe all auth state from memory and localStorage.
+   * Wipe all auth state from memory and localStorage. Also resets the wren
+   * store so a re-login does not inherit the previous user's cached
+   * conversation id, message history, or in-flight stream subscription
+   * (WEB-W4-26). Pinia stores are imported lazily here to avoid a
+   * module-level circular dependency between auth and wren.
    */
   function clearAuth() {
     accessToken.value = null
     setAccessToken(null)
     user.value = null
     localStorage.removeItem('ayp_user')
+    // Lazy import — keeps the auth ↔ wren coupling at runtime only.
+    import('@/stores/wren.store.js')
+      .then(({ useWrenStore }) => {
+        try {
+          useWrenStore().reset()
+        } catch {
+          // Pinia not active (e.g., very early teardown) — nothing to reset.
+        }
+      })
+      .catch(() => {
+        // Chunk load failure — best-effort reset; not auth-blocking.
+      })
   }
 
   /**
