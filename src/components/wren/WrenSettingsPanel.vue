@@ -96,7 +96,29 @@
 </template>
 
 <script>
-/** WrenSettingsPanel — form panel for tone, displayName, enabled, and dailyTurnCap. */
+/**
+ * WrenSettingsPanel — form panel for tone, displayName, enabled, and
+ * dailyTurnCap.
+ *
+ * Responsibility:
+ *   Standalone settings form. Loads the user's WrenSettings on mount via
+ *   the wren store, presents an editable form, and persists changes via
+ *   updateWrenSettings on submit.
+ *
+ * Props / Emits:
+ *   None — the panel reads and writes the wren store directly.
+ *
+ * Non-obvious behaviour:
+ *   - An empty `displayName` text field is sent as `null` (clear field)
+ *     rather than `""` so the API resolver treats it as an explicit unset.
+ *   - An empty `dailyTurnCap` number field is sent as `null` (use default
+ *     cap) rather than `NaN`.
+ *   - Initial mount sets loading=true and disables all inputs until
+ *     loadSettings resolves; the form is then re-populated from
+ *     store.settings.
+ *   - Save status is rendered inline (no toast) because the panel sits in
+ *     a settings context where inline feedback is preferred.
+ */
 import Button from '@/components/ui/Button.vue'
 import { useWrenStore } from '@/stores/wren.store.js'
 

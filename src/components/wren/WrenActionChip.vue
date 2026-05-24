@@ -30,8 +30,32 @@ import { CheckCircleIcon } from '@heroicons/vue/24/outline'
 import Button from '@/components/ui/Button.vue'
 
 /**
- * WrenActionChip — renders an applied write action with an optional Undo affordance.
- * The Undo button disappears once tapped (one-shot) or after `undoExpiresAt` passes.
+ * WrenActionChip — renders an applied write action with an optional Undo
+ * affordance.
+ *
+ * Responsibility:
+ *   Visual representation of one WrenAppliedAction inside a coach bubble's
+ *   actions row. Owns the local "this chip has been undone" and "this chip's
+ *   undo window has expired" UI state — the parent only needs to wire the
+ *   `undo` mutation in response to the emitted token.
+ *
+ * Props:
+ *   - action (Object, required): { kind, summary, refType?, refId?,
+ *     undoToken?, undoExpiresAt?, pending? }. `pending: true` (set
+ *     client-side during WrenActionStarted) dims the chip until the matching
+ *     WrenActionEvent arrives.
+ *
+ * Emits:
+ *   - undo(undoToken): fired exactly once when the user taps Undo before the
+ *     token expires. The chip immediately switches its label to "Undone" so
+ *     a second tap is impossible — see onUndo for the one-shot guard.
+ *
+ * Lifetime / non-obvious behaviour:
+ *   - If `undoExpiresAt` is already past at mount time, the Undo button is
+ *     never shown (alreadyExpired computed).
+ *   - Otherwise a setTimeout flips `expired` true when the window closes,
+ *     reactively hiding the Undo button. The timer is cleared on
+ *     beforeUnmount to avoid setting state on an unmounted instance.
  */
 export default {
   name: 'WrenActionChip',

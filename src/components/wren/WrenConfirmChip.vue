@@ -40,7 +40,29 @@ import Button from '@/components/ui/Button.vue'
 
 /**
  * WrenConfirmChip — renders a pending destructive action awaiting user
- * confirmation. Emits 'confirm' or 'cancel' with the confirmToken.
+ * confirmation.
+ *
+ * Responsibility:
+ *   Visual representation of one WrenPendingConfirmation inside a coach
+ *   bubble's actions row. Owns the local "resolved" UI state so the chip
+ *   immediately switches from buttons to a label after the user picks one,
+ *   preventing double-submit while the API mutation is in flight.
+ *
+ * Props:
+ *   - pending (Object, required): { confirmToken, tool, summary, refType,
+ *     refId, expiresAt }.
+ *
+ * Emits:
+ *   - confirm(confirmToken): fired once when the user taps Confirm.
+ *   - cancel(confirmToken): fired once when the user taps Cancel.
+ *
+ * Non-obvious behaviour:
+ *   - The chip does not track `expiresAt` itself. If the API rejects a
+ *     stale token, the parent (wren store) should surface the error via
+ *     toastError; the visual chip will simply read "Confirmed/Cancelled"
+ *     locally even though the action failed server-side. A future revision
+ *     could mirror WrenActionChip's expiry timer to disable the buttons
+ *     once `expiresAt` passes.
  */
 export default {
   name: 'WrenConfirmChip',

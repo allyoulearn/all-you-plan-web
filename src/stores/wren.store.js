@@ -13,6 +13,19 @@
  * Backwards compat:
  *   If sendWrenMessage returns status: 'complete' (legacy path with
  *   WREN_LLM_ENABLED=false), no subscription is needed — the reply is final.
+ *
+ * Known gap — token refresh mid-stream:
+ *   apolloClient's errorLink calls resetWsConnection() after a successful
+ *   token refresh (so the next subscribe uses the new bearer). graphql-ws
+ *   will retry-reconnect on the next subscribe, but any partial reply that
+ *   was streaming when the refresh happened is lost — the server-side
+ *   subscription was torn down. WrenComplete that arrives on reconnect for
+ *   a placeholder still in messages will replace the partial text via the
+ *   id match. If WrenComplete does not arrive (e.g., the user navigated
+ *   away first), the placeholder sits at status: 'streaming' until the
+ *   user reloads. Acceptable for v1; a future revision could add a watchdog
+ *   timer that flips a long-streaming placeholder to 'failed' so the UI
+ *   communicates "stream interrupted, resending…".
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -71,6 +84,27 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Send a user turn into the conversation.
+   *
+   * 1. Trims and short-circuits empty / in-flight sends.
+   * 2. Appends an optimistic user bubble immediately.
+   * 3. Opens (or reuses) the long-lived WrenStream subscription. The
+   *    subscription is shared across turns within a single conversation; it
+   *    is torn down only by reset() (logout) or teardown() (component
+   *    unmount). Subscribing BEFORE the mutation reduces the chance that
+   *    early stream events arrive with no listener — see applyStreamEvent
+   *    for how the WrenComplete race is handled.
+   * 4. Awaits the sendWrenMessage mutation; on success the returned
+   *    placeholder coach message is appended (status: 'streaming' for the
+   *    LLM path, 'complete' for the legacy scripted path).
+   * 5. On any failure, removes the optimistic bubble and toasts the user.
+   *    The in-flight subscription is intentionally NOT torn down — it is
+   *    reusable for subsequent retries within the same conversation.
+   *
+   * @param {string} text - Raw user input; trimmed before sending.
+   * @returns {Promise<void>}
+   */
   async function send(text) {
     const trimmed = text?.trim()
     if (!trimmed || sending.value) return
@@ -264,6 +298,11 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Reverse a previously-applied write action.
+   * @param {string} undoToken - One-shot token from the action's undoToken field
+   * @returns {Promise<boolean>} true on success; false if the mutation failed
+   */
   async function undo(undoToken) {
     try {
       const { data } = await apolloClient.mutate({
@@ -278,6 +317,11 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Confirm a destructive action awaiting user approval.
+   * @param {string} confirmToken - Token from a WrenPendingConfirmationEvent
+   * @returns {Promise<object|null>} The resulting WrenAppliedAction, or null on failure
+   */
   async function confirm(confirmToken) {
     try {
       const { data } = await apolloClient.mutate({
@@ -292,6 +336,11 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Cancel a destructive action awaiting user approval.
+   * @param {string} confirmToken - Token from a WrenPendingConfirmationEvent
+   * @returns {Promise<boolean>} true on success; false if the mutation failed
+   */
   async function cancel(confirmToken) {
     try {
       const { data } = await apolloClient.mutate({
@@ -306,6 +355,7 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /** Load the current user's WrenSettings into the store. */
   async function loadSettings() {
     try {
       const { data } = await apolloClient.query({
@@ -318,6 +368,18 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Persist a settings patch.
+   *
+   * Semantics: every key present in `patch` is forwarded to the API as a
+   * variable. Per the GraphQL schema, an explicit `null` clears the field
+   * (e.g. `{ displayName: null }` resets the coach name); omit a field to
+   * leave it unchanged. The API resolver mirrors this — see
+   * all-you-plan-api/src/domains/wren/resolvers.ts updateWrenSettings.
+   *
+   * @param {object} patch - Subset of { displayName, tone, enabled, dailyTurnCap }
+   * @returns {Promise<object|null>} The updated WrenSettings, or null on failure
+   */
   async function updateSettings(patch) {
     try {
       const { data } = await apolloClient.mutate({
@@ -332,6 +394,17 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Fetch a serialised export of the conversation. The caller is responsible
+   * for turning the payload into a Blob and triggering a download (see
+   * WrenPanel.vue onExport for the canonical flow).
+   *
+   * Errors propagate to the caller — there is no toast here because the
+   * single consumer wraps the call in try/catch and updates store.error.
+   *
+   * @param {'markdown'|'json'} format - The desired serialization format
+   * @returns {Promise<{ format: string, filename: string, content: string }>}
+   */
   async function exportConversation(format) {
     const { data } = await apolloClient.query({
       query: EXPORT_WREN_CONVERSATION,
