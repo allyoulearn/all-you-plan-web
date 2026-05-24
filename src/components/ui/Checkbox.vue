@@ -35,14 +35,19 @@
  * non-button element MUST add explicit keydown handlers for Space (and
  * preferably Enter) to preserve this behavior (WEB-W2-33).
  *
- * Pulse animation: a transient `--just-checked` class is applied for one
- * frame's worth of animation when `modelValue` transitions from false to
- * true, driving a keyframe scale-pulse. Initial mount with `modelValue: true`
- * does NOT pulse — only the user-initiated transition does.
+ * Pulse animation: a transient `--just-checked` class is applied when
+ * `modelValue` transitions from false to true, driving a keyframe scale-pulse
+ * (scale 1 → 1.18 → 1). Initial mount with `modelValue: true` does NOT pulse —
+ * only the user-initiated transition does. The pulse bulges ~2px into the
+ * surrounding margin via CSS `transform` (no reflow), so consumers should
+ * keep at least `gap-2` around the control to avoid overlap.
  */
 import { ref, watch, onBeforeUnmount } from 'vue'
 import Icon from './Icon.vue'
 
+// Slightly exceeds the 280ms CSS keyframe so the class survives the full
+// animation; matching the two risks a snap-back if class removal lands a
+// frame early.
 const PULSE_MS = 320
 
 export default {
@@ -66,6 +71,8 @@ export default {
     watch(
       () => props.modelValue,
       (val, prev) => {
+        // prev is undefined on the initial-value skip; treated as falsy
+        // intentionally so first-mount-with-true does not pulse.
         if (val && !prev) {
           justChecked.value = true
           if (pulseTimer) clearTimeout(pulseTimer)
