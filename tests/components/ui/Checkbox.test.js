@@ -101,6 +101,24 @@ describe('Checkbox', () => {
     expect(wrapper.classes()).not.toContain('checkbox--just-checked')
   })
 
+  it('adds the just-checked class on user click (false → true)', async () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: false } })
+    await wrapper.trigger('click')
+    expect(wrapper.classes()).toContain('checkbox--just-checked')
+  })
+
+  it('does not add the just-checked class on user click (true → false)', async () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: true } })
+    await wrapper.trigger('click')
+    expect(wrapper.classes()).not.toContain('checkbox--just-checked')
+  })
+
+  it('does not add the just-checked class on click when disabled', async () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: false, disabled: true } })
+    await wrapper.trigger('click')
+    expect(wrapper.classes()).not.toContain('checkbox--just-checked')
+  })
+
   it('adds the just-checked class on false → true transition', async () => {
     const wrapper = mount(Checkbox, { props: { modelValue: false } })
     await wrapper.setProps({ modelValue: true })

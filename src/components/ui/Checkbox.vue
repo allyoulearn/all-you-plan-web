@@ -35,10 +35,14 @@
  * non-button element MUST add explicit keydown handlers for Space (and
  * preferably Enter) to preserve this behavior (WEB-W2-33).
  *
- * Pulse animation: a transient `--just-checked` class is applied when
- * `modelValue` transitions from false to true, driving a keyframe scale-pulse
- * (scale 1 → 1.18 → 1). Initial mount with `modelValue: true` does NOT pulse —
- * only the user-initiated transition does. The pulse bulges ~2px into the
+ * Pulse animation: a transient `--just-checked` class is applied when the
+ * user clicks to check (false → true), driving a keyframe scale-pulse
+ * (scale 1 → 1.18 → 1). Triggered from inside `toggle()` rather than only
+ * from a prop watcher, so the pulse fires even when the parent immediately
+ * unmounts this Checkbox (e.g. ProjectDetailView / KanbanView move tasks
+ * between TransitionGroup containers on completion). A `watch(props.modelValue)`
+ * also triggers the pulse for programmatic v-model writes. Initial mount
+ * with `modelValue: true` does NOT pulse. The pulse bulges ~2px into the
  * surrounding margin via CSS `transform` (no reflow), so consumers should
  * keep at least `gap-2` around the control to avoid overlap.
  */
@@ -68,19 +72,26 @@ export default {
     const justChecked = ref(false)
     let pulseTimer = null
 
+    /** Apply the transient pulse class for PULSE_MS. Safe to call repeatedly. */
+    function triggerPulse() {
+      justChecked.value = true
+      if (pulseTimer) clearTimeout(pulseTimer)
+      pulseTimer = setTimeout(() => {
+        justChecked.value = false
+        pulseTimer = null
+      }, PULSE_MS)
+    }
+
     watch(
       () => props.modelValue,
       (val, prev) => {
         // prev is undefined on the initial-value skip; treated as falsy
-        // intentionally so first-mount-with-true does not pulse.
-        if (val && !prev) {
-          justChecked.value = true
-          if (pulseTimer) clearTimeout(pulseTimer)
-          pulseTimer = setTimeout(() => {
-            justChecked.value = false
-            pulseTimer = null
-          }, PULSE_MS)
-        }
+        // intentionally so first-mount-with-true does not pulse. Catches
+        // programmatic v-model writes; user-initiated clicks are handled
+        // inside toggle() so the pulse fires even when the parent
+        // immediately unmounts this Checkbox (projects views move tasks
+        // between TransitionGroup containers).
+        if (val && !prev) triggerPulse()
       }
     )
 
@@ -94,7 +105,10 @@ export default {
 
     /** Toggle the checked state; no-ops when disabled. */
     function toggle() {
-      if (!props.disabled) emit('update:modelValue', !props.modelValue)
+      if (props.disabled) return
+      const next = !props.modelValue
+      if (next) triggerPulse()
+      emit('update:modelValue', next)
     }
   }
 }
