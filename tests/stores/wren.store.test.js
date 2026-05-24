@@ -671,6 +671,18 @@ describe('useWrenStore — streaming events', () => {
     expect(store.messages[0].status).toBe('failed')
     expect(store.error).toMatch(/PROVIDER_DOWN|oops/i)
   })
+
+  it('WrenError shows a toast so the user sees it (no view renders store.error)', () => {
+    const store = useWrenStore()
+    store.messages = []
+    store.applyStreamEvent({
+      __typename: 'WrenError',
+      messageId: null,
+      code: 'NETWORK',
+      message: 'dropped'
+    })
+    expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Wren stream error')
+  })
 })
 
 describe('useWrenStore — reset()', () => {

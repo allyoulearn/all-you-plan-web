@@ -287,14 +287,19 @@ export const useWrenStore = defineStore('wren', () => {
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
       }
-      case 'WrenError':
+      case 'WrenError': {
         // Surface error message + mark the placeholder failed (when present).
+        // Also toast so the user sees it — no view renders store.error.
         if (msg) {
           msg.status = 'failed'
           messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         }
-        error.value = evt.code ? `${evt.code}: ${evt.message}` : evt.message
+        const text = evt.code ? `${evt.code}: ${evt.message}` : evt.message
+        error.value = text
+        const { toastError } = useErrorToast()
+        toastError(new Error(text), 'Wren stream error')
         break
+      }
     }
   }
 
