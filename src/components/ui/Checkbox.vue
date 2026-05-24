@@ -6,7 +6,10 @@
     :aria-label="ariaLabel"
     :disabled="disabled"
     class="checkbox"
-    :class="modelValue ? 'checkbox--checked' : 'checkbox--unchecked'"
+    :class="[
+      modelValue ? 'checkbox--checked' : 'checkbox--unchecked',
+      { 'checkbox--just-checked': justChecked }
+    ]"
     :style="{ '--checkbox-size': `${size}px` }"
     @click="toggle"
   >
@@ -31,8 +34,16 @@
  * mildly off-spec but generally accepted. Any future refactor to a
  * non-button element MUST add explicit keydown handlers for Space (and
  * preferably Enter) to preserve this behavior (WEB-W2-33).
+ *
+ * Pulse animation: a transient `--just-checked` class is applied for one
+ * frame's worth of animation when `modelValue` transitions from false to
+ * true, driving a keyframe scale-pulse. Initial mount with `modelValue: true`
+ * does NOT pulse — only the user-initiated transition does.
  */
+import { ref, watch, onBeforeUnmount } from 'vue'
 import Icon from './Icon.vue'
+
+const PULSE_MS = 320
 
 export default {
   name: 'Checkbox',
@@ -49,7 +60,28 @@ export default {
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
-    return { toggle }
+    const justChecked = ref(false)
+    let pulseTimer = null
+
+    watch(
+      () => props.modelValue,
+      (val, prev) => {
+        if (val && !prev) {
+          justChecked.value = true
+          if (pulseTimer) clearTimeout(pulseTimer)
+          pulseTimer = setTimeout(() => {
+            justChecked.value = false
+            pulseTimer = null
+          }, PULSE_MS)
+        }
+      }
+    )
+
+    onBeforeUnmount(() => {
+      if (pulseTimer) clearTimeout(pulseTimer)
+    })
+
+    return { toggle, justChecked }
 
     // -- Function definitions --
 
@@ -82,6 +114,27 @@ export default {
 
   &__icon {
     @apply text-accent-ink;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .checkbox--just-checked {
+    animation: checkbox-pop 280ms ease-out;
+  }
+
+  .checkbox--just-checked .checkbox__icon {
+    animation: checkbox-icon-pop 160ms ease-out;
+  }
+
+  @keyframes checkbox-pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes checkbox-icon-pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
   }
 }
 </style>

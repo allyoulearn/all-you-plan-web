@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
@@ -94,6 +94,39 @@ describe('Checkbox', () => {
     // Call toggle directly to exercise the disabled guard branch
     wrapper.vm.toggle()
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
+
+  it('does not add the just-checked class on initial mount when modelValue starts true', () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: true } })
+    expect(wrapper.classes()).not.toContain('checkbox--just-checked')
+  })
+
+  it('adds the just-checked class on false → true transition', async () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: false } })
+    await wrapper.setProps({ modelValue: true })
+    expect(wrapper.classes()).toContain('checkbox--just-checked')
+  })
+
+  it('does not add the just-checked class on true → false transition', async () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: true } })
+    await wrapper.setProps({ modelValue: false })
+    expect(wrapper.classes()).not.toContain('checkbox--just-checked')
+  })
+
+  it('clears the just-checked class after the pulse duration', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mount(Checkbox, { props: { modelValue: false } })
+      await wrapper.setProps({ modelValue: true })
+      expect(wrapper.classes()).toContain('checkbox--just-checked')
+
+      vi.advanceTimersByTime(400)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.classes()).not.toContain('checkbox--just-checked')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
