@@ -163,7 +163,11 @@ export default {
   }
 
   .task-complete-leave-from {
-    max-height: 200px;
+    // Generous ceiling above any realistic row/card height (kanban cards
+    // with multiline titles can reach ~200px). If the natural height ever
+    // exceeded the ceiling, the leave animation would snap before the
+    // collapse begins.
+    max-height: 400px;
   }
 
   .task-complete-leave-to {
