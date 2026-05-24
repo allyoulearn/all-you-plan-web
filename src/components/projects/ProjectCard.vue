@@ -1,13 +1,22 @@
 <template>
-  <RouterLink :to="`/projects/${project.id}`" class="project-card-link">
+  <component
+    :is="archived ? 'div' : 'router-link'"
+    :to="archived ? undefined : `/projects/${project.id}`"
+    class="project-card-link"
+    :class="{ 'project-card-link--archived': archived }"
+  >
     <Card>
       <div class="project-card__tags">
-        <Pill variant="default">
+        <Pill v-if="project.tag" variant="default">
           {{ project.tag }}
         </Pill>
 
         <Pill :variant="project.status === 'hot' ? 'accent' : 'default'">
           {{ statusLabel }}
+        </Pill>
+
+        <Pill v-if="archived" variant="default">
+          {{ t('projects.archivedBadge') }}
         </Pill>
       </div>
 
@@ -40,8 +49,14 @@
           {{ project.nudge }}
         </span>
       </div>
+
+      <div v-if="archived" class="project-card__archived-actions">
+        <Button size="sm" variant="ghost" @click="$emit('restore', project.id)">
+          {{ t('projects.restore') }}
+        </Button>
+      </div>
     </Card>
-  </RouterLink>
+  </component>
 </template>
 
 <script>
@@ -53,6 +68,7 @@ import Card from '@/components/ui/Card.vue'
 import Pill from '@/components/ui/Pill.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
 import Icon from '@/components/ui/Icon.vue'
+import Button from '@/components/ui/Button.vue'
 
 /**
  * Map from API status enum to the matching i18n key (WEB-W3-18). Replaces the
@@ -68,11 +84,14 @@ const STATUS_KEY = {
 
 export default {
   name: 'ProjectCard',
-  components: { RouterLink, Card, Pill, ProgressBar, Icon },
+  components: { RouterLink, Card, Pill, ProgressBar, Icon, Button },
   props: {
     /** The project object to display */
-    project: { type: Object, required: true }
+    project: { type: Object, required: true },
+    /** When true, render the card in read-only archived mode with a Restore action. */
+    archived: { type: Boolean, default: false }
   },
+  emits: ['restore'],
   setup(props) {
     const { t } = useI18n()
 
@@ -85,7 +104,7 @@ export default {
       return key ? t(key) : props.project.status
     })
 
-    return { progress, statusLabel }
+    return { progress, statusLabel, t }
   }
 }
 </script>
@@ -93,6 +112,10 @@ export default {
 <style lang="scss" scoped>
 .project-card-link {
   @apply block no-underline;
+
+  &--archived {
+    @apply opacity-80;
+  }
 }
 
 .project-card {
@@ -126,6 +149,10 @@ export default {
 
   &__nudge-text {
     @apply text-[12px] font-medium;
+  }
+
+  &__archived-actions {
+    @apply mt-2 flex justify-end;
   }
 }
 </style>

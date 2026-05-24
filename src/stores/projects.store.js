@@ -85,13 +85,18 @@ export const useProjectsStore = defineStore('projects', () => {
 
   // -- Actions --
 
-  async function loadProjects() {
+  /**
+   * Fetch all projects from the API. Pass `includeArchived: true` to bring
+   * archived projects into the list so the Projects view can render them in
+   * the "Archived" segment with a Restore action.
+   */
+  async function loadProjects({ includeArchived = false } = {}) {
     loadingProjects.value = true
     errorProjects.value = ''
     try {
       const { data } = await apolloClient.query({
         query: PROJECTS_QUERY,
-        variables: { includeArchived: false },
+        variables: { includeArchived },
         fetchPolicy: 'network-only'
       })
       projects.value = data.projects
@@ -100,6 +105,12 @@ export const useProjectsStore = defineStore('projects', () => {
     } finally {
       loadingProjects.value = false
     }
+  }
+
+  /** Set `archived: false` on a project, reversing an archive. Refreshes
+   *  the visible list so the UI reflects the segment the user is viewing. */
+  async function restoreProject(id) {
+    return updateProject(id, { archived: false })
   }
 
   async function loadBoard(id) {
@@ -610,6 +621,7 @@ export const useProjectsStore = defineStore('projects', () => {
     errorProjects,
     errorBoard,
     loadProjects,
+    restoreProject,
     loadBoard,
     completeTask,
     createProject,
