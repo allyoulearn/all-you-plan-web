@@ -108,11 +108,8 @@ export const useProjectsStore = defineStore('projects', () => {
         break
       }
     }
-    if (!task) {
-      const inDone = board.value.done?.some(t => t.id === id)
-      if (inDone) return
-      return
-    }
+    // Task already in done (idempotent) or not on this board — no-op either way.
+    if (!task) return
 
     const { toastError } = useErrorToast()
     const snapshot = {

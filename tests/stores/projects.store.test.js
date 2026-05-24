@@ -389,6 +389,19 @@ describe('projects.store', () => {
       await promise
       expect(store.loadingBoard).toBe(false)
     })
+
+    it('still completes when project.progress is missing', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      const board = makeOptimisticBoard()
+      delete board.project.progress
+      store.board = board
+
+      await store.completeTask('t1')
+
+      expect(store.board.done[0].id).toBe('t1')
+      expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
+    })
   })
 
   describe('updateProject error routing (WEB-W1-06)', () => {
