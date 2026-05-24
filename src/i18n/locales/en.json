@@ -154,7 +154,21 @@
     "emptyColumn": "Empty",
     "byStatus": "by status.",
     "notFound": "Project not found.",
-    "notFoundBack": "Back to projects"
+    "notFoundBack": "Back to projects",
+    "addColumn": "Add column",
+    "newColumnPlaceholder": "New column",
+    "columnActions": "Column actions",
+    "rename": "Rename",
+    "renameTitle": "Rename column",
+    "renameLabel": "Column name",
+    "deleteTitle": "Delete column",
+    "deleteWithTasks": "This column has {count} task | This column has {count} tasks",
+    "deleteEmpty": "Delete this column?",
+    "deleteModeMove": "Move tasks to another column",
+    "deleteModeDelete": "Delete the tasks too",
+    "deleteMoveTo": "Move to",
+    "deleteConfirm": "Delete",
+    "dragHandleHint": "Drag to reorder"
   },
   "calendar": {
     "prevMonth": "Previous month",

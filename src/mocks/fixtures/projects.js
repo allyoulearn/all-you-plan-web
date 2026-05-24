@@ -58,6 +58,87 @@ const projectList = [
   }
 ]
 
+/** Seeded default columns shared across mock projects. */
+const boardColumns = [
+  { id: 'col-bl', label: 'Backlog', order: 0 },
+  { id: 'col-tw', label: 'This week', order: 1 },
+  { id: 'col-do', label: 'Doing', order: 2 },
+  { id: 'col-dn', label: 'Done', order: 3 }
+]
+
+const boardTasks = [
+  {
+    id: 'bt1',
+    title: 'Write about-me page copy',
+    note: null,
+    tag: 'work',
+    done: false,
+    columnId: 'col-bl',
+    order: 0
+  },
+  {
+    id: 'bt2',
+    title: 'Design mobile breakpoints',
+    note: 'Test on iPhone 14 and Pixel 7',
+    tag: 'work',
+    done: false,
+    columnId: 'col-bl',
+    order: 1
+  },
+  {
+    id: 'bt3',
+    title: 'Set up Cloudflare Pages deploy',
+    note: null,
+    tag: 'work',
+    done: false,
+    columnId: 'col-tw',
+    order: 0
+  },
+  {
+    id: 'bt4',
+    title: 'Write first blog post draft',
+    note: 'Topic: building in public',
+    tag: 'work',
+    done: false,
+    columnId: 'col-tw',
+    order: 1
+  },
+  {
+    id: 'bt5',
+    title: 'Build project index page',
+    note: null,
+    tag: 'work',
+    done: false,
+    columnId: 'col-do',
+    order: 0
+  },
+  {
+    id: 'bt6',
+    title: 'Register domain name',
+    note: null,
+    tag: 'work',
+    done: true,
+    columnId: 'col-dn',
+    order: 0
+  },
+  {
+    id: 'bt7',
+    title: 'Choose tech stack',
+    note: null,
+    tag: 'work',
+    done: true,
+    columnId: 'col-dn',
+    order: 1
+  }
+]
+
+function bucketTasks() {
+  return boardColumns.map(col => ({
+    columnId: col.id,
+    tasks: boardTasks.filter(t => t.columnId === col.id)
+  }))
+}
+
 export const registry = {
   projects: () => ({ projects: projectList }),
   projectBoard: variables => {
@@ -69,84 +150,40 @@ export const registry = {
     return {
       projectBoard: {
         project,
-        backlog: [
-          {
-            id: 'bt1',
-            title: 'Write about-me page copy',
-            note: null,
-            tag: 'work',
-            done: false,
-            column: 'backlog',
-            order: 0
-          },
-          {
-            id: 'bt2',
-            title: 'Design mobile breakpoints',
-            note: 'Test on iPhone 14 and Pixel 7',
-            tag: 'work',
-            done: false,
-            column: 'backlog',
-            order: 1
-          }
-        ],
-        thisWeek: [
-          {
-            id: 'bt3',
-            title: 'Set up Cloudflare Pages deploy',
-            note: null,
-            tag: 'work',
-            done: false,
-            column: 'thisWeek',
-            order: 0
-          },
-          {
-            id: 'bt4',
-            title: 'Write first blog post draft',
-            note: 'Topic: building in public',
-            tag: 'work',
-            done: false,
-            column: 'thisWeek',
-            order: 1
-          }
-        ],
-        doing: [
-          {
-            id: 'bt5',
-            title: 'Build project index page',
-            note: null,
-            tag: 'work',
-            done: false,
-            column: 'doing',
-            order: 0
-          }
-        ],
-        done: [
-          {
-            id: 'bt6',
-            title: 'Register domain name',
-            note: null,
-            tag: 'work',
-            done: true,
-            column: 'done',
-            order: 0
-          },
-          {
-            id: 'bt7',
-            title: 'Choose tech stack',
-            note: null,
-            tag: 'work',
-            done: true,
-            column: 'done',
-            order: 1
-          }
-        ]
+        columns: boardColumns,
+        tasksByColumn: bucketTasks()
       }
     }
   },
+  // Column mutations — return shapes matching the new API contract.
+  createColumn: variables => ({
+    createColumn: {
+      id: `col-new-${Date.now()}`,
+      label: variables.label,
+      order: boardColumns.length
+    }
+  }),
+  updateColumn: variables => ({
+    updateColumn: {
+      id: variables.id,
+      label: variables.label ?? 'Column',
+      order: 0
+    }
+  }),
+  reorderColumns: () => ({ reorderColumns: boardColumns }),
+  deleteColumn: () => ({ deleteColumn: true }),
+  moveTask: variables => ({
+    moveTask: {
+      id: variables.id,
+      columnId: variables.columnId,
+      order: variables.order
+    }
+  }),
+  reorderTasksInColumn: () => ({ reorderTasksInColumn: [] }),
   updateTask: variables => ({
     updateTask: {
       id: variables.id,
-      column: variables.input?.column ?? 'doing'
+      columnId: variables.input?.columnId ?? null
     }
   })
 }

@@ -1,11 +1,20 @@
 /**
  * Projects store.
- * Manages the list of projects and the active project board. Exposes actions
- * to load all projects, load a specific project's board, and complete
- * individual board tasks.
+ * Manages the list of projects and the active project board (custom columns).
+ * Exposes actions to load projects, load a project board, complete tasks
+ * (decoupled from columns), and CRUD/reorder columns and tasks via drag.
  *
  * Error-surfacing policy: load errors set their respective error ref for
  * inline display; mutation errors additionally toast via useErrorToast.
+ *
+ * Board shape:
+ *   board.value = {
+ *     project: { ... },
+ *     columns: [ { id, label, order } ],
+ *     tasksByColumn: [ { columnId, tasks: [ { id, columnId, done, ... } ] } ],
+ *   }
+ * The two arrays are kept in the order returned by the server; consumers can
+ * iterate `columns` and use the helper `tasksFor(columnId)` to read tasks.
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -17,7 +26,13 @@ import {
   CREATE_PROJECT,
   UPDATE_PROJECT,
   DELETE_PROJECT,
-  CREATE_TASK
+  CREATE_TASK,
+  CREATE_COLUMN,
+  UPDATE_COLUMN,
+  REORDER_COLUMNS,
+  DELETE_COLUMN,
+  MOVE_TASK,
+  REORDER_TASKS_IN_COLUMN
 } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
@@ -27,19 +42,44 @@ export const useProjectsStore = defineStore('projects', () => {
   const board = ref(null)
   const loadingProjects = ref(false)
   const loadingBoard = ref(false)
-  // Toggled while a mutation (complete/create/update/delete) is in flight so
-  // views can disable submit buttons independently of the per-collection
-  // loading flags. See WEB-W1-11.
   const saving = ref(false)
   const errorProjects = ref('')
   const errorBoard = ref('')
 
-  // -- Actions --
+  // -- Helpers --
+
+  /** Build a fresh `tasksByColumn` array preserving column order. */
+  function buildTasksByColumn(columns, tasks) {
+    const byColumn = new Map(columns.map(col => [col.id, []]))
+    for (const task of tasks) {
+      const colId = task.columnId
+      if (colId && byColumn.has(colId)) byColumn.get(colId).push(task)
+    }
+    return columns.map(col => ({ columnId: col.id, tasks: byColumn.get(col.id) ?? [] }))
+  }
 
   /**
-   * Fetch all active (non-archived) projects from the API and replace the
-   * local list.
+   * Read the tasks array for `columnId` from board state, or [] when unknown.
+   * Views typically render `v-for col in board.columns` then call this for each.
    */
+  function tasksFor(columnId) {
+    if (!board.value) return []
+    const entry = board.value.tasksByColumn?.find(t => t.columnId === columnId)
+    return entry?.tasks ?? []
+  }
+
+  /** Find a task by id across every column. Returns { task, columnId } or null. */
+  function findTask(id) {
+    if (!board.value) return null
+    for (const { columnId, tasks } of board.value.tasksByColumn ?? []) {
+      const task = tasks.find(t => t.id === id)
+      if (task) return { task, columnId }
+    }
+    return null
+  }
+
+  // -- Actions --
+
   async function loadProjects() {
     loadingProjects.value = true
     errorProjects.value = ''
@@ -57,10 +97,6 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Fetch the Kanban board for the given project and store it locally.
-   * @param {string} id - The project ID whose board to load
-   */
   async function loadBoard(id) {
     loadingBoard.value = true
     errorBoard.value = ''
@@ -79,55 +115,33 @@ export const useProjectsStore = defineStore('projects', () => {
   }
 
   /**
-   * Mark a project task as complete with an optimistic local update.
+   * Toggle a task's `done` flag with an optimistic local update. Decoupled
+   * from columns — the task stays in whichever column it was in. Progress
+   * counts are recomputed for the project header.
    *
-   * Moves the task from its source column (`thisWeek` | `doing` | `backlog`)
-   * to the front of `done`, recomputes `project.progress`, and fires the
-   * mutation in the background — so the views never flip to a loading state
-   * during completion. On failure, the captured board reference is restored,
-   * the error is surfaced via `errorBoard` + toast (WEB-W1-05 / WEB-W1-13),
-   * and rethrown for callers (WEB-W1-01).
-   *
-   * The board is replaced atomically (never mutated in place) because Apollo
-   * Client freezes its result objects in development — mutating a frozen
-   * property would throw at runtime.
-   *
-   * No-ops when `board` is null, when the task id is not found in any column,
-   * or when the task is already in `done` (idempotent — protects against
-   * double-clicks while the mutation is in flight).
-   * @param {string} id - The task ID to complete
+   * No-ops when the board is null, the task id is not present, or the task
+   * is already done (idempotent — protects against double clicks while the
+   * mutation is in flight).
+   * @param {string} id - The task id to complete
    * @throws Re-throws the API error after surfacing it via errorBoard + toast.
    */
   async function completeTask(id) {
     if (!board.value) return
-
-    const SOURCE_COLUMNS = ['thisWeek', 'doing', 'backlog']
-    let sourceCol = null
-    let task = null
-    for (const col of SOURCE_COLUMNS) {
-      const found = board.value[col]?.find(t => t.id === id)
-      if (found) {
-        sourceCol = col
-        task = found
-        break
-      }
-    }
-    // Task already in done (idempotent) or not on this board — no-op either way.
-    if (!task) return
+    const found = findTask(id)
+    if (!found || found.task.done) return
 
     const { toastError } = useErrorToast()
-    // Snapshot the existing board reference for rollback. Apollo may have
-    // frozen this object, so we never mutate it — we replace board.value
-    // with a freshly-constructed board below and again on rollback.
     const snapshot = board.value
 
-    const newBoard = { ...board.value }
-    newBoard[sourceCol] = board.value[sourceCol].filter(t => t.id !== id)
-    newBoard.done = [{ ...task, done: true }, ...(board.value.done ?? [])]
+    const nextTasksByColumn = board.value.tasksByColumn.map(entry => ({
+      columnId: entry.columnId,
+      tasks: entry.tasks.map(t => (t.id === id ? { ...t, done: true } : t))
+    }))
+    const next = { ...board.value, tasksByColumn: nextTasksByColumn }
     if (board.value.project?.progress) {
       const total = board.value.project.progress.total ?? 0
       const done = (board.value.project.progress.done ?? 0) + 1
-      newBoard.project = {
+      next.project = {
         ...board.value.project,
         progress: {
           ...board.value.project.progress,
@@ -136,7 +150,7 @@ export const useProjectsStore = defineStore('projects', () => {
         }
       }
     }
-    board.value = newBoard
+    board.value = next
 
     errorBoard.value = ''
     saving.value = true
@@ -152,12 +166,6 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Create a new project, then refresh the projects list.
-   * Resets `errorProjects.value` at the start (WEB-W1-05 / WEB-W1-13).
-   * @param {{ name: string, tag?: string, blurb?: string }} input
-   * @returns {Promise<object>} Created project
-   */
   async function createProject(input) {
     const { toastError } = useErrorToast()
     errorProjects.value = ''
@@ -178,24 +186,8 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  // Fields that the projects-list view renders. When updateProject's input
-  // touches only board-visible (non-list) fields like `nudge`, we can skip the
-  // loadProjects() refetch (WEB-W1-19).
   const LIST_VISIBLE_FIELDS = ['name', 'tag', 'status', 'archived', 'blurb']
 
-  /**
-   * Update a project's fields; if a board is currently loaded for the same
-   * project, refresh it. The projects list is refreshed only when the update
-   * touched a list-visible field (WEB-W1-19) — board-only edits like
-   * changing `nudge` skip the wasted round-trip.
-   *
-   * Error surfacing (WEB-W1-06): writes the failure to `errorBoard` only when
-   * the active board belongs to the updated project — otherwise writes to
-   * `errorProjects` so the message appears in whichever view is actually
-   * visible. Both refs are reset at the start (WEB-W1-05 / WEB-W1-13).
-   * @param {string} id - Project ID
-   * @param {object} input - Fields to update
-   */
   async function updateProject(id, input) {
     const { toastError } = useErrorToast()
     errorBoard.value = ''
@@ -228,21 +220,10 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Archive (soft-delete) a project — sets archived:true, then refreshes lists.
-   * @param {string} id
-   */
   async function archiveProject(id) {
     return updateProject(id, { archived: true })
   }
 
-  /**
-   * Permanently delete a project (cascades tasks server-side).
-   * Resets `errorProjects.value` at the start (WEB-W1-05 / WEB-W1-13). Also
-   * clears any lingering board state when the deleted project's board was
-   * loaded so stale errorBoard messages do not leak (WEB-W1-21).
-   * @param {string} id
-   */
   async function deleteProject(id) {
     const { toastError } = useErrorToast()
     errorProjects.value = ''
@@ -264,17 +245,6 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  /**
-   * Create a new task under a project (defaults to the backlog column).
-   * Only fields with real values are sent — the server's zod schema rejects
-   * `null` for optional fields, so omitting them is the safe shape.
-   *
-   * Error surfacing (WEB-W1-07): writes the failure to `errorBoard` only when
-   * the active board belongs to the target project — otherwise writes to
-   * `errorProjects` so the message appears in whichever view is actually
-   * visible. Both refs are reset at the start (WEB-W1-05 / WEB-W1-13).
-   * @param {{ title: string, projectId: string, note?: string, column?: string, tag?: string, scheduledDate?: string }} input
-   */
   async function createTask(input) {
     const { toastError } = useErrorToast()
     errorBoard.value = ''
@@ -283,12 +253,12 @@ export const useProjectsStore = defineStore('projects', () => {
     const boardLoadedForThisProject = board.value?.project?.id === input.projectId
     const taskInput = {
       title: input.title,
-      projectId: input.projectId,
-      column: input.column ?? 'backlog'
+      projectId: input.projectId
     }
     if (input.note) taskInput.note = input.note
     if (input.tag) taskInput.tag = input.tag
     if (input.scheduledDate) taskInput.scheduledDate = input.scheduledDate
+    if (input.columnId) taskInput.columnId = input.columnId
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_TASK,
@@ -311,6 +281,192 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  // -- Column actions --
+
+  /** Append a new column to the active board. */
+  async function createColumn(projectId, label) {
+    const { toastError } = useErrorToast()
+    if (!board.value) return null
+    errorBoard.value = ''
+    saving.value = true
+    const snapshot = board.value
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_COLUMN,
+        variables: { projectId, label }
+      })
+      const col = data.createColumn
+      board.value = {
+        ...board.value,
+        columns: [...board.value.columns, col],
+        tasksByColumn: [...board.value.tasksByColumn, { columnId: col.id, tasks: [] }]
+      }
+      return col
+    } catch (e) {
+      board.value = snapshot
+      errorBoard.value = e.message
+      toastError(e, 'Failed to create column')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Rename a column. Optimistic. */
+  async function renameColumn(id, label) {
+    const { toastError } = useErrorToast()
+    if (!board.value) return
+    const snapshot = board.value
+    board.value = {
+      ...board.value,
+      columns: board.value.columns.map(c => (c.id === id ? { ...c, label } : c))
+    }
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({ mutation: UPDATE_COLUMN, variables: { id, label } })
+    } catch (e) {
+      board.value = snapshot
+      errorBoard.value = e.message
+      toastError(e, 'Failed to rename column')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
+   * Reorder columns by passing a new ordered id list. Used after drag-end on
+   * the outer kanban (column-level) Sortable.
+   */
+  async function reorderColumns(projectId, columnIds) {
+    const { toastError } = useErrorToast()
+    if (!board.value) return
+    const snapshot = board.value
+    const byId = new Map(board.value.columns.map(c => [c.id, c]))
+    const nextColumns = columnIds.map(id => byId.get(id)).filter(Boolean)
+    const tasksMap = new Map(board.value.tasksByColumn.map(t => [t.columnId, t]))
+    const nextTasksByColumn = columnIds
+      .map(id => tasksMap.get(id) ?? { columnId: id, tasks: [] })
+      .filter(Boolean)
+    board.value = { ...board.value, columns: nextColumns, tasksByColumn: nextTasksByColumn }
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({
+        mutation: REORDER_COLUMNS,
+        variables: { projectId, columnIds }
+      })
+    } catch (e) {
+      board.value = snapshot
+      errorBoard.value = e.message
+      toastError(e, 'Failed to reorder columns')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
+   * Delete a column, with `mode` either 'move' (tasks land in another column)
+   * or 'delete' (tasks are removed too). On success, the board reloads so
+   * progress + columns + tasks all reflect server state.
+   */
+  async function deleteColumn(id, mode, moveToColumnId) {
+    const { toastError } = useErrorToast()
+    if (!board.value) return
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({
+        mutation: DELETE_COLUMN,
+        variables: { id, mode, moveToColumnId: moveToColumnId ?? null }
+      })
+      if (board.value?.project?.id) {
+        await loadBoard(board.value.project.id)
+      }
+    } catch (e) {
+      errorBoard.value = e.message
+      toastError(e, 'Failed to delete column')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
+   * Move a task between columns (or within the same column at a new position).
+   * The caller passes the post-drag `nextTasksByColumn`; we persist it and
+   * roll back on error. When the move crosses columns, both source and
+   * destination get their order list flushed so neighbours collapse cleanly.
+   */
+  async function moveTask(taskId, fromColumnId, toColumnId, toIndex, nextTasksByColumn) {
+    const { toastError } = useErrorToast()
+    if (!board.value) return
+    const snapshot = board.value
+    board.value = { ...board.value, tasksByColumn: nextTasksByColumn }
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({
+        mutation: MOVE_TASK,
+        variables: { id: taskId, columnId: toColumnId, order: toIndex }
+      })
+      if (fromColumnId !== toColumnId) {
+        const srcEntry = nextTasksByColumn.find(t => t.columnId === fromColumnId)
+        if (srcEntry && srcEntry.tasks.length > 0) {
+          await apolloClient.mutate({
+            mutation: REORDER_TASKS_IN_COLUMN,
+            variables: {
+              columnId: fromColumnId,
+              taskIds: srcEntry.tasks.map(t => t.id)
+            }
+          })
+        }
+      }
+      const tgtEntry = nextTasksByColumn.find(t => t.columnId === toColumnId)
+      if (tgtEntry && tgtEntry.tasks.length > 1) {
+        await apolloClient.mutate({
+          mutation: REORDER_TASKS_IN_COLUMN,
+          variables: {
+            columnId: toColumnId,
+            taskIds: tgtEntry.tasks.map(t => t.id)
+          }
+        })
+      }
+    } catch (e) {
+      board.value = snapshot
+      errorBoard.value = e.message
+      toastError(e, 'Failed to move task')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /** Persist a within-column reorder. */
+  async function reorderTasksInColumn(columnId, taskIds, nextTasksByColumn) {
+    const { toastError } = useErrorToast()
+    if (!board.value) return
+    const snapshot = board.value
+    board.value = { ...board.value, tasksByColumn: nextTasksByColumn }
+    errorBoard.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({
+        mutation: REORDER_TASKS_IN_COLUMN,
+        variables: { columnId, taskIds }
+      })
+    } catch (e) {
+      board.value = snapshot
+      errorBoard.value = e.message
+      toastError(e, 'Failed to reorder tasks')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
   return {
     projects,
     board,
@@ -326,6 +482,15 @@ export const useProjectsStore = defineStore('projects', () => {
     updateProject,
     archiveProject,
     deleteProject,
-    createTask
+    createTask,
+    createColumn,
+    renameColumn,
+    reorderColumns,
+    deleteColumn,
+    moveTask,
+    reorderTasksInColumn,
+    tasksFor,
+    findTask,
+    buildTasksByColumn
   }
 })

@@ -32,7 +32,7 @@ export const PROJECTS_QUERY = gql`
   }
 `
 
-/** Fetch a single project's Kanban board with task columns. */
+/** Fetch a single project's Kanban board with dynamic columns and tasks-by-column. */
 export const PROJECT_BOARD_QUERY = gql`
   query ProjectBoard($id: ID!) {
     projectBoard(id: $id) {
@@ -53,42 +53,83 @@ export const PROJECT_BOARD_QUERY = gql`
           percent
         }
       }
-      backlog {
+      columns {
         id
-        title
-        note
-        tag
-        done
-        column
+        label
         order
       }
-      thisWeek {
-        id
-        title
-        note
-        tag
-        done
-        column
-        order
+      tasksByColumn {
+        columnId
+        tasks {
+          id
+          title
+          note
+          tag
+          done
+          columnId
+          order
+        }
       }
-      doing {
-        id
-        title
-        note
-        tag
-        done
-        column
-        order
-      }
-      done {
-        id
-        title
-        note
-        tag
-        done
-        column
-        order
-      }
+    }
+  }
+`
+
+/** Create a new column at the end of a project's board. */
+export const CREATE_COLUMN = gql`
+  mutation CreateColumn($projectId: ID!, $label: String!) {
+    createColumn(projectId: $projectId, label: $label) {
+      id
+      label
+      order
+    }
+  }
+`
+
+/** Rename a column. */
+export const UPDATE_COLUMN = gql`
+  mutation UpdateColumn($id: ID!, $label: String) {
+    updateColumn(id: $id, label: $label) {
+      id
+      label
+      order
+    }
+  }
+`
+
+/** Reorder all columns within a project by passing the full ordered id list. */
+export const REORDER_COLUMNS = gql`
+  mutation ReorderColumns($projectId: ID!, $columnIds: [ID!]!) {
+    reorderColumns(projectId: $projectId, columnIds: $columnIds) {
+      id
+      order
+    }
+  }
+`
+
+/** Delete a column, either moving its tasks elsewhere or deleting them too. */
+export const DELETE_COLUMN = gql`
+  mutation DeleteColumn($id: ID!, $mode: DeleteColumnMode!, $moveToColumnId: ID) {
+    deleteColumn(id: $id, mode: $mode, moveToColumnId: $moveToColumnId)
+  }
+`
+
+/** Move a task to a different column (or different slot in the same column). */
+export const MOVE_TASK = gql`
+  mutation MoveTask($id: ID!, $columnId: ID!, $order: Int!) {
+    moveTask(id: $id, columnId: $columnId, order: $order) {
+      id
+      columnId
+      order
+    }
+  }
+`
+
+/** Reorder tasks inside a column by passing the full ordered id list. */
+export const REORDER_TASKS_IN_COLUMN = gql`
+  mutation ReorderTasksInColumn($columnId: ID!, $taskIds: [ID!]!) {
+    reorderTasksInColumn(columnId: $columnId, taskIds: $taskIds) {
+      id
+      order
     }
   }
 `
@@ -98,7 +139,7 @@ export const UPDATE_TASK = gql`
   mutation UpdateTask($id: ID!, $input: UpdateTaskInput!) {
     updateTask(id: $id, input: $input) {
       id
-      column
+      columnId
     }
   }
 `

@@ -14,6 +14,19 @@ vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' }
 }))
 
+// Stub vuedraggable so the component renders without instantiating the
+// SortableJS engine in jsdom. The stub honours the slot-based item API:
+// expose each list element through the `item` slot just like the real
+// component does.
+vi.mock('vuedraggable', () => ({
+  default: {
+    name: 'draggable',
+    props: ['modelValue', 'list', 'itemKey', 'group', 'handle', 'animation'],
+    template:
+      '<div data-test="draggable"><template v-for="(element, index) in (modelValue || list || [])" :key="element[itemKey] ?? index"><slot name="item" :element="element" :index="index" /></template><slot name="footer" /></div>'
+  }
+}))
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
@@ -21,6 +34,10 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 const globalStubs = {
   ScreenHeading: true,
   KanbanCard: true,
+  ColumnHeaderMenu: true,
+  RenameColumnModal: true,
+  DeleteColumnDialog: true,
+  AddColumnButton: true,
   RouterLink: { template: '<a><slot /></a>' }
 }
 
@@ -28,10 +45,21 @@ const PROJECT = { id: 'proj-1', name: 'Alpha' }
 
 const BOARD = {
   project: PROJECT,
-  backlog: [{ id: 't1', title: 'Plan', done: false }],
-  thisWeek: [{ id: 't2', title: 'Execute', done: false }],
-  doing: [{ id: 't3', title: 'Review', done: false }],
-  done: [{ id: 't4', title: 'Ship', done: true }]
+  columns: [
+    { id: 'col-bl', label: 'Backlog', order: 0 },
+    { id: 'col-tw', label: 'This week', order: 1 },
+    { id: 'col-do', label: 'Doing', order: 2 },
+    { id: 'col-dn', label: 'Done', order: 3 }
+  ],
+  tasksByColumn: [
+    { columnId: 'col-bl', tasks: [{ id: 't1', title: 'Plan', done: false, columnId: 'col-bl' }] },
+    {
+      columnId: 'col-tw',
+      tasks: [{ id: 't2', title: 'Execute', done: false, columnId: 'col-tw' }]
+    },
+    { columnId: 'col-do', tasks: [{ id: 't3', title: 'Review', done: false, columnId: 'col-do' }] },
+    { columnId: 'col-dn', tasks: [{ id: 't4', title: 'Ship', done: true, columnId: 'col-dn' }] }
+  ]
 }
 
 function mountKanban(storeOverrides = {}) {
@@ -62,8 +90,6 @@ describe('KanbanView', () => {
     vi.clearAllMocks()
   })
 
-  // ── Loading / error states ─────────────────────────────────────────────────
-
   it('shows loading indicator while loadingBoard is true', () => {
     const wrapper = mountKanban({ loadingBoard: true })
     expect(wrapper.text()).toContain('Loading')
@@ -79,11 +105,9 @@ describe('KanbanView', () => {
     expect(wrapper.find('.kanban-view__status--error').exists()).toBe(true)
   })
 
-  // ── Not-found state (WEB-T08-007 fix) ─────────────────────────────────────
-
   it('shows "Project not found" when board loads but project is null', () => {
     const wrapper = mountKanban({
-      board: { project: null, backlog: [], thisWeek: [], doing: [], done: [] },
+      board: { project: null, columns: [], tasksByColumn: [] },
       loadingBoard: false,
       errorBoard: ''
     })
@@ -94,8 +118,6 @@ describe('KanbanView', () => {
     const wrapper = mountKanban({ board: null, loadingBoard: false, errorBoard: '' })
     expect(wrapper.text()).toContain('Project not found')
   })
-
-  // ── Board renders correctly ────────────────────────────────────────────────
 
   it('calls store.loadBoard with the route param id on mount', () => {
     mountKanban()
@@ -108,7 +130,7 @@ describe('KanbanView', () => {
     expect(wrapper.text()).toContain('Alpha')
   })
 
-  it('renders all 4 column headers', () => {
+  it('renders every column header label from the board', () => {
     const wrapper = mountKanban({ board: BOARD })
     expect(wrapper.text()).toContain('Backlog')
     expect(wrapper.text()).toContain('This week')
@@ -119,26 +141,23 @@ describe('KanbanView', () => {
   it('renders task count badges for each column', () => {
     const wrapper = mountKanban({ board: BOARD })
     const counts = wrapper.findAll('.kanban-view__column-count')
-    // Each column has exactly 1 task in BOARD
+    expect(counts).toHaveLength(4)
     counts.forEach(el => {
       expect(el.text()).toBe('[1]')
     })
   })
 
-  it('renders KanbanCard for each task', () => {
+  it('renders KanbanCard for each task across all columns', () => {
     const wrapper = mountKanban({ board: BOARD })
-    const cards = wrapper.findAll('kanban-card-stub')
-    // BOARD has 4 tasks across 4 columns
+    const cards = wrapper.findAllComponents({ name: 'KanbanCard' })
     expect(cards.length).toBe(4)
   })
 
   it('shows "Empty" placeholder for an empty column', () => {
     const emptyBoard = {
       project: PROJECT,
-      backlog: [],
-      thisWeek: [],
-      doing: [],
-      done: []
+      columns: BOARD.columns,
+      tasksByColumn: BOARD.columns.map(c => ({ columnId: c.id, tasks: [] }))
     }
     const wrapper = mountKanban({ board: emptyBoard })
     const emptyTexts = wrapper.findAll('.kanban-view__empty-col')
@@ -146,19 +165,41 @@ describe('KanbanView', () => {
     emptyTexts.forEach(el => expect(el.text()).toBe('Empty'))
   })
 
-  // ── columns computed ───────────────────────────────────────────────────────
-
-  it('defaults to empty arrays for missing board columns', () => {
-    const wrapper = mountKanban({ board: { project: PROJECT } })
-    // Should not throw; columns default to []
-    expect(wrapper.text()).toContain('Backlog')
+  it('renders no columns when the board has none', () => {
+    const wrapper = mountKanban({
+      board: { project: PROJECT, columns: [], tasksByColumn: [] }
+    })
+    expect(wrapper.findAll('.kanban-view__column')).toHaveLength(0)
   })
-
-  // ── completeTask wired to KanbanCard ──────────────────────────────────────
 
   it('passes the task to KanbanCard via task prop', () => {
     const wrapper = mountKanban({ board: BOARD })
-    const firstCard = wrapper.find('kanban-card-stub')
-    expect(firstCard.attributes('task')).toBeDefined()
+    const firstCard = wrapper.findComponent({ name: 'KanbanCard' })
+    expect(firstCard.props('task')).toMatchObject({ id: 't1' })
+  })
+
+  it('forwards a column rename through the store action', async () => {
+    const wrapper = mountKanban({ board: BOARD })
+    const store = useProjectsStore()
+    // The view exposes renameTarget for the modal via the menu; invoke the
+    // handler directly since the menu itself is a stub.
+    wrapper.vm.openRenameFor({ id: 'col-bl', label: 'Backlog' })
+    await wrapper.vm.onRenameSubmit('Inbox')
+    expect(store.renameColumn).toHaveBeenCalledWith('col-bl', 'Inbox')
+  })
+
+  it('forwards a column delete through the store action', async () => {
+    const wrapper = mountKanban({ board: BOARD })
+    const store = useProjectsStore()
+    wrapper.vm.openDeleteFor({ id: 'col-tw', label: 'This week' })
+    await wrapper.vm.onDeleteConfirm({ mode: 'delete', moveToColumnId: null })
+    expect(store.deleteColumn).toHaveBeenCalledWith('col-tw', 'delete', null)
+  })
+
+  it('forwards an add-column event through the store action', async () => {
+    const wrapper = mountKanban({ board: BOARD })
+    const store = useProjectsStore()
+    await wrapper.vm.onAddColumn('Review')
+    expect(store.createColumn).toHaveBeenCalledWith('proj-1', 'Review')
   })
 })

@@ -217,13 +217,20 @@ export default {
     /** Completion percentage (0–100). */
     const percent = computed(() => project.value?.progress?.percent ?? 0)
 
-    /** Task sections ordered for display; labels resolved via i18n (WEB-W4-03). */
-    const sections = computed(() => [
-      { key: 'thisWeek', label: t('projects.columnThisWeek'), tasks: store.board?.thisWeek ?? [] },
-      { key: 'doing', label: t('projects.columnDoing'), tasks: store.board?.doing ?? [] },
-      { key: 'backlog', label: t('projects.columnBacklog'), tasks: store.board?.backlog ?? [] },
-      { key: 'done', label: t('projects.columnDone'), tasks: store.board?.done ?? [] },
-    ])
+    /**
+     * Task sections derived from the project's custom columns (kanban
+     * migration). Sections render in the user's configured column order;
+     * empty columns are kept so the user can drag tasks into them from the
+     * board even from this overview screen.
+     */
+    const sections = computed(() => {
+      const board = store.board
+      if (!board?.columns) return []
+      return board.columns.map(col => {
+        const entry = board.tasksByColumn?.find(t => t.columnId === col.id)
+        return { key: col.id, label: col.label, tasks: entry?.tasks ?? [] }
+      })
+    })
 
     // -- Lifecycle --
     onMounted(() => store.loadBoard(route.params.id))

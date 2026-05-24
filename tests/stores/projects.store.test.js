@@ -16,7 +16,13 @@ vi.mock('@/api/operations/index.js', () => ({
   CREATE_PROJECT: 'CREATE_PROJECT',
   UPDATE_PROJECT: 'UPDATE_PROJECT',
   DELETE_PROJECT: 'DELETE_PROJECT',
-  CREATE_TASK: 'CREATE_TASK'
+  CREATE_TASK: 'CREATE_TASK',
+  CREATE_COLUMN: 'CREATE_COLUMN',
+  UPDATE_COLUMN: 'UPDATE_COLUMN',
+  REORDER_COLUMNS: 'REORDER_COLUMNS',
+  DELETE_COLUMN: 'DELETE_COLUMN',
+  MOVE_TASK: 'MOVE_TASK',
+  REORDER_TASKS_IN_COLUMN: 'REORDER_TASKS_IN_COLUMN'
 }))
 
 const mockToastError = vi.fn()
@@ -34,8 +40,12 @@ const fakeProjects = [
 const fakeBoard = {
   project: { id: 'p1', title: 'Alpha', status: 'on_track' },
   columns: [
-    { id: 'col1', title: 'To Do', tasks: [{ id: 't1', title: 'Task A', done: false }] },
-    { id: 'col2', title: 'Done', tasks: [] }
+    { id: 'col-tw', label: 'This week', order: 0 },
+    { id: 'col-dn', label: 'Done', order: 1 }
+  ],
+  tasksByColumn: [
+    { columnId: 'col-tw', tasks: [{ id: 't1', title: 'Task A', done: false, columnId: 'col-tw' }] },
+    { columnId: 'col-dn', tasks: [] }
   ]
 }
 
@@ -47,11 +57,40 @@ function makeOptimisticBoard() {
       status: 'on_track',
       progress: { done: 1, total: 4, percent: 25 }
     },
-    thisWeek: [{ id: 't1', title: 'Task A', done: false, tag: null }],
-    doing: [{ id: 't2', title: 'Task B', done: false, tag: null }],
-    backlog: [{ id: 't3', title: 'Task C', done: false, tag: null }],
-    done: [{ id: 't4', title: 'Task D', done: true, tag: null }]
+    columns: [
+      { id: 'col-tw', label: 'This week', order: 0 },
+      { id: 'col-do', label: 'Doing', order: 1 },
+      { id: 'col-bl', label: 'Backlog', order: 2 },
+      { id: 'col-dn', label: 'Done', order: 3 }
+    ],
+    tasksByColumn: [
+      {
+        columnId: 'col-tw',
+        tasks: [{ id: 't1', title: 'Task A', done: false, tag: null, columnId: 'col-tw' }]
+      },
+      {
+        columnId: 'col-do',
+        tasks: [{ id: 't2', title: 'Task B', done: false, tag: null, columnId: 'col-do' }]
+      },
+      {
+        columnId: 'col-bl',
+        tasks: [{ id: 't3', title: 'Task C', done: false, tag: null, columnId: 'col-bl' }]
+      },
+      {
+        columnId: 'col-dn',
+        tasks: [{ id: 't4', title: 'Task D', done: true, tag: null, columnId: 'col-dn' }]
+      }
+    ]
   }
+}
+
+/** Look up a task across every column for assertion convenience. */
+function findInBoard(board, id) {
+  for (const entry of board.tasksByColumn) {
+    const t = entry.tasks.find(t => t.id === id)
+    if (t) return { task: t, columnId: entry.columnId }
+  }
+  return null
 }
 
 describe('projects.store', () => {
@@ -252,8 +291,8 @@ describe('projects.store', () => {
     })
   })
 
-  describe('completeTask()', () => {
-    it('moves the task to done locally without calling loadBoard (no reload flash)', async () => {
+  describe('completeTask() (decoupled from columns)', () => {
+    it('marks the task done in place without moving columns', async () => {
       apolloClient.mutate.mockResolvedValueOnce({})
       const store = useProjectsStore()
       store.board = makeOptimisticBoard()
@@ -264,45 +303,35 @@ describe('projects.store', () => {
         expect.objectContaining({ variables: { id: 't1' } })
       )
       expect(apolloClient.query).not.toHaveBeenCalled()
-      expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
-      expect(store.board.done[0]).toMatchObject({ id: 't1', done: true })
+      const located = findInBoard(store.board, 't1')
+      expect(located?.columnId).toBe('col-tw')
+      expect(located?.task.done).toBe(true)
       expect(store.board.project.progress.done).toBe(2)
       expect(store.board.project.progress.percent).toBe(50)
       expect(store.loadingBoard).toBe(false)
     })
 
-    it('moves a task from doing to done', async () => {
-      apolloClient.mutate.mockResolvedValueOnce({})
-      const store = useProjectsStore()
-      store.board = makeOptimisticBoard()
-
-      await store.completeTask('t2')
-
-      expect(store.board.doing.find(t => t.id === 't2')).toBeUndefined()
-      expect(store.board.done[0]).toMatchObject({ id: 't2', done: true })
-    })
-
-    it('moves a task from backlog to done', async () => {
+    it('marks tasks done in any column without rearranging them', async () => {
       apolloClient.mutate.mockResolvedValueOnce({})
       const store = useProjectsStore()
       store.board = makeOptimisticBoard()
 
       await store.completeTask('t3')
 
-      expect(store.board.backlog.find(t => t.id === 't3')).toBeUndefined()
-      expect(store.board.done[0]).toMatchObject({ id: 't3', done: true })
+      const located = findInBoard(store.board, 't3')
+      expect(located?.columnId).toBe('col-bl')
+      expect(located?.task.done).toBe(true)
     })
 
     it('is a no-op when the task is already done (idempotent)', async () => {
       const store = useProjectsStore()
       store.board = makeOptimisticBoard()
-      const beforeDone = [...store.board.done]
+      const beforeProgress = { ...store.board.project.progress }
 
       await store.completeTask('t4')
 
       expect(apolloClient.mutate).not.toHaveBeenCalled()
-      expect(store.board.done).toEqual(beforeDone)
-      expect(store.board.project.progress.done).toBe(1)
+      expect(store.board.project.progress).toEqual(beforeProgress)
     })
 
     it('is a no-op when the task id is not found', async () => {
@@ -328,15 +357,11 @@ describe('projects.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('complete failed'))
       const store = useProjectsStore()
       store.board = makeOptimisticBoard()
-      const originalThisWeek = [...store.board.thisWeek]
-      const originalDone = [...store.board.done]
-      const originalProgress = { ...store.board.project.progress }
+      const snapshot = store.board
 
       await store.completeTask('t1').catch(() => {})
 
-      expect(store.board.thisWeek).toEqual(originalThisWeek)
-      expect(store.board.done).toEqual(originalDone)
-      expect(store.board.project.progress).toEqual(originalProgress)
+      expect(store.board).toBe(snapshot)
       expect(store.errorBoard).toBe('complete failed')
       expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to complete task')
     })
@@ -399,8 +424,8 @@ describe('projects.store', () => {
 
       await store.completeTask('t1')
 
-      expect(store.board.done[0].id).toBe('t1')
-      expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
+      const located = findInBoard(store.board, 't1')
+      expect(located?.task.done).toBe(true)
     })
 
     it('handles a frozen board (Apollo result) without throwing', async () => {
@@ -409,11 +434,13 @@ describe('projects.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({})
       const store = useProjectsStore()
       const board = makeOptimisticBoard()
-      // Freeze every level: outer board, project, progress, each column array.
-      Object.freeze(board.thisWeek)
-      Object.freeze(board.doing)
-      Object.freeze(board.backlog)
-      Object.freeze(board.done)
+      // Freeze every level: outer board, project, progress, each column entry.
+      for (const entry of board.tasksByColumn) {
+        Object.freeze(entry.tasks)
+        Object.freeze(entry)
+      }
+      Object.freeze(board.tasksByColumn)
+      Object.freeze(board.columns)
       Object.freeze(board.project.progress)
       Object.freeze(board.project)
       Object.freeze(board)
@@ -421,9 +448,143 @@ describe('projects.store', () => {
 
       await expect(store.completeTask('t1')).resolves.not.toThrow()
 
-      expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
-      expect(store.board.done[0]).toMatchObject({ id: 't1', done: true })
+      const located = findInBoard(store.board, 't1')
+      expect(located?.task.done).toBe(true)
       expect(store.board.project.progress.done).toBe(2)
+    })
+  })
+
+  describe('column actions', () => {
+    function setBoard(store) {
+      store.board = makeOptimisticBoard()
+    }
+
+    it('createColumn appends the new column and an empty task bucket', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { createColumn: { id: 'col-new', label: 'Review', order: 4 } }
+      })
+      const store = useProjectsStore()
+      setBoard(store)
+
+      await store.createColumn('p1', 'Review')
+
+      const ids = store.board.columns.map(c => c.id)
+      expect(ids).toEqual(['col-tw', 'col-do', 'col-bl', 'col-dn', 'col-new'])
+      const entry = store.board.tasksByColumn.find(t => t.columnId === 'col-new')
+      expect(entry?.tasks).toEqual([])
+    })
+
+    it('renameColumn updates the label optimistically', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { updateColumn: { id: 'col-tw', label: 'Inbox' } }
+      })
+      const store = useProjectsStore()
+      setBoard(store)
+
+      await store.renameColumn('col-tw', 'Inbox')
+
+      const col = store.board.columns.find(c => c.id === 'col-tw')
+      expect(col?.label).toBe('Inbox')
+    })
+
+    it('renameColumn rolls back on error', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('rename failed'))
+      const store = useProjectsStore()
+      setBoard(store)
+      const snapshot = store.board
+
+      await store.renameColumn('col-tw', 'Inbox').catch(() => {})
+
+      expect(store.board).toBe(snapshot)
+      expect(store.errorBoard).toBe('rename failed')
+    })
+
+    it('reorderColumns rearranges columns and matching task buckets', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      setBoard(store)
+      const newOrder = ['col-dn', 'col-bl', 'col-do', 'col-tw']
+
+      await store.reorderColumns('p1', newOrder)
+
+      expect(store.board.columns.map(c => c.id)).toEqual(newOrder)
+      expect(store.board.tasksByColumn.map(t => t.columnId)).toEqual(newOrder)
+    })
+
+    it('deleteColumn fires a board reload after the mutation', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      setBoard(store)
+
+      await store.deleteColumn('col-bl', 'delete', null)
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { id: 'col-bl', mode: 'delete', moveToColumnId: null }
+        })
+      )
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'PROJECT_BOARD_QUERY' })
+      )
+    })
+  })
+
+  describe('drag actions', () => {
+    function setBoard(store) {
+      store.board = makeOptimisticBoard()
+    }
+
+    it('moveTask updates state and fires the moveTask mutation', async () => {
+      // moveTask + one reorder for the target column (single task left there).
+      apolloClient.mutate.mockResolvedValue({})
+      const store = useProjectsStore()
+      setBoard(store)
+      // Build a "next" tasksByColumn that moves t1 from col-tw to col-do at index 0.
+      const next = store.board.tasksByColumn.map(entry => ({
+        columnId: entry.columnId,
+        tasks: entry.tasks.filter(t => t.id !== 't1')
+      }))
+      const movedTask = { ...store.board.tasksByColumn[0].tasks[0], columnId: 'col-do' }
+      const tgt = next.find(e => e.columnId === 'col-do')
+      tgt.tasks = [movedTask, ...tgt.tasks]
+
+      await store.moveTask('t1', 'col-tw', 'col-do', 0, next)
+
+      const moveCall = apolloClient.mutate.mock.calls.find(c => c[0]?.mutation === 'MOVE_TASK')
+      expect(moveCall).toBeDefined()
+      expect(moveCall[0].variables).toEqual({ id: 't1', columnId: 'col-do', order: 0 })
+      const located = findInBoard(store.board, 't1')
+      expect(located?.columnId).toBe('col-do')
+    })
+
+    it('moveTask rolls back on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('move failed'))
+      const store = useProjectsStore()
+      setBoard(store)
+      const snapshot = store.board
+      const next = store.board.tasksByColumn.map(e => ({ ...e, tasks: [...e.tasks] }))
+
+      await store.moveTask('t1', 'col-tw', 'col-do', 0, next).catch(() => {})
+
+      expect(store.board).toBe(snapshot)
+      expect(store.errorBoard).toBe('move failed')
+    })
+
+    it('reorderTasksInColumn updates state and fires the reorder mutation', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      setBoard(store)
+      const next = store.board.tasksByColumn.map(e => ({ ...e, tasks: [...e.tasks] }))
+
+      await store.reorderTasksInColumn('col-tw', ['t1'], next)
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutation: 'REORDER_TASKS_IN_COLUMN',
+          variables: { columnId: 'col-tw', taskIds: ['t1'] }
+        })
+      )
     })
   })
 

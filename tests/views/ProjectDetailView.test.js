@@ -42,12 +42,34 @@ const PROJECT = {
   progress: { percent: 60, done: 3, total: 5 }
 }
 
+const COLUMNS = [
+  { id: 'col-tw', label: 'This week', order: 0 },
+  { id: 'col-do', label: 'Doing', order: 1 },
+  { id: 'col-bl', label: 'Backlog', order: 2 },
+  { id: 'col-dn', label: 'Done', order: 3 }
+]
+
 const BOARD = {
   project: PROJECT,
-  thisWeek: [{ id: 't1', title: 'Write tests', done: false, tag: null }],
-  doing: [{ id: 't2', title: 'Review PR', done: false, tag: 'review' }],
-  backlog: [{ id: 't3', title: 'Plan Q3', done: false, tag: null }],
-  done: [{ id: 't4', title: 'Ship MVP', done: true, tag: null }]
+  columns: COLUMNS,
+  tasksByColumn: [
+    {
+      columnId: 'col-tw',
+      tasks: [{ id: 't1', title: 'Write tests', done: false, tag: null, columnId: 'col-tw' }]
+    },
+    {
+      columnId: 'col-do',
+      tasks: [{ id: 't2', title: 'Review PR', done: false, tag: 'review', columnId: 'col-do' }]
+    },
+    {
+      columnId: 'col-bl',
+      tasks: [{ id: 't3', title: 'Plan Q3', done: false, tag: null, columnId: 'col-bl' }]
+    },
+    {
+      columnId: 'col-dn',
+      tasks: [{ id: 't4', title: 'Ship MVP', done: true, tag: null, columnId: 'col-dn' }]
+    }
+  ]
 }
 
 function mountDetail(storeOverrides = {}) {
@@ -99,7 +121,7 @@ describe('ProjectDetailView', () => {
 
   it('shows "Project not found" when board loads but project is null', () => {
     const wrapper = mountDetail({
-      board: { project: null, thisWeek: [], doing: [], backlog: [], done: [] },
+      board: { project: null, columns: [], tasksByColumn: [] },
       loadingBoard: false,
       errorBoard: ''
     })
@@ -198,10 +220,8 @@ describe('ProjectDetailView', () => {
   it('shows "No tasks here." for an empty section', () => {
     const emptyBoard = {
       project: PROJECT,
-      thisWeek: [],
-      doing: [],
-      backlog: [],
-      done: []
+      columns: COLUMNS,
+      tasksByColumn: COLUMNS.map(c => ({ columnId: c.id, tasks: [] }))
     }
     const wrapper = mountDetail({ board: emptyBoard })
     const empties = wrapper.findAll('.project-detail-view__section-empty')
