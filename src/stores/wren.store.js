@@ -374,7 +374,12 @@ export const useWrenStore = defineStore('wren', () => {
           msg.status = 'failed'
           messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         }
-        const text = evt.code ? `${evt.code}: ${evt.message}` : evt.message
+        // The wire field is `errorMessage` (renamed from `message` to avoid
+        // colliding with `WrenComplete.message: WrenMessage!`). Fall back to
+        // `message` so older payloads / tests written before the rename
+        // still resolve to a string.
+        const errText = evt.errorMessage ?? evt.message ?? ''
+        const text = evt.code ? `${evt.code}: ${errText}` : errText
         error.value = text
         const { toastError } = useErrorToast()
         toastError(new Error(text), 'Wren stream error')

@@ -666,7 +666,7 @@ describe('useWrenStore — streaming events', () => {
       __typename: 'WrenError',
       messageId: 'p1',
       code: 'PROVIDER_DOWN',
-      message: 'oops'
+      errorMessage: 'oops'
     })
     expect(store.messages[0].status).toBe('failed')
     expect(store.error).toMatch(/PROVIDER_DOWN|oops/i)
@@ -679,7 +679,7 @@ describe('useWrenStore — streaming events', () => {
       __typename: 'WrenError',
       messageId: null,
       code: 'NETWORK',
-      message: 'dropped'
+      errorMessage: 'dropped'
     })
     expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Wren stream error')
   })

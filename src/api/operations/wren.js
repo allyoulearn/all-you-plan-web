@@ -183,7 +183,7 @@ export const WREN_STREAM_SUBSCRIPTION = gql`
       ... on WrenError {
         messageId
         code
-        message
+        errorMessage
       }
     }
   }
