@@ -343,4 +343,91 @@ describe('WrenBubble — action union', () => {
     await btns[1].trigger('click') // Confirm
     expect(wrapper.emitted('confirm')).toEqual([['ct1']])
   })
+
+  it('classify(): drops null and garbage entries so they never reach the template', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: 'Done',
+          actions: [null, 42, { random: 'noise' }, undefined],
+          status: 'complete',
+          createdAt: ''
+        }
+      },
+      global: { stubs: { Button: true } }
+    })
+    // No actions area rendered because every entry classified to null/garbage.
+    expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
+  })
+
+  it('classify(): treats a typename-less object with summary as an applied action', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: '',
+          actions: [{ summary: 'No __typename, but has summary' }],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    // WrenActionChip renders the summary text.
+    expect(wrapper.text()).toContain('No __typename, but has summary')
+  })
+
+  it('classify(): treats a typename-less object with confirmToken as a pending confirmation', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: '',
+          actions: [{ confirmToken: 'ct1', summary: 'Hmm?' }],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    expect(wrapper.text()).toContain('Hmm?')
+    expect(wrapper.text()).toContain('Confirm')
+    expect(wrapper.text()).toContain('Cancel')
+  })
+
+  it('classify(): a typename-less object with a `label` is suggested', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: '',
+          actions: [{ label: 'Try this' }],
+          status: 'complete',
+          createdAt: ''
+        }
+      },
+      global: { stubs: { Button: { template: '<button><slot/></button>' } } }
+    })
+    expect(wrapper.text()).toContain('Try this')
+  })
+
+  it('renders no actions when message.actions is not an array', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: 'No actions here',
+          actions: null,
+          status: 'complete',
+          createdAt: ''
+        }
+      },
+      global: { stubs: { Button: true } }
+    })
+    expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
+  })
 })

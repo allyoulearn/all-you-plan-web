@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import WrenActionChip from '@/components/wren/WrenActionChip.vue'
 
 describe('WrenActionChip', () => {
@@ -37,5 +37,59 @@ describe('WrenActionChip', () => {
   it('renders pending class when action.pending is true', () => {
     const w = mount(WrenActionChip, { props: { action: { summary: 'Adding…', pending: true } } })
     expect(w.find('.wren-action-chip--pending').exists()).toBe(true)
+  })
+
+  it('hides Undo after the undoExpiresAt timer fires', async () => {
+    vi.useFakeTimers()
+    const now = Date.now()
+    vi.setSystemTime(now)
+    try {
+      const future = new Date(now + 5_000).toISOString()
+      const w = mount(WrenActionChip, {
+        props: { action: { summary: 'X', undoToken: 't1', undoExpiresAt: future } }
+      })
+      expect(w.text()).toContain('Undo')
+
+      // Advance system time + run the pending timeout.
+      vi.setSystemTime(now + 6_000)
+      vi.advanceTimersByTime(6_000)
+      await flushPromises()
+      expect(w.text()).not.toContain('Undo')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('clears the expiry timer on unmount so no setState happens after teardown', () => {
+    vi.useFakeTimers()
+    const clearSpy = vi.spyOn(globalThis, 'clearTimeout')
+    try {
+      const future = new Date(Date.now() + 60_000).toISOString()
+      const w = mount(WrenActionChip, {
+        props: { action: { summary: 'X', undoToken: 't1', undoExpiresAt: future } }
+      })
+      w.unmount()
+      expect(clearSpy).toHaveBeenCalled()
+    } finally {
+      clearSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('WrenActionChip — non-expiry edge cases', () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows no Undo when undoToken is missing even if undoExpiresAt is in the future', () => {
+    const future = new Date(Date.now() + 60_000).toISOString()
+    const w = mount(WrenActionChip, {
+      props: { action: { summary: 'X', undoExpiresAt: future } }
+    })
+    expect(w.text()).not.toContain('Undo')
   })
 })

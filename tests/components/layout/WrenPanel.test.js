@@ -330,5 +330,46 @@ describe('WrenPanel', () => {
         URL.revokeObjectURL = origRevoke
       }
     })
+
+    it('revokes the object URL after triggering the download', async () => {
+      const wrapper = mountPanel()
+      const store = useWrenStore()
+      store.exportConversation = vi
+        .fn()
+        .mockResolvedValue({ format: 'markdown', filename: 'wren.md', content: '# hi' })
+      const origCreate = URL.createObjectURL
+      const origRevoke = URL.revokeObjectURL
+      const revoke = vi.fn()
+      URL.createObjectURL = vi.fn(() => 'blob:fake')
+      URL.revokeObjectURL = revoke
+      try {
+        await wrapper.find('.wren-panel__export-btn').trigger('click')
+        await new Promise(r => setTimeout(r, 0))
+        expect(revoke).toHaveBeenCalledWith('blob:fake')
+      } finally {
+        URL.createObjectURL = origCreate
+        URL.revokeObjectURL = origRevoke
+      }
+    })
+
+    it('surfaces export errors via store.error so the user sees a message', async () => {
+      const wrapper = mountPanel()
+      const store = useWrenStore()
+      store.exportConversation = vi.fn().mockRejectedValue(new Error('network down'))
+      await wrapper.find('.wren-panel__export-btn').trigger('click')
+      await new Promise(r => setTimeout(r, 0))
+      expect(store.error).toBe('network down')
+    })
+
+    it('re-enables the export button after a failed export (no permanently-disabled state)', async () => {
+      const wrapper = mountPanel()
+      const store = useWrenStore()
+      store.exportConversation = vi.fn().mockRejectedValue(new Error('fail'))
+      await wrapper.find('.wren-panel__export-btn').trigger('click')
+      await new Promise(r => setTimeout(r, 0))
+      // The exporting flag should be cleared in the finally — the button is
+      // enabled again so the user can retry.
+      expect(wrapper.find('.wren-panel__export-btn').attributes('disabled')).toBeUndefined()
+    })
   })
 })

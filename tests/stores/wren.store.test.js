@@ -175,6 +175,232 @@ describe('wren.store', () => {
       await store.send('hi')
       expect(store.error).toBe('')
     })
+
+    it('opens the stream subscription on the first send and reuses it on later sends', async () => {
+      apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
+      apolloClient.mutate.mockResolvedValue({ data: { sendWrenMessage: coachReply } })
+      const store = useWrenStore()
+
+      await store.send('first')
+      expect(apolloClient.subscribe).toHaveBeenCalledTimes(1)
+      expect(apolloClient.subscribe).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { conversationId: 'c1' } })
+      )
+
+      // Second send: subscription already active, conversationId cached.
+      await store.send('second')
+      expect(apolloClient.subscribe).toHaveBeenCalledTimes(1)
+      // ensureConversation cached the id, so only the first query was used.
+      expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('routes subscription events into applyStreamEvent (token delta path)', async () => {
+      // Wire a real callback through the subscribe stub so emitting an event
+      // exercises the next handler.
+      let nextCb
+      apolloClient.subscribe.mockReturnValueOnce({
+        subscribe: ({ next }) => {
+          nextCb = next
+          return { unsubscribe: () => {} }
+        }
+      })
+      apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: {
+          sendWrenMessage: {
+            id: 'cm1',
+            sender: 'coach',
+            text: '',
+            actions: [],
+            status: 'streaming',
+            createdAt: ''
+          }
+        }
+      })
+      const store = useWrenStore()
+      await store.send('hi')
+      nextCb({
+        data: { wrenStream: { __typename: 'WrenTokenDelta', messageId: 'cm1', text: 'hello' } }
+      })
+      const coachMsg = store.messages.find(m => m.id === 'cm1')
+      expect(coachMsg.text).toBe('hello')
+    })
+
+    it('sets error.value when the subscription onError fires', async () => {
+      let errCb
+      apolloClient.subscribe.mockReturnValueOnce({
+        subscribe: ({ error }) => {
+          errCb = error
+          return { unsubscribe: () => {} }
+        }
+      })
+      apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
+      apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
+      const store = useWrenStore()
+      await store.send('hi')
+      errCb(new Error('socket dropped'))
+      expect(store.error).toBe('socket dropped')
+    })
+
+    it('does not open a subscription when ensureConversation fails', async () => {
+      apolloClient.query.mockRejectedValueOnce(new Error('no conversation'))
+      apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
+      const store = useWrenStore()
+      await store.send('hi')
+      expect(apolloClient.subscribe).not.toHaveBeenCalled()
+      // The mutation still happened (legacy/scripted path can survive without a stream).
+      expect(apolloClient.mutate).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+// ── Action mutations (undo/confirm/cancel) ────────────────────────────────────
+
+describe('useWrenStore — action mutations', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  describe('undo()', () => {
+    it('returns true when the mutation resolves with true', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { undoWrenAction: true } })
+      const store = useWrenStore()
+      const ok = await store.undo('u1')
+      expect(ok).toBe(true)
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { undoToken: 'u1' } })
+      )
+    })
+
+    it('returns false when the mutation resolves with false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { undoWrenAction: false } })
+      const store = useWrenStore()
+      const ok = await store.undo('u1')
+      expect(ok).toBe(false)
+    })
+
+    it('returns false and toasts on error', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('undo failed'))
+      const store = useWrenStore()
+      const ok = await store.undo('u1')
+      expect(ok).toBe(false)
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Undo failed')
+    })
+  })
+
+  describe('confirm()', () => {
+    it('returns the applied action on success', async () => {
+      const applied = { kind: 'task.deleted', summary: 'X', undoToken: null, undoExpiresAt: null }
+      apolloClient.mutate.mockResolvedValueOnce({ data: { confirmWrenAction: applied } })
+      const store = useWrenStore()
+      const res = await store.confirm('ct1')
+      expect(res).toEqual(applied)
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { confirmToken: 'ct1' } })
+      )
+    })
+
+    it('returns null and toasts on error', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('confirm failed'))
+      const store = useWrenStore()
+      const res = await store.confirm('ct1')
+      expect(res).toBeNull()
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Confirmation failed')
+    })
+  })
+
+  describe('cancel()', () => {
+    it('returns true when the mutation resolves with true', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { cancelWrenAction: true } })
+      const store = useWrenStore()
+      const ok = await store.cancel('ct1')
+      expect(ok).toBe(true)
+    })
+
+    it('returns false and toasts on error', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('cancel failed'))
+      const store = useWrenStore()
+      const ok = await store.cancel('ct1')
+      expect(ok).toBe(false)
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Cancel failed')
+    })
+  })
+})
+
+// ── Settings + export ─────────────────────────────────────────────────────────
+
+describe('useWrenStore — settings + export', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('loadSettings: populates settings on success', async () => {
+    apolloClient.query.mockResolvedValueOnce({
+      data: {
+        wrenSettings: { displayName: 'Lucas', tone: 'direct', enabled: true, dailyTurnCap: 50 }
+      }
+    })
+    const store = useWrenStore()
+    await store.loadSettings()
+    expect(store.settings).toMatchObject({ displayName: 'Lucas', tone: 'direct' })
+  })
+
+  it('loadSettings: sets error on failure', async () => {
+    apolloClient.query.mockRejectedValueOnce(new Error('settings down'))
+    const store = useWrenStore()
+    await store.loadSettings()
+    expect(store.error).toBe('settings down')
+  })
+
+  it('updateSettings: persists patch + returns the new settings', async () => {
+    const next = { displayName: null, tone: 'warm', enabled: true, dailyTurnCap: null }
+    apolloClient.mutate.mockResolvedValueOnce({ data: { updateWrenSettings: next } })
+    const store = useWrenStore()
+    const res = await store.updateSettings({ displayName: null })
+    expect(res).toEqual(next)
+    expect(store.settings).toEqual(next)
+    expect(apolloClient.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { displayName: null } })
+    )
+  })
+
+  it('updateSettings: forwards null explicitly so the API can clear a field', async () => {
+    apolloClient.mutate.mockResolvedValueOnce({
+      data: {
+        updateWrenSettings: { displayName: null, tone: 'warm', enabled: true, dailyTurnCap: null }
+      }
+    })
+    const store = useWrenStore()
+    await store.updateSettings({ displayName: null, dailyTurnCap: null })
+    const variables = apolloClient.mutate.mock.calls[0][0].variables
+    expect(variables.displayName).toBeNull()
+    expect(variables.dailyTurnCap).toBeNull()
+  })
+
+  it('updateSettings: returns null on error and sets error', async () => {
+    apolloClient.mutate.mockRejectedValueOnce(new Error('save failed'))
+    const store = useWrenStore()
+    const res = await store.updateSettings({ tone: 'warm' })
+    expect(res).toBeNull()
+    expect(store.error).toBe('save failed')
+  })
+
+  it('exportConversation: returns the export payload', async () => {
+    apolloClient.query.mockResolvedValueOnce({
+      data: { exportWrenConversation: { format: 'markdown', filename: 'x.md', content: '# hi' } }
+    })
+    const store = useWrenStore()
+    const res = await store.exportConversation('markdown')
+    expect(res).toMatchObject({ format: 'markdown', filename: 'x.md' })
+  })
+
+  it('exportConversation: propagates errors to the caller (no internal toast)', async () => {
+    apolloClient.query.mockRejectedValueOnce(new Error('export down'))
+    const store = useWrenStore()
+    await expect(store.exportConversation('markdown')).rejects.toThrow('export down')
+    expect(mockToastError).not.toHaveBeenCalled()
   })
 })
 
