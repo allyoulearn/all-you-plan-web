@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
 import { createI18n } from 'vue-i18n'
-import { ref } from 'vue'
+import { nextTick, reactive, ref } from 'vue'
 import WrenView from '@/views/WrenView.vue'
 import en from '@/i18n/locales/en.json'
 
@@ -340,6 +340,87 @@ describe('WrenView', () => {
       const { wrapper, cancelSpy } = mountWithActionsBubbleStub('cancel')
       await wrapper.find('.wb-stub').trigger('click')
       expect(cancelSpy).toHaveBeenCalledWith('tok-cancel')
+    })
+  })
+
+  // -- store.loading watcher (line ~115) --
+  //
+  // setup() initialises `loaded` from the current store.loading and also
+  // sets up `watch(() => store.loading, isLoading => { if (!isLoading) loaded = true })`
+  // so a store that starts in the loading state still flips to "ready" once
+  // the initial load resolves. The earlier suite only covered the
+  // synchronous mount paths; this one drives the watcher branch by mutating
+  // a reactive fake store after mount.
+
+  describe('store.loading watcher', () => {
+    function mountWithReactiveStore({ messages = [], loading = true } = {}) {
+      const undoSpy = vi.fn()
+      const confirmSpy = vi.fn()
+      const cancelSpy = vi.fn()
+      // reactive() so that the watcher source `() => store.loading` re-runs
+      // when we mutate fakeStore.loading below.
+      fakeStore = reactive({
+        messages,
+        loading,
+        sending: false,
+        error: '',
+        load: vi.fn().mockResolvedValue(undefined),
+        send: vi.fn().mockResolvedValue(undefined),
+        undo: undoSpy,
+        confirm: confirmSpy,
+        cancel: cancelSpy
+      })
+      draftRef = ref('')
+      const wrapper = mount(WrenView, {
+        global: {
+          stubs: globalStubs,
+          plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
+        }
+      })
+      return wrapper
+    }
+
+    it('flips `loaded` true when store.loading transitions true → false (covers watch())', async () => {
+      const wrapper = mountWithReactiveStore({ loading: true })
+      // Pre-watcher: loaded starts false because loading was true at setup.
+      expect(wrapper.vm.loaded).toBe(false)
+      expect(wrapper.text()).toContain('Loading')
+
+      // Flip loading false — the watcher should set loaded true on next tick.
+      fakeStore.loading = false
+      await nextTick()
+      await flushPromises()
+
+      expect(wrapper.vm.loaded).toBe(true)
+    })
+
+    it('watcher does NOT flip loaded false when store.loading transitions false → true after first load', async () => {
+      // Start loaded (loading false), then flip loading true — the watcher's
+      // `if (!isLoading) loaded = true` branch should be skipped, so loaded
+      // stays true. This guards the inverted-condition regression.
+      const wrapper = mountWithReactiveStore({ loading: false })
+      expect(wrapper.vm.loaded).toBe(true)
+
+      fakeStore.loading = true
+      await nextTick()
+      await flushPromises()
+
+      // Even though store is "loading" again (e.g., a refresh), the first
+      // load already resolved so loaded stays true.
+      expect(wrapper.vm.loaded).toBe(true)
+    })
+
+    it('shows empty-state after the watcher flips loaded (loading false, no messages)', async () => {
+      const wrapper = mountWithReactiveStore({ loading: true, messages: [] })
+      // While loading, the empty-state copy is suppressed.
+      expect(wrapper.text()).not.toContain('Start a conversation with Wren')
+
+      fakeStore.loading = false
+      await nextTick()
+      await flushPromises()
+
+      // Watcher flipped loaded → empty-state copy now renders.
+      expect(wrapper.text()).toContain('Start a conversation with Wren')
     })
   })
 })
