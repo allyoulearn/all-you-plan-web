@@ -726,3 +726,176 @@ describe('useWrenStore — reset()', () => {
     })
   })
 })
+
+// ── Stream watchdog ───────────────────────────────────────────────────────────
+//
+// Every incremental stream event on a 'streaming' placeholder arms a 30s
+// timer; WrenComplete / WrenError / reset() clear it. If the timer fires the
+// message flips to 'interrupted' and a toast surfaces.
+
+describe('useWrenStore — stream watchdog', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  function streamingPlaceholder(id = 'p1') {
+    return { id, sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
+  }
+
+  it('resets the window when a delta arrives within the timeout', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      store.messages = [streamingPlaceholder()]
+
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi ' })
+      // 29s later — still under the threshold (default 30s).
+      vi.advanceTimersByTime(29_000)
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'there' })
+
+      expect(store.messages[0].status).toBe('streaming')
+      expect(store.messages[0].text).toBe('hi there')
+      expect(store.error).toBe('')
+      expect(mockToastError).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('flips to interrupted + sets error + toasts when the watchdog fires', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      store.messages = [streamingPlaceholder()]
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi' })
+
+      // 31s of silence — watchdog fires at 30s.
+      vi.advanceTimersByTime(31_000)
+
+      expect(store.messages[0].status).toBe('interrupted')
+      expect(store.messages[0].text).toBe('hi') // partial preserved
+      expect(store.error).toMatch(/interrupted/i)
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Wren stream interrupted')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('WrenComplete cancels the watchdog so a late timer is a no-op', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      store.messages = [streamingPlaceholder()]
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi ' })
+
+      store.applyStreamEvent({
+        __typename: 'WrenComplete',
+        message: {
+          id: 'p1',
+          sender: 'coach',
+          text: 'hi there',
+          actions: [],
+          status: 'complete',
+          createdAt: ''
+        }
+      })
+
+      // 60s later — long past the threshold but the timer was cleared so
+      // status must remain 'complete' and no toast surfaces.
+      vi.advanceTimersByTime(60_000)
+
+      expect(store.messages[0].status).toBe('complete')
+      expect(mockToastError).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('WrenError cancels the watchdog (message stays failed, not overwritten to interrupted)', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      store.messages = [streamingPlaceholder()]
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi' })
+
+      store.applyStreamEvent({
+        __typename: 'WrenError',
+        messageId: 'p1',
+        code: 'PROVIDER_DOWN',
+        message: 'down'
+      })
+      expect(store.messages[0].status).toBe('failed')
+
+      // Drain time well past the threshold — status must not flip.
+      vi.advanceTimersByTime(60_000)
+      expect(store.messages[0].status).toBe('failed')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('WrenActionEvent on a streaming message also re-arms the watchdog', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      store.messages = [streamingPlaceholder()]
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi' })
+
+      vi.advanceTimersByTime(20_000)
+      // Action event with no tempId — still counts as activity.
+      store.applyStreamEvent({
+        __typename: 'WrenActionEvent',
+        messageId: 'p1',
+        tempId: null,
+        action: { summary: 'Added X', undoToken: null, undoExpiresAt: null }
+      })
+      vi.advanceTimersByTime(20_000) // total 40s but only 20s since action event
+
+      expect(store.messages[0].status).toBe('streaming')
+      expect(mockToastError).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reset() cancels all pending watchdogs so they cannot fire post-reset', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      store.messages = [streamingPlaceholder('p1'), streamingPlaceholder('p2')]
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'a' })
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p2', text: 'b' })
+
+      store.reset()
+
+      // Past the threshold — neither timer should fire on a reset store.
+      vi.advanceTimersByTime(60_000)
+      expect(store.messages).toEqual([])
+      expect(mockToastError).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not arm the watchdog for a message that is not in streaming state', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useWrenStore()
+      // Placeholder already 'complete' — incoming late delta should not
+      // resurrect a watchdog window. (Defensive: this guards against a stray
+      // event for a finalised message overwriting status downstream.)
+      store.messages = [
+        { id: 'p1', sender: 'coach', text: 'done', actions: [], status: 'complete', createdAt: '' }
+      ]
+      store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'late' })
+      vi.advanceTimersByTime(60_000)
+
+      // Status unchanged, no toast.
+      expect(store.messages[0].status).toBe('complete')
+      expect(mockToastError).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

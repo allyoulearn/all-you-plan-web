@@ -23,12 +23,20 @@
         class="wren-bubble__body"
         :class="hasActions ? 'wren-bubble__body--accent' : 'wren-bubble__body--default'"
       >
-        {{ message.text }}<span
+        {{ message.text
+        }}<span
           v-if="message.status === 'streaming'"
           class="wren-bubble__cursor"
           aria-hidden="true"
         >
           ▊
+        </span>
+
+        <span
+          v-else-if="message.status === 'interrupted'"
+          class="wren-bubble__interrupted"
+        >
+          · stream interrupted
         </span>
       </div>
 
@@ -187,6 +195,13 @@ export default {
     display: inline-block;
     margin-left: 1px;
     animation: wren-bubble-cursor-blink 1s steps(2, start) infinite;
+  }
+
+  // Inline indicator appended when the watchdog flips a streaming message to
+  // 'interrupted'. Same line as the partial text so the partial reply isn't
+  // pushed offscreen — the muted style communicates "this is metadata".
+  &__interrupted {
+    @apply ml-2 font-mono text-[11px] uppercase tracking-wider text-muted;
   }
 }
 

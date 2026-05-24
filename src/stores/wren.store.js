@@ -14,18 +14,19 @@
  *   If sendWrenMessage returns status: 'complete' (legacy path with
  *   WREN_LLM_ENABLED=false), no subscription is needed — the reply is final.
  *
- * Known gap — token refresh mid-stream:
+ * Stream watchdog (token refresh mid-stream guard):
  *   apolloClient's errorLink calls resetWsConnection() after a successful
  *   token refresh (so the next subscribe uses the new bearer). graphql-ws
  *   will retry-reconnect on the next subscribe, but any partial reply that
  *   was streaming when the refresh happened is lost — the server-side
- *   subscription was torn down. WrenComplete that arrives on reconnect for
- *   a placeholder still in messages will replace the partial text via the
- *   id match. If WrenComplete does not arrive (e.g., the user navigated
- *   away first), the placeholder sits at status: 'streaming' until the
- *   user reloads. Acceptable for v1; a future revision could add a watchdog
- *   timer that flips a long-streaming placeholder to 'failed' so the UI
- *   communicates "stream interrupted, resending…".
+ *   subscription was torn down. To keep the UI honest we run a per-message
+ *   watchdog: every WrenTokenDelta / WrenActionStarted / WrenActionEvent /
+ *   WrenPendingConfirmationEvent / WrenConfirmationResolvedEvent resets a
+ *   WREN_STREAM_TIMEOUT_MS timer keyed by messageId. If no event arrives
+ *   for that long we flip the placeholder to status: 'interrupted', set
+ *   error.value, and toast. WrenComplete / WrenError clear the timer.
+ *   Watchdogs live in a module-level Map (not Pinia state) — they are
+ *   timers, not UI state — and reset() / teardown() clear them all.
  */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -43,6 +44,21 @@ import {
   EXPORT_WREN_CONVERSATION
 } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
+
+/**
+ * How long a streaming message may go without any incremental event before
+ * the watchdog flips it to 'interrupted'. Kept at the module scope so tests
+ * can advance fake timers past the threshold without needing to plumb the
+ * value through the store API.
+ */
+const WREN_STREAM_TIMEOUT_MS = 30_000
+
+/**
+ * Active per-message watchdog timer ids, keyed by messageId. Lives outside
+ * Pinia state intentionally — these are setTimeout handles, not UI state,
+ * and Vue reactivity has no need to track them.
+ */
+const streamWatchdogs = new Map()
 
 export const useWrenStore = defineStore('wren', () => {
   const messages = ref([])
@@ -162,6 +178,55 @@ export const useWrenStore = defineStore('wren', () => {
       }
       activeSubscription = null
     }
+    clearAllWatchdogs()
+  }
+
+  /**
+   * Clear a single per-message watchdog timer (no-op if none registered).
+   * Called from applyStreamEvent on every incremental event (so the next
+   * tick starts a fresh window) and on terminal events (WrenComplete /
+   * WrenError) so a completed stream cannot later flip to 'interrupted'.
+   */
+  function clearWatchdog(messageId) {
+    if (!messageId) return
+    const id = streamWatchdogs.get(messageId)
+    if (id !== undefined) {
+      clearTimeout(id)
+      streamWatchdogs.delete(messageId)
+    }
+  }
+
+  /** Clear every active per-message watchdog. Used by reset() / teardown(). */
+  function clearAllWatchdogs() {
+    for (const id of streamWatchdogs.values()) clearTimeout(id)
+    streamWatchdogs.clear()
+  }
+
+  /**
+   * Schedule (or reschedule) the per-message watchdog. After
+   * WREN_STREAM_TIMEOUT_MS without an incremental event, mark the still-
+   * streaming placeholder 'interrupted', surface a friendly error, and toast.
+   * Safe to call on every event — clearWatchdog() first so we always run on
+   * a fresh window. Skipped for messages with no id (defensive).
+   */
+  function armWatchdog(messageId) {
+    if (!messageId) return
+    clearWatchdog(messageId)
+    const id = setTimeout(() => {
+      streamWatchdogs.delete(messageId)
+      const idx = messages.value.findIndex(m => m.id === messageId)
+      if (idx < 0) return
+      const msg = messages.value[idx]
+      if (msg.status !== 'streaming') return
+      messages.value = messages.value.map((m, i) =>
+        i === idx ? { ...m, status: 'interrupted' } : m
+      )
+      const text = 'Wren stream interrupted. Please send your message again.'
+      error.value = text
+      const { toastError } = useErrorToast()
+      toastError(new Error(text), 'Wren stream interrupted')
+    }, WREN_STREAM_TIMEOUT_MS)
+    streamWatchdogs.set(messageId, id)
   }
 
   /**
@@ -200,9 +265,11 @@ export const useWrenStore = defineStore('wren', () => {
 
     // WrenComplete carries the canonical final message. If the placeholder is
     // not yet in the array (subscription emitted before the mutation resolved),
-    // append it so the reply is never dropped.
+    // append it so the reply is never dropped. Either way the stream is over,
+    // so cancel any pending watchdog for this message id.
     if (evt.__typename === 'WrenComplete') {
       const finalMsg = evt.message
+      clearWatchdog(finalMsg?.id ?? messageId)
       if (idx >= 0) {
         messages.value = messages.value.map(m => (m.id === finalMsg.id ? { ...finalMsg } : m))
       } else {
@@ -216,6 +283,16 @@ export const useWrenStore = defineStore('wren', () => {
     // error.value, even without a message attachment.
     if (idx < 0 && evt.__typename !== 'WrenError') return
     const msg = idx >= 0 ? { ...messages.value[idx] } : null
+
+    // For any incremental event on a still-streaming placeholder, restart the
+    // watchdog window. Skipped for WrenError (terminal, cleared below) and
+    // for placeholders that already moved off 'streaming' (someone else
+    // already finalised the message — don't resurrect the timer). The arm
+    // happens before the switch so an event arriving for a freshly-streaming
+    // message immediately starts a window.
+    if (idx >= 0 && msg && msg.status === 'streaming' && evt.__typename !== 'WrenError') {
+      armWatchdog(messageId)
+    }
 
     switch (evt.__typename) {
       case 'WrenTokenDelta':
@@ -290,6 +367,9 @@ export const useWrenStore = defineStore('wren', () => {
       case 'WrenError': {
         // Surface error message + mark the placeholder failed (when present).
         // Also toast so the user sees it — no view renders store.error.
+        // Terminal event: cancel the watchdog so a late-firing timer cannot
+        // overwrite the 'failed' status with 'interrupted'.
+        clearWatchdog(messageId)
         if (msg) {
           msg.status = 'failed'
           messages.value = messages.value.map((m, i) => (i === idx ? msg : m))

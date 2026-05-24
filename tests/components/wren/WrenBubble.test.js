@@ -296,6 +296,27 @@ describe('WrenBubble — action union', () => {
     expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(false)
   })
 
+  it('shows a "stream interrupted" indicator when status=interrupted (watchdog fired)', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm1',
+          sender: 'coach',
+          text: 'partial reply',
+          actions: [],
+          status: 'interrupted',
+          createdAt: ''
+        }
+      }
+    })
+    // Partial text preserved, cursor gone, indicator visible.
+    expect(wrapper.text()).toContain('partial reply')
+    expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(false)
+    const indicator = wrapper.find('.wren-bubble__interrupted')
+    expect(indicator.exists()).toBe(true)
+    expect(indicator.text()).toMatch(/stream interrupted/i)
+  })
+
   it('propagates undo event from chip', async () => {
     const action = {
       __typename: 'WrenAppliedAction',
