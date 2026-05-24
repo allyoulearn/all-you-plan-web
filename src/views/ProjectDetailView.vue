@@ -60,7 +60,12 @@
       <template v-for="section in sections" :key="section.key">
         <SectionHeader :label="section.label" :count="section.tasks.length" />
 
-        <div v-if="section.tasks.length" class="project-detail-view__task-list">
+        <TransitionGroup
+          v-if="section.tasks.length"
+          name="task-complete"
+          tag="div"
+          class="project-detail-view__task-list"
+        >
           <div
             v-for="task in section.tasks"
             :key="task.id"
@@ -82,7 +87,7 @@
               {{ task.tag }}
             </Pill>
           </div>
-        </div>
+        </TransitionGroup>
 
         <p v-else class="project-detail-view__section-empty">
           {{ t('projects.noTasksHere') }}
@@ -289,6 +294,13 @@ export default {
 
   &__task-item {
     @apply flex items-center gap-3.5 rounded-lg px-2 py-3 transition-colors hover:bg-paper-3;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition:
+        background-color 150ms ease,
+        color 150ms ease,
+        transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
   }
 
   &__task-title {
@@ -313,6 +325,47 @@ export default {
 
   &__board-link {
     @apply inline-flex h-9 items-center rounded-pill border border-rule-soft bg-paper-2 px-4 text-[13px] font-medium text-ink transition-colors hover:bg-paper-3 no-underline;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .task-complete-leave-active {
+    transition:
+      opacity 220ms ease-out,
+      transform 220ms ease-out,
+      max-height 220ms ease-out 80ms,
+      margin 220ms ease-out 80ms,
+      padding 220ms ease-out 80ms;
+    overflow: hidden;
+  }
+
+  .task-complete-leave-from {
+    max-height: 200px;
+  }
+
+  .task-complete-leave-to {
+    opacity: 0;
+    transform: translateX(8px);
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .task-complete-enter-active {
+    transition:
+      opacity 180ms ease-out 120ms,
+      transform 180ms ease-out 120ms;
+  }
+
+  .task-complete-enter-from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  .task-complete-move {
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 </style>
