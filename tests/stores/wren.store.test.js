@@ -307,6 +307,130 @@ describe('useWrenStore — streaming events', () => {
     expect(store.messages[0].text).toBe('partial complete')
   })
 
+  it('appends a final message on WrenComplete when the placeholder is not yet present (mutation-vs-subscription race)', () => {
+    const store = useWrenStore()
+    store.messages = []
+    store.applyStreamEvent({
+      __typename: 'WrenComplete',
+      message: {
+        id: 'p1',
+        sender: 'coach',
+        text: 'arrived first',
+        actions: [],
+        status: 'complete',
+        createdAt: '2026-05-23T00:01:00Z'
+      }
+    })
+    expect(store.messages).toHaveLength(1)
+    expect(store.messages[0].id).toBe('p1')
+    expect(store.messages[0].status).toBe('complete')
+  })
+
+  it('drops token-delta events for unknown messages (no placeholder yet)', () => {
+    const store = useWrenStore()
+    store.messages = []
+    // No placeholder for 'p1' yet — event should be a no-op, not throw.
+    store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'lost' })
+    expect(store.messages).toEqual([])
+  })
+
+  it('WrenError without a placeholder still sets error.value', () => {
+    const store = useWrenStore()
+    store.messages = []
+    store.applyStreamEvent({
+      __typename: 'WrenError',
+      messageId: null,
+      code: 'PROVIDER_DOWN',
+      message: 'down'
+    })
+    expect(store.error).toMatch(/PROVIDER_DOWN/)
+    expect(store.messages).toEqual([])
+  })
+
+  it('WrenActionEvent appends a chip if no tempId is provided', () => {
+    const store = useWrenStore()
+    store.messages = [
+      { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenActionEvent',
+      messageId: 'p1',
+      tempId: null,
+      action: {
+        __typename: 'WrenAppliedAction',
+        kind: 'task.created',
+        summary: 'Added "Y"',
+        undoToken: 'u2',
+        undoExpiresAt: '2030-05-23T00:00:00Z'
+      }
+    })
+    expect(store.messages[0].actions).toHaveLength(1)
+    expect(store.messages[0].actions[0]).toMatchObject({ summary: 'Added "Y"', undoToken: 'u2' })
+  })
+
+  it('WrenConfirmationResolvedEvent (confirmed + action) upgrades the chip to applied', () => {
+    const store = useWrenStore()
+    store.messages = [
+      {
+        id: 'p1',
+        sender: 'coach',
+        text: '',
+        actions: [
+          {
+            __typename: 'WrenPendingConfirmation',
+            confirmToken: 'ct1',
+            summary: 'Delete?'
+          }
+        ],
+        status: 'streaming',
+        createdAt: ''
+      }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenConfirmationResolvedEvent',
+      messageId: 'p1',
+      confirmToken: 'ct1',
+      resolution: 'confirmed',
+      action: {
+        kind: 'task.deleted',
+        summary: 'Deleted "X"',
+        undoToken: 'u3',
+        undoExpiresAt: '2030-05-23T00:00:00Z'
+      }
+    })
+    expect(store.messages[0].actions[0].__typename).toBe('WrenAppliedAction')
+    expect(store.messages[0].actions[0].summary).toBe('Deleted "X"')
+  })
+
+  it('WrenConfirmationResolvedEvent (cancelled) marks the existing chip resolved without losing fields', () => {
+    const store = useWrenStore()
+    store.messages = [
+      {
+        id: 'p1',
+        sender: 'coach',
+        text: '',
+        actions: [
+          {
+            __typename: 'WrenPendingConfirmation',
+            confirmToken: 'ct1',
+            summary: 'Delete?'
+          }
+        ],
+        status: 'streaming',
+        createdAt: ''
+      }
+    ]
+    store.applyStreamEvent({
+      __typename: 'WrenConfirmationResolvedEvent',
+      messageId: 'p1',
+      confirmToken: 'ct1',
+      resolution: 'cancelled',
+      action: null
+    })
+    expect(store.messages[0].actions[0].resolution).toBe('cancelled')
+    expect(store.messages[0].actions[0].summary).toBe('Delete?')
+  })
+
   it('marks message failed on WrenError', () => {
     const store = useWrenStore()
     store.messages = [

@@ -145,18 +145,53 @@ export const useWrenStore = defineStore('wren', () => {
     sending.value = false
   }
 
+  /**
+   * Apply a single WrenStreamEvent payload to the message list in place.
+   *
+   * Each case mutates a cloned copy of the matching placeholder message so
+   * Vue's reactivity picks up the change via array replacement. Events for
+   * unknown messages are dropped silently — except WrenComplete (which
+   * carries the final message and is appended if missing, covering the
+   * subscription-emits-before-mutation-resolves race) and WrenError
+   * (which still surfaces error.value even when no message exists).
+   *
+   * @param {object} evt - One of the WrenStreamEvent union members
+   *   (WrenTokenDelta | WrenActionStarted | WrenActionEvent |
+   *    WrenPendingConfirmationEvent | WrenConfirmationResolvedEvent |
+   *    WrenComplete | WrenError), each tagged with __typename.
+   */
   function applyStreamEvent(evt) {
     const messageId = evt.messageId ?? evt.message?.id
     const idx = messageId ? messages.value.findIndex(m => m.id === messageId) : -1
+
+    // WrenComplete carries the canonical final message. If the placeholder is
+    // not yet in the array (subscription emitted before the mutation resolved),
+    // append it so the reply is never dropped.
+    if (evt.__typename === 'WrenComplete') {
+      const finalMsg = evt.message
+      if (idx >= 0) {
+        messages.value = messages.value.map(m => (m.id === finalMsg.id ? { ...finalMsg } : m))
+      } else {
+        messages.value = [...messages.value, { ...finalMsg }]
+      }
+      return
+    }
+
+    // Other events need a matching placeholder. Bail without touching state
+    // when none is found — WrenError still falls through below to surface the
+    // error.value, even without a message attachment.
     if (idx < 0 && evt.__typename !== 'WrenError') return
     const msg = idx >= 0 ? { ...messages.value[idx] } : null
 
     switch (evt.__typename) {
       case 'WrenTokenDelta':
+        // Append the next chunk of streamed coach text to the placeholder.
         msg.text = (msg.text ?? '') + evt.text
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
       case 'WrenActionStarted':
+        // Server signalled it is about to perform a write action — insert an
+        // optimistic chip keyed by tempId so the user sees immediate feedback.
         msg.actions = [
           ...(msg.actions ?? []),
           {
@@ -170,6 +205,9 @@ export const useWrenStore = defineStore('wren', () => {
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
       case 'WrenActionEvent': {
+        // Reconcile the optimistic chip (matched by tempId) with the real
+        // applied action. Append as a new chip when no tempId matches — covers
+        // server-initiated actions that never had a "starting" event.
         const actions = [...(msg.actions ?? [])]
         const j = evt.tempId ? actions.findIndex(a => a.tempId === evt.tempId) : -1
         const newAction = { ...evt.action, __typename: 'WrenAppliedAction' }
@@ -180,6 +218,10 @@ export const useWrenStore = defineStore('wren', () => {
         break
       }
       case 'WrenPendingConfirmationEvent':
+        // Destructive action awaiting user confirmation — render a confirm chip.
+        // __typename here is the client-side persistent shape (distinct from
+        // the wire WrenPendingConfirmationEvent) so WrenBubble.classify can
+        // route it to WrenConfirmChip.
         msg.actions = [
           ...(msg.actions ?? []),
           {
@@ -195,6 +237,9 @@ export const useWrenStore = defineStore('wren', () => {
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
       case 'WrenConfirmationResolvedEvent': {
+        // User confirmed or cancelled — swap the pending chip in place. On
+        // confirm with an action payload, upgrade to a full WrenAppliedAction;
+        // otherwise mark the existing chip resolved so it grays out.
         const actions = [...(msg.actions ?? [])]
         const j = actions.findIndex(a => a.confirmToken === evt.confirmToken)
         if (j >= 0) {
@@ -208,12 +253,8 @@ export const useWrenStore = defineStore('wren', () => {
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
       }
-      case 'WrenComplete': {
-        const finalMsg = evt.message
-        messages.value = messages.value.map(m => (m.id === finalMsg.id ? { ...finalMsg } : m))
-        break
-      }
       case 'WrenError':
+        // Surface error message + mark the placeholder failed (when present).
         if (msg) {
           msg.status = 'failed'
           messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
