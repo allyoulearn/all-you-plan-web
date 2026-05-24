@@ -24,15 +24,34 @@
       <KpiRow :kpis="store.view.kpis" />
 
       <template v-for="group in groups" :key="group.key">
-        <SectionHeader v-if="group.items.length" :label="group.label" :count="group.items.length" />
+        <SectionHeader :label="group.label" :count="group.items.length" />
 
-        <div v-if="group.items.length" class="today-view__task-group">
-          <TaskRow
+        <div
+          class="today-view__task-group"
+          :class="{
+            'today-view__task-group--empty': !group.items.length,
+            'today-view__task-group--drop': dropLane === group.key
+          }"
+          :data-lane="group.key"
+          @dragover.prevent="onLaneDragOver($event, group)"
+          @dragleave="onLaneDragLeave(group)"
+          @drop.prevent="onLaneDrop($event, group)"
+        >
+          <div
             v-for="task in group.items"
             :key="task.id"
-            :task="task"
-            @complete="store.completeTask"
-          />
+            class="today-view__task-row-wrap"
+            :class="{ 'today-view__task-row-wrap--dragging': draggingId === task.id }"
+            draggable="true"
+            @dragstart="onTaskDragStart($event, task)"
+            @dragend="onTaskDragEnd"
+          >
+            <TaskRow :task="task" @complete="store.completeTask" />
+          </div>
+
+          <p v-if="!group.items.length" class="today-view__lane-empty">
+            {{ t('today.laneDropHint') }}
+          </p>
         </div>
       </template>
 
@@ -84,6 +103,18 @@ export default {
     const router = useRouter()
     const { t } = useI18n()
     const showCreateTask = ref(false)
+    /** id of the task currently being dragged; null when no drag in flight. */
+    const draggingId = ref(null)
+    /** Lane key currently under the pointer; null otherwise. */
+    const dropLane = ref(null)
+
+    /** Default scheduled time for each lane. Dropping into a lane sets the
+     *  dragged task's scheduledTime to this. */
+    const LANE_TIME = {
+      morning: '09:00',
+      afternoon: '13:00',
+      evening: '18:00'
+    }
 
     // Prevents the empty-state flash on first mount and between mutation
     // reload cycles (WEB-W4-20). Mirrors the ChoresView pattern.
@@ -153,7 +184,65 @@ export default {
       return Number.isFinite(h) ? h : 12
     }
 
-    return { store, groups, t, showCreateTask, planWithWren, showEmpty }
+    // -- Drag handlers --
+
+    function onTaskDragStart(e, task) {
+      draggingId.value = task.id
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', task.id)
+    }
+
+    function onTaskDragEnd() {
+      draggingId.value = null
+      dropLane.value = null
+    }
+
+    function onLaneDragOver(e, group) {
+      if (!draggingId.value) return
+      e.dataTransfer.dropEffect = 'move'
+      dropLane.value = group.key
+    }
+
+    function onLaneDragLeave(group) {
+      if (dropLane.value === group.key) dropLane.value = null
+    }
+
+    async function onLaneDrop(e, group) {
+      const id = e.dataTransfer.getData('text/plain')
+      dropLane.value = null
+      draggingId.value = null
+      if (!id) return
+      const task = store.view?.tasks?.find(t => t.id === id)
+      if (!task) return
+      const nextTime = LANE_TIME[group.key]
+      if (!nextTime) return
+      // Skip the round trip if the task is already in that band — the
+      // hourOf computation handles boundaries; a same-lane drop just
+      // returns without firing the mutation.
+      const currentLane = groups.value.find(g => g.items.some(t => t.id === id))?.key
+      if (currentLane === group.key) return
+      try {
+        await store.rescheduleTask(id, { scheduledTime: nextTime })
+      } catch {
+        // Toast surfaced by the store.
+      }
+    }
+
+    return {
+      store,
+      groups,
+      t,
+      showCreateTask,
+      planWithWren,
+      showEmpty,
+      draggingId,
+      dropLane,
+      onTaskDragStart,
+      onTaskDragEnd,
+      onLaneDragOver,
+      onLaneDragLeave,
+      onLaneDrop
+    }
   }
 }
 </script>
@@ -169,7 +258,31 @@ export default {
   }
 
   &__task-group {
-    @apply rounded-md bg-paper-2 px-2.5 py-1 shadow-sm;
+    @apply rounded-md bg-paper-2 px-2.5 py-1 shadow-sm transition-colors;
+
+    &--empty {
+      @apply min-h-[44px] border border-dashed border-rule-soft bg-paper px-2.5 py-2;
+    }
+
+    &--drop {
+      @apply bg-paper-3 ring-2 ring-accent;
+    }
+  }
+
+  &__task-row-wrap {
+    @apply cursor-grab;
+
+    &:active {
+      @apply cursor-grabbing;
+    }
+
+    &--dragging {
+      @apply opacity-40;
+    }
+  }
+
+  &__lane-empty {
+    @apply text-[12px] italic text-muted;
   }
 
   &__empty {

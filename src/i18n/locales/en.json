@@ -83,7 +83,8 @@
     "morning": "Morning",
     "afternoon": "Afternoon",
     "evening": "Evening",
-    "emptyState": "Nothing scheduled for today. Add a task or plan with Wren."
+    "emptyState": "Nothing scheduled for today. Add a task or plan with Wren.",
+    "laneDropHint": "Drop a task here"
   },
   "kpi": {
     "streak": "Streak",

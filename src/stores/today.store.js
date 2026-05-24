@@ -10,7 +10,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { apolloClient } from '@/api/apollo.js'
-import { TODAY_QUERY, COMPLETE_TASK, MOVE_UNFINISHED, CREATE_TASK } from '@/api/operations/index.js'
+import {
+  TODAY_QUERY,
+  COMPLETE_TASK,
+  MOVE_UNFINISHED,
+  CREATE_TASK,
+  RESCHEDULE_TASK
+} from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 
 export const useTodayStore = defineStore('today', () => {
@@ -149,5 +155,59 @@ export const useTodayStore = defineStore('today', () => {
     }
   }
 
-  return { view, loading, saving, error, load, completeTask, moveUnfinished, createTask }
+  /**
+   * Reschedule a task to a new time (same day by default). Optimistic:
+   * patches the local task's scheduledTime in place; rolls back on error.
+   * Used by drag-to-lane on the Today view.
+   *
+   * @param {string} id - Task id
+   * @param {{ scheduledDate?: string|null, scheduledTime?: string|null }} input
+   *   scheduledDate defaults to the active view's date so a same-day
+   *   time-slot move doesn't reset the day.
+   */
+  async function rescheduleTask(id, { scheduledDate, scheduledTime } = {}) {
+    const { toastError } = useErrorToast()
+    if (!view.value) return
+    const targetDate = scheduledDate ?? view.value.date
+    const snapshot = view.value
+    view.value = {
+      ...view.value,
+      tasks: view.value.tasks.map(t =>
+        t.id === id ? { ...t, scheduledTime: scheduledTime ?? null } : t
+      )
+    }
+    error.value = ''
+    saving.value = true
+    try {
+      await apolloClient.mutate({
+        mutation: RESCHEDULE_TASK,
+        variables: { id, scheduledDate: targetDate, scheduledTime: scheduledTime ?? null }
+      })
+      // If we moved the task to a different day, reload so the row leaves
+      // the current view; otherwise the optimistic patch already shows the
+      // new lane.
+      if (targetDate !== view.value?.date) {
+        await load(view.value?.date)
+      }
+    } catch (e) {
+      view.value = snapshot
+      error.value = e.message
+      toastError(e, 'Failed to reschedule task')
+      throw e
+    } finally {
+      saving.value = false
+    }
+  }
+
+  return {
+    view,
+    loading,
+    saving,
+    error,
+    load,
+    completeTask,
+    moveUnfinished,
+    createTask,
+    rescheduleTask
+  }
 })
