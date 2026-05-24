@@ -285,4 +285,61 @@ describe('WrenView', () => {
     // v-model updates the ref — wrapper.vm.draft is the draftRef
     expect(input.element.value).toBe('Test message')
   })
+
+  // -- Bubble event wiring --
+
+  describe('WrenBubble event forwarding', () => {
+    function mountWithActionsBubbleStub(eventName) {
+      // Replace the WrenBubble stub with one that emits the chosen event
+      // (undo / confirm / cancel) on click so we can assert that the
+      // inline arrow handler in WrenView reaches store.<method>.
+      const undoSpy = vi.fn()
+      const confirmSpy = vi.fn()
+      const cancelSpy = vi.fn()
+      fakeStore = {
+        messages: [buildMessage({ sender: 'coach', actions: [] })],
+        loading: false,
+        sending: false,
+        error: '',
+        load: vi.fn().mockResolvedValue(undefined),
+        send: vi.fn().mockResolvedValue(undefined),
+        undo: undoSpy,
+        confirm: confirmSpy,
+        cancel: cancelSpy
+      }
+      draftRef = ref('')
+      const wrapper = mount(WrenView, {
+        global: {
+          stubs: {
+            ScreenHeading: true,
+            WrenBubble: {
+              props: ['message'],
+              emits: ['action', 'undo', 'confirm', 'cancel'],
+              template: `<div class="wb-stub" @click="$emit('${eventName}', 'tok-${eventName}')">{{ message.text }}</div>`
+            }
+          },
+          plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
+        }
+      })
+      return { wrapper, undoSpy, confirmSpy, cancelSpy }
+    }
+
+    it('@undo from WrenBubble routes to store.undo with the token', async () => {
+      const { wrapper, undoSpy } = mountWithActionsBubbleStub('undo')
+      await wrapper.find('.wb-stub').trigger('click')
+      expect(undoSpy).toHaveBeenCalledWith('tok-undo')
+    })
+
+    it('@confirm from WrenBubble routes to store.confirm with the token', async () => {
+      const { wrapper, confirmSpy } = mountWithActionsBubbleStub('confirm')
+      await wrapper.find('.wb-stub').trigger('click')
+      expect(confirmSpy).toHaveBeenCalledWith('tok-confirm')
+    })
+
+    it('@cancel from WrenBubble routes to store.cancel with the token', async () => {
+      const { wrapper, cancelSpy } = mountWithActionsBubbleStub('cancel')
+      await wrapper.find('.wb-stub').trigger('click')
+      expect(cancelSpy).toHaveBeenCalledWith('tok-cancel')
+    })
+  })
 })

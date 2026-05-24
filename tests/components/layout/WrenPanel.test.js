@@ -178,6 +178,39 @@ describe('WrenPanel', () => {
       const input = wrapper.find('.wren-panel__input')
       expect(input.element.value).toBe('Plan tomorrow')
     })
+
+    it.each([
+      ['undo', 'undo'],
+      ['confirm', 'confirm'],
+      ['cancel', 'cancel']
+    ])('WrenBubble @%s routes to store.%s with the token', async (event, method) => {
+      setActivePinia(createTestingPinia({ createSpy: vi.fn }))
+      const store = useWrenStore()
+      store.load = vi.fn().mockResolvedValue(undefined)
+      store.send = vi.fn().mockResolvedValue(undefined)
+      store[method] = vi.fn().mockResolvedValue(true)
+      Object.assign(store, {
+        messages: [{ id: '1', sender: 'coach', text: 'Hi', actions: [], createdAt: null }],
+        loading: false,
+        sending: false,
+        error: ''
+      })
+      const wrapper = mount(WrenPanel, {
+        global: {
+          plugins: [i18n],
+          stubs: {
+            WrenBubble: {
+              props: ['message'],
+              emits: ['action', 'undo', 'confirm', 'cancel'],
+              template: `<div class="wb-stub" @click="$emit('${event}', 'tok-${event}')" />`
+            }
+          }
+        },
+        attachTo: document.body
+      })
+      await wrapper.find('.wb-stub').trigger('click')
+      expect(store[method]).toHaveBeenCalledWith(`tok-${event}`)
+    })
   })
 
   describe('quick-prompt chips', () => {
