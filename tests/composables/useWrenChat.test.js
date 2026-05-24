@@ -259,4 +259,22 @@ describe('useWrenChat', () => {
     await nextTick() // nextTick inside scrollToBottom
     expect(el.scrollTop).toBe(500)
   })
+
+  // -- teardown --
+
+  it('calls store.teardown on component unmount so the WS subscription unwinds', () => {
+    const store = useWrenStore()
+    store.load = vi.fn().mockResolvedValue(undefined)
+    store.teardown = vi.fn()
+    const wrapper = mount({
+      setup() {
+        useWrenChat(ref(null))
+        return {}
+      },
+      template: '<div />'
+    })
+    expect(store.teardown).not.toHaveBeenCalled()
+    wrapper.unmount()
+    expect(store.teardown).toHaveBeenCalledOnce()
+  })
 })

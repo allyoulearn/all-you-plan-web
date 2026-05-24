@@ -3,7 +3,7 @@
  * Shared logic for the Wren chat UI used by both WrenPanel and WrenView.
  * Handles draft state, auto-scroll, send, keydown, and quick-prompt chips.
  */
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useWrenStore } from '@/stores/wren.store.js'
 
 // -- Constants --
@@ -37,6 +37,13 @@ export function useWrenChat(bodyRef) {
       // store.error is already set by the store; log for diagnostics
       console.error('[useWrenChat] load failed', err)
     })
+  })
+
+  // Tear down the long-lived Wren stream subscription so the WS listener does
+  // not outlive the consuming view (WrenPanel / WrenView). Without this the
+  // subscription survives navigation and accumulates one listener per mount.
+  onBeforeUnmount(() => {
+    store.teardown()
   })
 
   // -- Scroll --
