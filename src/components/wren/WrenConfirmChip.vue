@@ -1,5 +1,11 @@
 <template>
-  <div class="wren-confirm-chip" :class="{ 'wren-confirm-chip--resolved': resolved }">
+  <div
+    class="wren-confirm-chip"
+    :class="{
+      'wren-confirm-chip--resolved': resolved,
+      'wren-confirm-chip--expired': isExpired && !resolved
+    }"
+  >
     <ExclamationTriangleIcon class="wren-confirm-chip__icon" aria-hidden="true" />
 
     <span class="wren-confirm-chip__summary">
@@ -9,6 +15,12 @@
     <template v-if="resolved">
       <span class="wren-confirm-chip__resolution">
         {{ resolved }}
+      </span>
+    </template>
+
+    <template v-else-if="isExpired">
+      <span class="wren-confirm-chip__resolution">
+        Expired
       </span>
     </template>
 
@@ -57,12 +69,12 @@ import Button from '@/components/ui/Button.vue'
  *   - cancel(confirmToken): fired once when the user taps Cancel.
  *
  * Non-obvious behaviour:
- *   - The chip does not track `expiresAt` itself. If the API rejects a
- *     stale token, the parent (wren store) should surface the error via
- *     toastError; the visual chip will simply read "Confirmed/Cancelled"
- *     locally even though the action failed server-side. A future revision
- *     could mirror WrenActionChip's expiry timer to disable the buttons
- *     once `expiresAt` passes.
+ *   - Mirrors WrenActionChip's expiry pattern: when `expiresAt` is already
+ *     past at mount, the buttons are replaced with an "Expired" label. When
+ *     it lapses while the chip is mounted, a setTimeout flips `expired` true
+ *     and the buttons disappear. The timer is cleared on beforeUnmount.
+ *     The API also rejects stale tokens, so this is purely a UX guard so the
+ *     user does not click a button that will surface a toast error.
  */
 export default {
   name: 'WrenConfirmChip',
@@ -76,14 +88,40 @@ export default {
   },
   emits: ['confirm', 'cancel'],
   data() {
-    return { resolved: null }
+    return { resolved: null, expired: false, expiryTimer: null }
+  },
+  computed: {
+    alreadyExpired() {
+      if (!this.pending.expiresAt) return false
+      return new Date(this.pending.expiresAt).getTime() <= Date.now()
+    },
+    isExpired() {
+      return this.expired || this.alreadyExpired
+    }
+  },
+  mounted() {
+    if (this.pending.expiresAt) {
+      const ms = new Date(this.pending.expiresAt).getTime() - Date.now()
+      if (ms > 0) {
+        this.expiryTimer = setTimeout(() => {
+          this.expired = true
+        }, ms)
+      } else {
+        this.expired = true
+      }
+    }
+  },
+  beforeUnmount() {
+    if (this.expiryTimer) clearTimeout(this.expiryTimer)
   },
   methods: {
     onConfirm() {
+      if (this.isExpired) return
       this.resolved = 'Confirmed'
       this.$emit('confirm', this.pending.confirmToken)
     },
     onCancel() {
+      if (this.isExpired) return
       this.resolved = 'Cancelled'
       this.$emit('cancel', this.pending.confirmToken)
     }
@@ -104,6 +142,11 @@ export default {
 }
 .wren-confirm-chip--resolved {
   opacity: 0.7;
+}
+.wren-confirm-chip--expired {
+  opacity: 0.5;
+  background: var(--paper-2, #f7f6f1);
+  border-color: var(--rule-soft, #e0ddd2);
 }
 .wren-confirm-chip__icon {
   width: 1rem;
