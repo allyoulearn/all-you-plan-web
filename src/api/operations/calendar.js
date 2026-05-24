@@ -18,3 +18,16 @@ export const CALENDAR_EVENTS_QUERY = gql`
     }
   }
 `
+
+/** Update a calendar event's title, date, or accent. Used by drag-to-
+ *  reschedule on the monthly grid. */
+export const UPDATE_CALENDAR_EVENT = gql`
+  mutation UpdateCalendarEvent($id: ID!, $title: String, $date: String, $accent: Boolean) {
+    updateCalendarEvent(id: $id, title: $title, date: $date, accent: $accent) {
+      id
+      title
+      date
+      accent
+    }
+  }
+`

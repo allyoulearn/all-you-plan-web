@@ -61,12 +61,16 @@
             'calendar-view__day-cell--today': isToday(cell) && !isSelected(cell),
             'calendar-view__day-cell--selected': isSelected(cell),
             'calendar-view__day-cell--default': !cell.adjacent && !isToday(cell) && !isSelected(cell),
+            'calendar-view__day-cell--drop': dropTargetDate === cellDateStr(cell) && !cell.adjacent,
           }"
           :disabled="cell.adjacent"
           :aria-label="cellAriaLabel(cell)"
           :aria-current="isToday(cell) ? 'date' : undefined"
           :aria-pressed="!cell.adjacent && isSelected(cell) ? 'true' : undefined"
           @click="selectDay(cell)"
+          @dragover.prevent="onDayDragOver($event, cell)"
+          @dragleave="onDayDragLeave(cell)"
+          @drop.prevent="onDayDrop($event, cell)"
         >
           <span>
             {{ cell.day }}
@@ -107,7 +111,13 @@
           v-for="ev in agendaEvents"
           :key="ev.id"
           class="calendar-view__agenda-item"
-          :class="ev.accent ? 'calendar-view__agenda-item--accent' : 'calendar-view__agenda-item--default'"
+          :class="[
+            ev.accent ? 'calendar-view__agenda-item--accent' : 'calendar-view__agenda-item--default',
+            { 'calendar-view__agenda-item--dragging': draggingId === ev.id }
+          ]"
+          draggable="true"
+          @dragstart="onAgendaDragStart($event, ev)"
+          @dragend="onAgendaDragEnd"
         >
           <span
             class="calendar-view__event-dot"
@@ -144,6 +154,11 @@ export default {
     const currentYear = ref(today.getFullYear())
     const currentMonth = ref(today.getMonth()) // 0-indexed
     const selectedDay = ref(today.getDate())
+    /** Drag state — id of the event currently being dragged, and the
+     *  YYYY-MM-DD of the day cell the pointer is over. Both null when no
+     *  drag is in flight. */
+    const draggingId = ref(null)
+    const dropTargetDate = ref(null)
 
     // -- Computed --
 
@@ -339,6 +354,57 @@ export default {
       return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     }
 
+    /** YYYY-MM-DD string for a cell, taking adjacent-month overflow into
+     *  account. Returns null for adjacent cells so they can't accept drops. */
+    function cellDateStr(cell) {
+      if (cell.adjacent) return null
+      return `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`
+    }
+
+    // -- Drag-and-drop handlers --
+
+    function onAgendaDragStart(e, ev) {
+      draggingId.value = ev.id
+      // Use a custom MIME type so we don't conflict with the browser's text
+      // drag handling. The data is the event id; cells read it on drop.
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', ev.id)
+    }
+
+    function onAgendaDragEnd() {
+      draggingId.value = null
+      dropTargetDate.value = null
+    }
+
+    function onDayDragOver(e, cell) {
+      if (cell.adjacent || !draggingId.value) return
+      e.dataTransfer.dropEffect = 'move'
+      dropTargetDate.value = cellDateStr(cell)
+    }
+
+    function onDayDragLeave(cell) {
+      const target = cellDateStr(cell)
+      if (dropTargetDate.value === target) dropTargetDate.value = null
+    }
+
+    async function onDayDrop(e, cell) {
+      const id = e.dataTransfer.getData('text/plain')
+      dropTargetDate.value = null
+      draggingId.value = null
+      if (!id || cell.adjacent) return
+      const dateStr = cellDateStr(cell)
+      const existing = store.events.find(ev => ev.id === id)
+      if (!existing || existing.date === dateStr) return
+      try {
+        await store.rescheduleEvent(id, dateStr)
+        // Move the agenda selection to the destination so the user sees
+        // their drop land somewhere meaningful.
+        selectedDay.value = cell.day
+      } catch {
+        // Toast surfaced by the store.
+      }
+    }
+
     return {
       t,
       dayHeaders,
@@ -358,6 +424,14 @@ export default {
       eventsForDay,
       selectDay,
       cellAriaLabel,
+      cellDateStr,
+      draggingId,
+      dropTargetDate,
+      onAgendaDragStart,
+      onAgendaDragEnd,
+      onDayDragOver,
+      onDayDragLeave,
+      onDayDrop
     }
   }
 }
@@ -411,6 +485,10 @@ export default {
     &--default {
       @apply hover:bg-paper-3;
     }
+
+    &--drop {
+      @apply ring-2 ring-accent ring-offset-1;
+    }
   }
 
   &__dots {
@@ -450,7 +528,11 @@ export default {
   }
 
   &__agenda-item {
-    @apply flex items-center gap-3 border-b border-rule-soft py-3 last:border-0;
+    @apply flex cursor-grab items-center gap-3 border-b border-rule-soft py-3 last:border-0;
+
+    &:active {
+      @apply cursor-grabbing;
+    }
 
     &--accent {
       @apply text-accent;
@@ -458,6 +540,10 @@ export default {
 
     &--default {
       @apply text-ink;
+    }
+
+    &--dragging {
+      @apply opacity-40;
     }
   }
 
