@@ -84,9 +84,13 @@ export const useProjectsStore = defineStore('projects', () => {
    * Moves the task from its source column (`thisWeek` | `doing` | `backlog`)
    * to the front of `done`, recomputes `project.progress`, and fires the
    * mutation in the background — so the views never flip to a loading state
-   * during completion. On failure, the captured snapshot is restored, the
-   * error is surfaced via `errorBoard` + toast (WEB-W1-05 / WEB-W1-13), and
-   * rethrown for callers (WEB-W1-01).
+   * during completion. On failure, the captured board reference is restored,
+   * the error is surfaced via `errorBoard` + toast (WEB-W1-05 / WEB-W1-13),
+   * and rethrown for callers (WEB-W1-01).
+   *
+   * The board is replaced atomically (never mutated in place) because Apollo
+   * Client freezes its result objects in development — mutating a frozen
+   * property would throw at runtime.
    *
    * No-ops when `board` is null, when the task id is not found in any column,
    * or when the task is already in `done` (idempotent — protects against
@@ -112,38 +116,34 @@ export const useProjectsStore = defineStore('projects', () => {
     if (!task) return
 
     const { toastError } = useErrorToast()
-    const snapshot = {
-      thisWeek: [...(board.value.thisWeek ?? [])],
-      doing: [...(board.value.doing ?? [])],
-      backlog: [...(board.value.backlog ?? [])],
-      done: [...(board.value.done ?? [])],
-      progress: board.value.project?.progress ? { ...board.value.project.progress } : null
-    }
+    // Snapshot the existing board reference for rollback. Apollo may have
+    // frozen this object, so we never mutate it — we replace board.value
+    // with a freshly-constructed board below and again on rollback.
+    const snapshot = board.value
 
-    board.value[sourceCol] = board.value[sourceCol].filter(t => t.id !== id)
-    board.value.done = [{ ...task, done: true }, ...(board.value.done ?? [])]
+    const newBoard = { ...board.value }
+    newBoard[sourceCol] = board.value[sourceCol].filter(t => t.id !== id)
+    newBoard.done = [{ ...task, done: true }, ...(board.value.done ?? [])]
     if (board.value.project?.progress) {
       const total = board.value.project.progress.total ?? 0
       const done = (board.value.project.progress.done ?? 0) + 1
-      board.value.project.progress = {
-        ...board.value.project.progress,
-        done,
-        percent: total > 0 ? Math.round((done / total) * 100) : 0
+      newBoard.project = {
+        ...board.value.project,
+        progress: {
+          ...board.value.project.progress,
+          done,
+          percent: total > 0 ? Math.round((done / total) * 100) : 0
+        }
       }
     }
+    board.value = newBoard
 
     errorBoard.value = ''
     saving.value = true
     try {
       await apolloClient.mutate({ mutation: COMPLETE_PROJECT_TASK, variables: { id } })
     } catch (e) {
-      board.value.thisWeek = snapshot.thisWeek
-      board.value.doing = snapshot.doing
-      board.value.backlog = snapshot.backlog
-      board.value.done = snapshot.done
-      if (snapshot.progress && board.value.project) {
-        board.value.project.progress = snapshot.progress
-      }
+      board.value = snapshot
       errorBoard.value = e.message
       toastError(e, 'Failed to complete task')
       throw e

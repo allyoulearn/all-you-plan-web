@@ -402,6 +402,29 @@ describe('projects.store', () => {
       expect(store.board.done[0].id).toBe('t1')
       expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
     })
+
+    it('handles a frozen board (Apollo result) without throwing', async () => {
+      // Apollo Client freezes query results in development; the store must
+      // never mutate the board in place, only replace it atomically.
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      const board = makeOptimisticBoard()
+      // Freeze every level: outer board, project, progress, each column array.
+      Object.freeze(board.thisWeek)
+      Object.freeze(board.doing)
+      Object.freeze(board.backlog)
+      Object.freeze(board.done)
+      Object.freeze(board.project.progress)
+      Object.freeze(board.project)
+      Object.freeze(board)
+      store.board = board
+
+      await expect(store.completeTask('t1')).resolves.not.toThrow()
+
+      expect(store.board.thisWeek.find(t => t.id === 't1')).toBeUndefined()
+      expect(store.board.done[0]).toMatchObject({ id: 't1', done: true })
+      expect(store.board.project.progress.done).toBe(2)
+    })
   })
 
   describe('updateProject error routing (WEB-W1-06)', () => {
