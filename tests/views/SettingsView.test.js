@@ -3,6 +3,23 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
 import { createI18n } from 'vue-i18n'
+
+// Mock the billing composable so SettingsView interaction tests can assert
+// on startUpgrade / openPortal calls without depending on Stripe wiring.
+// `billingTier` is mutable so a test can flip between Free and Pro to
+// exercise both rendered states.
+const billingStartUpgrade = vi.fn()
+const billingOpenPortal = vi.fn()
+let billingTier = 'free'
+vi.mock('@/composables/useBilling.js', () => ({
+  useBilling: () => ({
+    startUpgrade: billingStartUpgrade,
+    openPortal: billingOpenPortal,
+    currentTier: () => billingTier,
+    isPaid: () => billingTier !== 'free'
+  })
+}))
+
 import SettingsView from '@/views/SettingsView.vue'
 import { useAuthStore } from '@/stores/auth.store'
 import en from '@/i18n/locales/en.json'
@@ -31,7 +48,7 @@ const globalStubs = {
 
 // ── Mount helper ──────────────────────────────────────────────────────────────
 
-function buildUser(settings = {}) {
+function buildUser(settings = {}, subscription = undefined) {
   return {
     id: 'u1',
     name: 'Test User',
@@ -44,7 +61,8 @@ function buildUser(settings = {}) {
       mode: 'light',
       journalVisibility: 'private',
       ...settings
-    }
+    },
+    subscription
   }
 }
 
@@ -64,7 +82,7 @@ vi.mock('@/composables/useErrorToast.js', () => ({
   })
 }))
 
-function mountSettings(userSettings = {}) {
+function mountSettings(userSettings = {}, subscription = undefined) {
   return mount(SettingsView, {
     global: {
       stubs: globalStubs,
@@ -73,7 +91,7 @@ function mountSettings(userSettings = {}) {
           createSpy: vi.fn,
           initialState: {
             auth: {
-              user: buildUser(userSettings),
+              user: buildUser(userSettings, subscription),
               accessToken: 'tok',
               loading: false,
               error: ''
@@ -90,6 +108,9 @@ describe('SettingsView', () => {
   beforeEach(() => {
     setActivePinia(createTestingPinia({ createSpy: vi.fn }))
     mockToastError.mockReset()
+    billingStartUpgrade.mockReset()
+    billingOpenPortal.mockReset()
+    billingTier = 'free'
   })
 
   // -- Rendering --
@@ -338,5 +359,121 @@ describe('SettingsView', () => {
     await wrapper.vm.onVisibilityChange('open')
 
     expect(mockToastError).toHaveBeenCalled()
+  })
+
+  // -- Billing section --
+
+  it('renders a Billing section header', () => {
+    const wrapper = mountSettings()
+    const headers = wrapper.findAll('section-header-stub')
+    expect(headers.some(h => h.attributes('label') === 'Billing')).toBe(true)
+  })
+
+  it('shows "Free" plan label for users with no subscription', () => {
+    const wrapper = mountSettings()
+    expect(wrapper.vm.planLabel).toBe('Free')
+    expect(wrapper.text()).toContain('Free')
+  })
+
+  it('shows "Pro" plan label for paid users', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    expect(wrapper.vm.planLabel).toBe('Pro')
+    expect(wrapper.vm.isPaid).toBe(true)
+  })
+
+  it('shows "Family" plan label for family tier', () => {
+    billingTier = 'family'
+    const wrapper = mountSettings({}, { tier: 'family' })
+    expect(wrapper.vm.planLabel).toBe('Family')
+  })
+
+  it('renders an Upgrade to Pro CTA for Free users', () => {
+    billingTier = 'free'
+    const wrapper = mountSettings({}, { tier: 'free' })
+    expect(wrapper.text()).toContain('Upgrade to Pro')
+    expect(wrapper.vm.isPaid).toBe(false)
+  })
+
+  it('does NOT render the Upgrade CTA for Pro users', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    // The upgrade row description is the marker; it is not rendered when Pro
+    // is active. Plan-description row remains.
+    expect(wrapper.text()).not.toContain('200 Wren turns/day, calendar sync, and everything')
+  })
+
+  it('renders a Manage subscription affordance for Pro users', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    expect(wrapper.text()).toContain('Open Stripe portal')
+  })
+
+  it('does NOT render the Manage subscription row for Free users', () => {
+    billingTier = 'free'
+    const wrapper = mountSettings({}, { tier: 'free' })
+    expect(wrapper.text()).not.toContain('Open Stripe portal')
+  })
+
+  it('onUpgradeClick calls billing.startUpgrade with the wren-pro planId', () => {
+    const wrapper = mountSettings()
+    wrapper.vm.onUpgradeClick()
+    expect(billingStartUpgrade).toHaveBeenCalledWith('wren-pro')
+  })
+
+  it('onManageClick calls billing.openPortal', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    wrapper.vm.onManageClick()
+    expect(billingOpenPortal).toHaveBeenCalled()
+  })
+
+  it('nextBillingLabel formats currentPeriodEnd as "Renews <date>" for active subscriptions', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings(
+      {},
+      { tier: 'pro', status: 'active', currentPeriodEnd: '2026-06-30T00:00:00Z' }
+    )
+    expect(wrapper.vm.nextBillingLabel).toMatch(/^Renews /)
+    expect(wrapper.vm.nextBillingLabel).toContain('2026')
+  })
+
+  it('nextBillingLabel formats currentPeriodEnd as "Ends <date>" for canceled subscriptions', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings(
+      {},
+      { tier: 'pro', status: 'canceled', currentPeriodEnd: '2026-06-30T00:00:00Z' }
+    )
+    expect(wrapper.vm.nextBillingLabel).toMatch(/^Ends /)
+  })
+
+  it('nextBillingLabel returns empty string when no currentPeriodEnd', () => {
+    const wrapper = mountSettings()
+    expect(wrapper.vm.nextBillingLabel).toBe('')
+  })
+
+  it('nextBillingLabel returns empty string for invalid currentPeriodEnd', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro', currentPeriodEnd: 'not-a-date' })
+    expect(wrapper.vm.nextBillingLabel).toBe('')
+  })
+
+  it('planDescription describes the Free tier with the cap', () => {
+    const wrapper = mountSettings()
+    expect(wrapper.vm.planDescription).toContain('5 Wren turns/day')
+  })
+
+  it('planDescription describes the Pro tier', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    expect(wrapper.vm.planDescription).toContain('Pro')
+    expect(wrapper.vm.planDescription).toContain('200')
+  })
+
+  it('planDescription describes the Family tier with seats info', () => {
+    billingTier = 'family'
+    const wrapper = mountSettings({}, { tier: 'family' })
+    expect(wrapper.vm.planDescription.toLowerCase()).toContain('family')
+    expect(wrapper.vm.planDescription).toContain('5')
   })
 })
