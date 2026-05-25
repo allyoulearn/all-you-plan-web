@@ -451,4 +451,99 @@ describe('WrenBubble — action union', () => {
     })
     expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
   })
+
+  // ── Upgrade CTA (Task 5 — daily cap conversion moment) ─────────────────────
+  it('renders WrenUpgradeChip when an upgrade action is present', () => {
+    const upgrade = {
+      __typename: 'WrenUpgradeAction',
+      kind: 'upgrade',
+      summary: 'Upgrade to Pro for 200 turns/day',
+      planId: 'wren-pro'
+    }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm-cap',
+          sender: 'coach',
+          text: "You've used your 5 free chats for today.",
+          actions: [upgrade],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    // The chip's summary + the body's chat-limit copy both render.
+    expect(wrapper.text()).toContain("You've used your 5 free chats for today.")
+    expect(wrapper.text()).toContain('Upgrade to Pro for 200 turns/day')
+    expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(true)
+  })
+
+  it('does NOT render an upgrade chip when no upgrade action is present', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm-normal',
+          sender: 'coach',
+          text: 'Hi there!',
+          actions: [],
+          status: 'complete',
+          createdAt: ''
+        }
+      },
+      global: { stubs: { Button: true } }
+    })
+    expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(false)
+  })
+
+  it('classify(): a __typename-only WrenUpgradeAction routes to the upgrade chip', () => {
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm-typed',
+          sender: 'coach',
+          text: 'Cap hit',
+          actions: [{ __typename: 'WrenUpgradeAction', summary: 'Get Pro', planId: 'wren-pro' }],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Get Pro')
+  })
+
+  it('does not render an upgrade chip for user-sender messages', () => {
+    const upgrade = { kind: 'upgrade', summary: 'X', planId: 'wren-pro' }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm-user',
+          sender: 'user',
+          text: 'hi',
+          actions: [upgrade],
+          createdAt: ''
+        }
+      }
+    })
+    // User bubbles never render the actions row at all.
+    expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(false)
+  })
+
+  it('propagates upgrade event from chip with the planId', async () => {
+    const upgrade = { kind: 'upgrade', summary: 'X', planId: 'wren-pro' }
+    const wrapper = mount(WrenBubble, {
+      props: {
+        message: {
+          id: 'm-up',
+          sender: 'coach',
+          text: 'Cap hit',
+          actions: [upgrade],
+          status: 'complete',
+          createdAt: ''
+        }
+      }
+    })
+    await wrapper.find('button').trigger('click')
+    expect(wrapper.emitted('upgrade')).toEqual([['wren-pro']])
+  })
 })

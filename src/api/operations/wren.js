@@ -31,6 +31,11 @@ const WREN_MESSAGE_FIELDS = gql`
       ... on WrenAppliedAction {
         ...AppliedActionFields
       }
+      ... on WrenUpgradeAction {
+        kind
+        summary
+        planId
+      }
     }
     createdAt
   }

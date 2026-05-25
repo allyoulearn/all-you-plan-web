@@ -64,6 +64,12 @@
             @confirm="token => $emit('confirm', token)"
             @cancel="token => $emit('cancel', token)"
           />
+
+          <WrenUpgradeChip
+            v-else-if="action.kind === 'upgrade'"
+            :action="action.payload"
+            @upgrade="planId => $emit('upgrade', planId)"
+          />
         </template>
       </div>
     </div>
@@ -81,15 +87,23 @@
 import Button from '@/components/ui/Button.vue'
 import WrenActionChip from '@/components/wren/WrenActionChip.vue'
 import WrenConfirmChip from '@/components/wren/WrenConfirmChip.vue'
+import WrenUpgradeChip from '@/components/wren/WrenUpgradeChip.vue'
 
 /**
  * Classify a raw action entry into a normalised shape consumed by the template.
  * @param {string|object|null} raw
- * @returns {{ kind: 'suggested', label: string } | { kind: 'applied'|'pending', payload: object } | null}
+ * @returns {{ kind: 'suggested', label: string } | { kind: 'applied'|'pending'|'upgrade', payload: object } | null}
  */
 function classify(raw) {
   if (typeof raw === 'string') return { kind: 'suggested', label: raw }
   if (!raw || typeof raw !== 'object') return null
+  // Upgrade CTA from the cap-hit branch of sendWrenMessage. Surface this
+  // BEFORE the generic `summary` check so an upgrade payload (which also has
+  // a summary string) is routed to WrenUpgradeChip rather than the applied
+  // action chip. The structural marker is the explicit `kind: 'upgrade'`.
+  if (raw.kind === 'upgrade' || raw.__typename === 'WrenUpgradeAction') {
+    return { kind: 'upgrade', payload: raw }
+  }
   if (raw.__typename === 'WrenSuggestedAction' || typeof raw.label === 'string') {
     return { kind: 'suggested', label: raw.label }
   }
@@ -104,12 +118,12 @@ function classify(raw) {
 
 export default {
   name: 'WrenBubble',
-  components: { Button, WrenActionChip, WrenConfirmChip },
+  components: { Button, WrenActionChip, WrenConfirmChip, WrenUpgradeChip },
   props: {
     /** The message object with sender, text, actions, status, and createdAt fields */
     message: { type: Object, required: true }
   },
-  emits: ['action', 'undo', 'confirm', 'cancel'],
+  emits: ['action', 'undo', 'confirm', 'cancel', 'upgrade'],
   computed: {
     normalizedActions() {
       if (!Array.isArray(this.message.actions)) return []
