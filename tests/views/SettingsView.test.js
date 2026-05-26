@@ -4,17 +4,34 @@ import { setActivePinia } from 'pinia'
 import { createTestingPinia } from '@pinia/testing'
 import { createI18n } from 'vue-i18n'
 
+// Mock vue-router so the SettingsView's OAuth-callback handler (useRoute()
+// and useRouter().replace) can run inside the test environment without a
+// real router. `routeQueryMock` is mutable so a test can simulate landing
+// on /settings?connection=success.
+let routeQueryMock = {}
+const routerReplaceMock = vi.fn()
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual('vue-router')
+  return {
+    ...actual,
+    useRoute: () => ({ query: routeQueryMock }),
+    useRouter: () => ({ replace: routerReplaceMock, push: vi.fn() })
+  }
+})
+
 // Mock the billing composable so SettingsView interaction tests can assert
-// on startUpgrade / openPortal calls without depending on Stripe wiring.
-// `billingTier` is mutable so a test can flip between Free and Pro to
-// exercise both rendered states.
+// on startUpgrade / openPortal / connectGoogleCalendar calls without
+// depending on Stripe or Google wiring. `billingTier` is mutable so a test
+// can flip between Free and Pro to exercise both rendered states.
 const billingStartUpgrade = vi.fn()
 const billingOpenPortal = vi.fn()
+const billingConnectGoogleCalendar = vi.fn(async () => ({ ok: true }))
 let billingTier = 'free'
 vi.mock('@/composables/useBilling.js', () => ({
   useBilling: () => ({
     startUpgrade: billingStartUpgrade,
     openPortal: billingOpenPortal,
+    connectGoogleCalendar: billingConnectGoogleCalendar,
     currentTier: () => billingTier,
     isPaid: () => billingTier !== 'free'
   })
@@ -110,6 +127,10 @@ describe('SettingsView', () => {
     mockToastError.mockReset()
     billingStartUpgrade.mockReset()
     billingOpenPortal.mockReset()
+    billingConnectGoogleCalendar.mockReset()
+    billingConnectGoogleCalendar.mockResolvedValue({ ok: true })
+    routerReplaceMock.mockReset()
+    routeQueryMock = {}
     billingTier = 'free'
   })
 
@@ -475,5 +496,63 @@ describe('SettingsView', () => {
     const wrapper = mountSettings({}, { tier: 'family' })
     expect(wrapper.vm.planDescription.toLowerCase()).toContain('family')
     expect(wrapper.vm.planDescription).toContain('5')
+  })
+
+  // -- Google Calendar connect button --
+
+  it('renders the "Connect Google Calendar" label for Pro users', () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    expect(wrapper.text()).toContain('Connect Google Calendar')
+  })
+
+  it('renders the "Available on Pro" label for Free users', () => {
+    billingTier = 'free'
+    const wrapper = mountSettings()
+    expect(wrapper.text()).toContain('Available on Pro')
+    expect(wrapper.text()).not.toContain('Connect Google Calendar')
+  })
+
+  it('calls billing.connectGoogleCalendar when a Pro user clicks Connect', async () => {
+    billingTier = 'pro'
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    await wrapper.vm.onConnectCalendarClick()
+    expect(billingConnectGoogleCalendar).toHaveBeenCalledTimes(1)
+    expect(billingStartUpgrade).not.toHaveBeenCalled()
+  })
+
+  it('routes Free users through startUpgrade instead of connectGoogleCalendar', async () => {
+    billingTier = 'free'
+    const wrapper = mountSettings()
+    await wrapper.vm.onConnectCalendarClick()
+    expect(billingStartUpgrade).toHaveBeenCalledWith('wren-pro')
+    expect(billingConnectGoogleCalendar).not.toHaveBeenCalled()
+  })
+
+  it('does not double-fire while a connect call is in flight', async () => {
+    billingTier = 'pro'
+    let resolveConnect
+    billingConnectGoogleCalendar.mockReturnValue(
+      new Promise(res => {
+        resolveConnect = () => res({ ok: true })
+      })
+    )
+    const wrapper = mountSettings({}, { tier: 'pro' })
+    const first = wrapper.vm.onConnectCalendarClick()
+    // Second click while the first is mid-flight should be a no-op.
+    await wrapper.vm.onConnectCalendarClick()
+    resolveConnect()
+    await first
+    expect(billingConnectGoogleCalendar).toHaveBeenCalledTimes(1)
+  })
+
+  it('exposes calendarConnectDescription tailored to the tier', () => {
+    billingTier = 'pro'
+    const wrapperPro = mountSettings({}, { tier: 'pro' })
+    expect(wrapperPro.vm.calendarConnectDescription.toLowerCase()).toContain('two-way')
+
+    billingTier = 'free'
+    const wrapperFree = mountSettings()
+    expect(wrapperFree.vm.calendarConnectDescription.toLowerCase()).toContain('available on pro')
   })
 })
