@@ -1,13 +1,21 @@
 /** Mock fixtures for the Daily Review screen. */
 
 const mockResponses = {
-  'What did you accomplish today?':
-    'Finished the weekly update and got my morning walk in. Made meaningful progress on the project board.',
-  'What got in the way?':
-    'A few unplanned messages in the afternoon pulled me off deep work earlier than expected.',
-  'What will you carry into tomorrow?':
-    'The mentor call prep and the blog draft. Those are the two non-negotiables.',
-  'Energy level check-in': 'Moderate — the sleep was decent but not great. Afternoon was sluggish.'
+  wins: {
+    starred: ['t1'],
+    freeText: 'Got a 30-minute walk in the morning that I had not planned for.'
+  },
+  friction: {
+    text: 'A few unplanned messages in the afternoon pulled me off deep work earlier than expected.',
+    tags: ['surprise', 'context-switch']
+  },
+  leftovers: {
+    tomorrow: ['t2'],
+    picked: [],
+    dropped: [],
+    kept: []
+  },
+  tomorrowIntent: 'Finish the blog draft.'
 }
 
 export const registry = {
