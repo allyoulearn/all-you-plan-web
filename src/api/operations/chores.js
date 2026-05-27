@@ -4,7 +4,7 @@
  * Queries: CHORES_QUERY (full list with cadence + streak metadata).
  * Mutations: COMPLETE_CHORE, CREATE_CHORE, UPDATE_CHORE, DELETE_CHORE.
  * Cadence is modelled as `{ type, daysOfWeek?, interval?, dayOfMonth? }`
- * (see api ChoreCadenceInput). (WEB-W1-12)
+ * (see api ChoreCadenceInput).
  */
 import { gql } from '@apollo/client/core'
 
@@ -27,6 +27,8 @@ export const CHORES_QUERY = gql`
       snoozedUntil
       skipNextDate
       order
+      recentCompletions
+      createdAt
     }
   }
 `
@@ -64,10 +66,10 @@ export const CREATE_CHORE = gql`
   }
 `
 
-/** Update a chore's title, cadence, and/or active flag. */
+/** Update a chore's title, cadence, active flag, and/or order index. */
 export const UPDATE_CHORE = gql`
-  mutation UpdateChore($id: ID!, $title: String, $cadence: ChoreCadenceInput, $active: Boolean) {
-    updateChore(id: $id, title: $title, cadence: $cadence, active: $active) {
+  mutation UpdateChore($id: ID!, $title: String, $cadence: ChoreCadenceInput, $active: Boolean, $order: Int) {
+    updateChore(id: $id, title: $title, cadence: $cadence, active: $active, order: $order) {
       id
       title
       cadence {
@@ -77,6 +79,7 @@ export const UPDATE_CHORE = gql`
         dayOfMonth
       }
       active
+      order
     }
   }
 `
