@@ -86,4 +86,21 @@ describe('composeSendoff', () => {
     const b = composeSendoff(base)
     expect(a).toEqual(b)
   })
+
+  it('strips a trailing period from the intent so the appended sentence does not double-punctuate', () => {
+    const out = composeSendoff({ ...base, tomorrowIntent: 'Finish the blog draft.' })
+    expect(out.body).toContain('Finish the blog draft. ')
+    expect(out.body).not.toContain('Finish the blog draft.. ')
+  })
+
+  it('strips a trailing period from the top win as well', () => {
+    const out = composeSendoff({
+      ...base,
+      mood: 'steady',
+      doneCount: 3,
+      totalCount: 5,
+      topWinTitle: 'Mentor call prep.'
+    })
+    expect(out.body).toContain('Mentor call prep mattered.')
+  })
 })

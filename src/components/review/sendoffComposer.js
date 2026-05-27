@@ -27,8 +27,8 @@ export function composeSendoff(input) {
   } = input || {}
 
   const completion = bucket(doneCount, totalCount)
-  const intent = String(tomorrowIntent || '').trim()
-  const win = String(topWinTitle || '').trim()
+  const intent = stripTrailingDot(String(tomorrowIntent || '').trim())
+  const win = stripTrailingDot(String(topWinTitle || '').trim())
   const moodHeadline = HEADLINES[mood] ?? HEADLINES.steady
 
   const parts = []
@@ -54,6 +54,10 @@ export function composeSendoff(input) {
     headline: moodHeadline,
     body: parts.join(' ')
   }
+}
+
+function stripTrailingDot(s) {
+  return s.replace(/\.+$/, '')
 }
 
 function bucket(done, total) {
