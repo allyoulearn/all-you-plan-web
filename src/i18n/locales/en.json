@@ -387,19 +387,64 @@
     "bubbleInterrupted": "· stream interrupted"
   },
   "review": {
-    "step1Label": "Step 1 — How was your energy today?",
-    "step2Label": "Step 2 — What moved forward",
-    "step3Label": "Step 3 — What didn't finish",
-    "step4Label": "Step 4 — Wren's send-off",
-    "sendoffQuote": "\"Every day that ends is a day you showed up. That's enough.\"",
-    "noDoneTasks": "No completed tasks today.",
-    "noPendingTasks": "Everything got done — great day.",
+    "headingPrefix": "How did",
+    "headingEmphasis": "today feel?",
+    "loading": "Loading…",
     "saving": "Saving…",
     "finishReview": "Finish review",
     "reviewSaved": "Review saved.",
-    "loading": "Loading…",
-    "headingPrefix": "How did",
-    "headingEmphasis": "today feel?"
+    "edit": "Edit",
+    "wren": {
+      "open": "How did today feel?",
+      "wins": "What mattered most?",
+      "friction": "What got in the way?",
+      "leftovers": "These didn't land — what do we do with them?",
+      "intent": "If one thing happens tomorrow, what is it?"
+    },
+    "headline": "{done} of {total} done",
+    "headlineStreak": " · {streak}-day streak",
+    "mood": {
+      "heavy": "heavy",
+      "low": "low",
+      "steady": "steady",
+      "good": "good",
+      "lit": "lit"
+    },
+    "win": {
+      "freeTextLabel": "Anything off-list?",
+      "freeTextPlaceholder": "A win that wasn't on today's list",
+      "empty": "Some days nothing on the list moves. That's still a day.",
+      "star": "Mark as a top win",
+      "unstar": "Unmark top win"
+    },
+    "friction": {
+      "placeholder": "What got in the way?",
+      "tag": {
+        "meetings": "meetings",
+        "energy": "energy",
+        "scope": "scope",
+        "surprise": "surprise",
+        "context-switch": "context-switch"
+      }
+    },
+    "leftover": {
+      "moveAll": "Move all to tomorrow",
+      "action": {
+        "tomorrow": "Tomorrow",
+        "pick": "Pick day",
+        "drop": "Drop",
+        "keep": "Keep on today"
+      },
+      "empty": "Everything got done. Quiet flex.",
+      "pickDayLabel": "Pick a date"
+    },
+    "intent": {
+      "placeholder": "One thing for tomorrow",
+      "counterRemaining": "{n} characters left"
+    },
+    "sendoff": {
+      "saveError": "Review saved, but {n} task(s) couldn't be moved."
+    }
   },
   "settings": {
     "title": "Settings",
