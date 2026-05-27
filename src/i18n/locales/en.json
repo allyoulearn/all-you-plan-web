@@ -444,7 +444,18 @@
     },
     "sendoff": {
       "saveError": "Review saved, but {n} task(s) couldn't be moved."
-    }
+    },
+    "back": "Back",
+    "next": "Next",
+    "stepOf": "Step {n} of {total}",
+    "stepLabel": {
+      "mood": "Mood",
+      "wins": "Wins",
+      "friction": "Friction",
+      "leftovers": "Leftovers",
+      "intent": "Tomorrow"
+    },
+    "review": "Review"
   },
   "settings": {
     "title": "Settings",

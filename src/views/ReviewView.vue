@@ -1,82 +1,131 @@
 <template>
   <div class="review-view">
-    <AppScreenHeading
-      :eyebrow="`${t('nav.withWren')} · ${t('nav.itemDailyReview')}`"
-      :title="t('review.headingPrefix')"
-      :emphasis="t('review.headingEmphasis')"
-    />
+    <!-- Progress strip: dotted line + caption. Hidden on the finale because
+         the closer is the moment, not another step. -->
+    <div v-if="!isFinale" class="review-view__progress">
+      <ol
+        class="review-view__progress-track"
+        :aria-label="t('nav.itemDailyReview')"
+      >
+        <li v-for="n in TOTAL_STEPS" :key="n" class="review-view__progress-item">
+          <button
+            type="button"
+            class="review-view__progress-dot"
+            :class="{
+              'review-view__progress-dot--active': currentStep === n,
+              'review-view__progress-dot--done': n < currentStep
+            }"
+            :aria-current="currentStep === n ? 'step' : 'false'"
+            :aria-label="t('review.stepOf', { n, total: TOTAL_STEPS })"
+            @click="goToStep(n)"
+          />
+        </li>
+      </ol>
 
-    <!-- 1. Open + mood -->
-    <section class="review-view__section">
-      <WrenTurn :prompt="t('review.wren.open')" :callout="headlineCallout">
-        <MoodPicker v-model="mood" />
-      </WrenTurn>
-    </section>
+      <p class="review-view__progress-caption">
+        <span class="review-view__progress-step">
+          {{ t('review.stepOf', { n: currentStep, total: TOTAL_STEPS }) }}
+        </span>
+        <span class="review-view__progress-sep">·</span>
+        <span class="review-view__progress-label">
+          {{ t(`review.stepLabel.${currentStepKey}`) }}
+        </span>
+      </p>
+    </div>
 
-    <!-- 2. Wins -->
-    <section class="review-view__section">
-      <WrenTurn :prompt="t('review.wren.wins')">
-        <WinPicker v-model="wins" :tasks="doneTasks" />
-      </WrenTurn>
-    </section>
+    <!-- Step content. One section visible at a time, with a soft fade between. -->
+    <Transition name="review-fade" mode="out-in">
+      <div :key="currentStep" ref="stepRef" class="review-view__step">
+        <template v-if="currentStep === 1">
+          <h1 class="review-view__prompt">{{ t('review.wren.open') }}</h1>
+          <p v-if="headlineCallout" class="review-view__callout">{{ headlineCallout }}</p>
+          <MoodPicker v-model="mood" class="review-view__body" />
+        </template>
 
-    <!-- 3. Friction -->
-    <section class="review-view__section">
-      <WrenTurn :prompt="t('review.wren.friction')">
-        <FrictionInput v-model="friction" />
-      </WrenTurn>
-    </section>
+        <template v-else-if="currentStep === 2">
+          <h1 class="review-view__prompt">{{ t('review.wren.wins') }}</h1>
+          <WinPicker v-model="wins" :tasks="doneTasks" class="review-view__body" />
+        </template>
 
-    <!-- 4. Leftovers -->
-    <section class="review-view__section">
-      <WrenTurn :prompt="t('review.wren.leftovers')">
-        <template v-if="pendingTasks.length">
-          <button type="button" class="review-view__bulk" @click="moveAllToTomorrow">
-            {{ t('review.leftover.moveAll') }}
-          </button>
+        <template v-else-if="currentStep === 3">
+          <h1 class="review-view__prompt">{{ t('review.wren.friction') }}</h1>
+          <FrictionInput v-model="friction" class="review-view__body" />
+        </template>
 
-          <LeftoverRow
-            v-for="task in pendingTasks"
-            :key="task.id"
-            :task="task"
-            :action="leftoverAction(task.id)"
-            @update:action="kind => setLeftover(task.id, kind)"
+        <template v-else-if="currentStep === 4">
+          <h1 class="review-view__prompt">{{ t('review.wren.leftovers') }}</h1>
+
+          <div v-if="pendingTasks.length" class="review-view__body">
+            <button type="button" class="review-view__bulk" @click="moveAllToTomorrow">
+              {{ t('review.leftover.moveAll') }}
+            </button>
+
+            <LeftoverRow
+              v-for="task in pendingTasks"
+              :key="task.id"
+              :task="task"
+              :action="leftoverAction(task.id)"
+              @update:action="kind => setLeftover(task.id, kind)"
+            />
+          </div>
+
+          <p v-else class="review-view__empty">
+            {{ t('review.leftover.empty') }}
+          </p>
+        </template>
+
+        <template v-else-if="currentStep === 5">
+          <h1 class="review-view__prompt">{{ t('review.wren.intent') }}</h1>
+          <TomorrowIntent
+            v-model="tomorrowIntent"
+            class="review-view__body"
+            @keydown.enter.prevent="next"
           />
         </template>
 
-        <p v-else class="review-view__empty">
-          {{ t('review.leftover.empty') }}
-        </p>
-      </WrenTurn>
-    </section>
+        <template v-else>
+          <!-- Finale: dynamic send-off + Finish. -->
+          <SendoffCard
+            :input="sendoffInput"
+            :saving="reviewStore.saving"
+            :disabled="!mood"
+            :saved="saved && !editing"
+            @finish="finishReview"
+            @edit="onEdit"
+          />
 
-    <!-- 5. Tomorrow intent -->
-    <section class="review-view__section">
-      <WrenTurn :prompt="t('review.wren.intent')">
-        <TomorrowIntent v-model="tomorrowIntent" />
-      </WrenTurn>
-    </section>
+          <p v-if="reviewStore.error" class="review-view__error">
+            {{ reviewStore.error }}
+          </p>
+        </template>
+      </div>
+    </Transition>
 
-    <!-- 6. Send-off -->
-    <section class="review-view__section">
-      <SendoffCard
-        :input="sendoffInput"
-        :saving="reviewStore.saving"
-        :disabled="!mood"
-        :saved="saved && !editing"
-        @finish="finishReview"
-        @edit="editing = true"
-      />
+    <!-- Step navigation. Big targets so it's easy on touch. -->
+    <div v-if="!isFinale" class="review-view__nav">
+      <AppButton
+        v-if="currentStep > 1"
+        variant="ghost"
+        @click="prev"
+      >
+        ← {{ t('review.back') }}
+      </AppButton>
 
-      <p v-if="reviewStore.error" class="review-view__error">
-        {{ reviewStore.error }}
-      </p>
-    </section>
+      <div class="review-view__nav-spacer" />
 
-    <!-- Wren cross-app upsell. Lives below the send-off so the close is the
-         emotional closer; the upsell is an offer beneath. -->
+      <AppButton
+        variant="primary"
+        :disabled="!canAdvance"
+        @click="next"
+      >
+        {{ nextLabel }} →
+      </AppButton>
+    </div>
+
+    <!-- Wren cross-app upsell only on the finale — the close is the emotional
+         close; the upsell is an offer beneath. -->
     <WrenCrossAppUpsell
-      v-if="showWrenUpsell"
+      v-if="isFinale && showWrenUpsell"
       class="review-view__upsell"
       plan="managed_multi_monthly"
       @dismiss="onDismissWrenUpsell"
@@ -86,16 +135,16 @@
 
 <script>
 /**
- * ReviewView — Wren-led daily review. Composes section components and owns
- * the canonical local state for the in-progress review. Hydrates from the
- * review store on mount; on Finish saves the structured payload + fires
- * carry-forward mutations only for newly-changed leftover decisions.
+ * ReviewView — Wren-led daily review delivered as a 5-step stepper plus a
+ * send-off finale. One decision per screen so it's quick to fill in daily:
+ * mood, wins, friction, leftovers, tomorrow intent. The finale composes the
+ * dynamic send-off from the assembled state and persists everything on
+ * Finish.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
-import WrenTurn from '@/components/review/WrenTurn.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import MoodPicker from '@/components/review/MoodPicker.vue'
 import WinPicker from '@/components/review/WinPicker.vue'
 import FrictionInput from '@/components/review/FrictionInput.vue'
@@ -109,6 +158,11 @@ import { useReviewStore } from '@/stores/review.store.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
 import { localISOToday, toLocalISODate } from '@/utils/date.js'
 import { diffLeftovers } from '@/components/review/leftoverDiff.js'
+
+const TOTAL_STEPS = 5
+const FINALE_STEP = TOTAL_STEPS + 1
+
+const STEP_KEYS = ['mood', 'wins', 'friction', 'leftovers', 'intent']
 
 const WREN_UPSELL_DISMISSED_KEY = 'wren-cross-app-upsell-dismissed'
 
@@ -130,8 +184,7 @@ function emptyResponses() {
 export default {
   name: 'ReviewView',
   components: {
-    AppScreenHeading,
-    WrenTurn,
+    AppButton,
     MoodPicker,
     WinPicker,
     FrictionInput,
@@ -153,6 +206,8 @@ export default {
     const leftoverActions = ref({}) // taskId -> { kind, date? }
     const tomorrowIntent = ref('')
     const editing = ref(false)
+    const currentStep = ref(1)
+    const stepRef = ref(null)
 
     const todayDate = localISOToday()
     const tomorrow = localISOTomorrow()
@@ -171,8 +226,6 @@ export default {
     const headlineCallout = computed(() => {
       const total = todayStore.view?.kpis?.todayTotal ?? 0
       const streak = todayStore.view?.kpis?.streak ?? 0
-      // Spec: hide the callout entirely when streak is 0 or total is 0 — keeps
-      // the opening from feeling sterile on a freshly-started habit.
       if (total === 0 || streak === 0) return ''
       const done = todayStore.view?.kpis?.todayDone ?? 0
       return t('review.headline', { done, total }) + t('review.headlineStreak', { streak })
@@ -194,15 +247,47 @@ export default {
       }
     })
 
+    const isFinale = computed(() => currentStep.value === FINALE_STEP)
+    const currentStepKey = computed(() => STEP_KEYS[currentStep.value - 1] ?? '')
+
+    // Step 1 requires a mood selection before advancing; other steps are
+    // optional (the user might have no wins, no friction, etc.).
+    const canAdvance = computed(() => currentStep.value !== 1 || Boolean(mood.value))
+
+    // "Review" on the last input step so it reads as the bridge to the
+    // send-off; "Next" everywhere else.
+    const nextLabel = computed(() =>
+      currentStep.value === TOTAL_STEPS ? t('review.review') : t('review.next')
+    )
+
+    // -- Watchers --
+
+    // Auto-focus the first input on each step so the user can type without
+    // hunting for the field. Skip step 1 (mood pills) and step 4 when the
+    // empty state is showing (no input there).
+    watch(currentStep, async () => {
+      await nextTick()
+      const el = stepRef.value
+      if (!el) return
+      const first = el.querySelector('textarea, input[type="text"], input:not([type])')
+      if (first && typeof first.focus === 'function') {
+        first.focus()
+      }
+    })
+
     // -- Lifecycle --
 
     onMounted(async () => {
       await Promise.all([todayStore.load(todayDate), reviewStore.load(todayDate)])
       hydrateFromStore()
+
+      // If a review was already saved today, drop straight into the finale.
+      if (saved.value) currentStep.value = FINALE_STEP
     })
 
     return {
       t,
+      TOTAL_STEPS,
       todayStore,
       reviewStore,
       mood,
@@ -217,11 +302,21 @@ export default {
       headlineCallout,
       sendoffInput,
       showWrenUpsell,
+      currentStep,
+      currentStepKey,
+      isFinale,
+      canAdvance,
+      nextLabel,
+      stepRef,
       leftoverAction,
       setLeftover,
       moveAllToTomorrow,
       finishReview,
       onDismissWrenUpsell,
+      onEdit,
+      next,
+      prev,
+      goToStep,
       todayDate
     }
 
@@ -230,7 +325,6 @@ export default {
     function hydrateFromStore() {
       const r = reviewStore.review
       if (!r) {
-        // Default: every pending task gets "tomorrow"
         for (const task of pendingTasks.value) {
           leftoverActions.value[task.id] = { kind: 'tomorrow' }
         }
@@ -262,8 +356,6 @@ export default {
       for (const id of lo.dropped ?? []) leftoverActions.value[id] = { kind: 'drop' }
       for (const id of lo.kept ?? []) leftoverActions.value[id] = { kind: 'keep' }
 
-      // Tasks not represented in the saved payload (e.g. created after the
-      // review was saved) default to "tomorrow".
       for (const task of pendingTasks.value) {
         if (!leftoverActions.value[task.id]) {
           leftoverActions.value[task.id] = { kind: 'tomorrow' }
@@ -285,6 +377,31 @@ export default {
         next[task.id] = { kind: 'tomorrow' }
       }
       leftoverActions.value = next
+    }
+
+    function next() {
+      if (!canAdvance.value) return
+      currentStep.value = Math.min(currentStep.value + 1, FINALE_STEP)
+    }
+
+    function prev() {
+      currentStep.value = Math.max(currentStep.value - 1, 1)
+    }
+
+    function goToStep(n) {
+      // Step 1 has no preconditions; later steps require mood (the only
+      // gating decision — keeps the finale from being reachable empty).
+      if (n > 1 && !mood.value) {
+        currentStep.value = 1
+        return
+      }
+
+      currentStep.value = Math.max(1, Math.min(n, FINALE_STEP))
+    }
+
+    function onEdit() {
+      editing.value = true
+      currentStep.value = 1
     }
 
     function composeResponses() {
@@ -319,7 +436,6 @@ export default {
       try {
         await reviewStore.save(todayDate, mood.value, responses)
       } catch {
-        // Store already toasts; do not fire any carry-forward.
         return
       }
 
@@ -364,9 +480,6 @@ export default {
     }
 
     async function deleteTaskById(id) {
-      // Inline mutation rather than adding a new store action; the review
-      // is the only caller and the today store reload after a deletion is
-      // unnecessary here (the user is closing out the day).
       const { apolloClient } = await import('@/api/apollo.js')
       const { DELETE_TASK } = await import('@/api/operations/index.js')
       await apolloClient.mutate({ mutation: DELETE_TASK, variables: { id } })
@@ -386,27 +499,106 @@ export default {
 
 <style lang="scss" scoped>
 .review-view {
-  // Generous vertical rhythm between sections so each Wren turn reads as
-  // its own moment now that there's no card chrome separating them.
-  &__section {
-    @apply mb-8;
+  @apply mx-auto max-w-[42rem];
+
+  &__progress {
+    @apply mb-12 flex flex-col gap-2;
+  }
+
+  &__progress-track {
+    @apply flex items-center gap-1.5;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  &__progress-item {
+    @apply flex-1;
+  }
+
+  &__progress-dot {
+    @apply block h-1 w-full rounded-pill bg-rule-soft transition-colors;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent;
+
+    &--done {
+      @apply bg-accent opacity-60;
+    }
+
+    &--active {
+      @apply bg-accent;
+    }
+  }
+
+  &__progress-caption {
+    @apply mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+  }
+
+  &__progress-step {
+    @apply text-ink;
+  }
+
+  &__progress-sep {
+    @apply mx-1 opacity-40;
+  }
+
+  &__progress-label {
+    @apply opacity-80;
+  }
+
+  &__step {
+    // Anchor each step at a similar vertical position so the layout doesn't
+    // jump as the user moves Next/Back.
+    @apply mb-10 min-h-[20rem];
+  }
+
+  &__prompt {
+    // Large italic serif is the page focal point — the entire screen
+    // resolves around answering this one question.
+    @apply font-serif text-[28px] italic leading-tight text-ink;
+  }
+
+  &__callout {
+    @apply mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+  }
+
+  &__body {
+    @apply mt-6;
   }
 
   &__bulk {
-    @apply mb-2 inline-block font-mono text-[11px] uppercase tracking-[0.14em] underline opacity-80;
+    @apply mb-3 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent underline opacity-80;
     @apply hover:opacity-100;
   }
 
   &__empty {
-    @apply text-[13px] opacity-80;
+    @apply mt-6 text-[14px] text-muted;
   }
 
   &__error {
-    @apply mt-2 text-[12px] text-bad;
+    @apply mt-3 text-[12px] text-bad;
+  }
+
+  &__nav {
+    @apply mt-8 flex items-center gap-3;
+  }
+
+  &__nav-spacer {
+    @apply flex-1;
   }
 
   &__upsell {
-    @apply mb-5;
+    @apply mt-10;
   }
+}
+
+// Soft fade between steps so the transition feels considered, not jarring.
+.review-fade-enter-active,
+.review-fade-leave-active {
+  transition: opacity 150ms ease-out;
+}
+
+.review-fade-enter-from,
+.review-fade-leave-to {
+  opacity: 0;
 }
 </style>
