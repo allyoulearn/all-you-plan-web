@@ -1,5 +1,12 @@
 <template>
   <div class="review-view">
+    <AppScreenHeading
+      :eyebrow="`${t('nav.withWren')} · ${t('nav.itemDailyReview')}`"
+      :title="t('review.headingPrefix')"
+      :emphasis="t('review.headingEmphasis')"
+    />
+
+    <AppCard class="review-view__card">
     <!-- Progress strip: 5-segment track with the step caption inline at the
          right so the eye picks up "where you are" in one glance. Hidden on
          the finale because the closer is the moment, not another step. -->
@@ -124,6 +131,8 @@
       </AppButton>
     </nav>
 
+    </AppCard>
+
     <!-- Wren cross-app upsell only on the finale — the close is the emotional
          close; the upsell is an offer beneath. -->
     <WrenCrossAppUpsell
@@ -146,6 +155,8 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import MoodPicker from '@/components/review/MoodPicker.vue'
 import WinPicker from '@/components/review/WinPicker.vue'
@@ -186,6 +197,8 @@ function emptyResponses() {
 export default {
   name: 'ReviewView',
   components: {
+    AppScreenHeading,
+    AppCard,
     AppButton,
     MoodPicker,
     WinPicker,
@@ -500,18 +513,22 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// The whole review is a vertical flex column that fills most of the
-// viewport. Progress sticks at the top, the step content lives in the
-// middle (vertically centered so each step "lands" in the same place
-// visually), and the Back/Next nav sticks to the bottom. This stops the
-// Next button from floating mid-page when the step content is short.
+// Container matches other views (heading at top, content card below). No
+// min-height — the card sizes to its content so the page doesn't scroll
+// unnecessarily.
 .review-view {
-  @apply mx-auto flex w-full max-w-[56rem] flex-col;
-  min-height: calc(100vh - 8rem);
+  // No global flex/min-height; just let the heading + card flow naturally.
+}
+
+// AppCard wraps the entire stepper: progress at the top, prompt + answer
+// in the middle, Back/Next anchored at the bottom of the card. Generous
+// internal padding keeps each step feeling intentional.
+.review-view__card {
+  @apply p-8;
 }
 
 .review-view__progress {
-  @apply mb-4 flex items-center gap-4;
+  @apply mb-6 flex items-center gap-4;
 }
 
 .review-view__progress-track {
@@ -554,47 +571,45 @@ export default {
   @apply opacity-80;
 }
 
-// Step grows to fill the available vertical space and centers its content
-// so the prompt + answer sit at the visual midpoint, not pinned to the top.
+// Step sizes naturally — no flex-grow or min-height. The card sizes to
+// the content; nav buttons land right under the answer.
 .review-view__step {
-  @apply flex flex-1 flex-col justify-center py-12;
+  @apply py-4;
 }
 
 .review-view__prompt {
-  // Large italic serif is the page focal point — the entire screen
-  // resolves around answering this one question.
-  @apply font-serif text-[40px] italic leading-tight text-ink;
+  // Italic serif is the focal point — sized to feel weighted inside the
+  // card without overwhelming it.
+  @apply font-serif text-[28px] italic leading-tight text-ink;
 }
 
 .review-view__callout {
-  @apply mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+  @apply mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
 }
 
 .review-view__body {
-  @apply mt-8;
+  @apply mt-6;
 }
 
 .review-view__bulk {
-  @apply mb-4 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent underline opacity-80;
+  @apply mb-3 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent underline opacity-80;
   @apply hover:opacity-100;
 }
 
 .review-view__empty {
-  @apply mt-6 text-[16px] text-muted;
+  @apply mt-4 text-[15px] text-muted;
 }
 
 .review-view__error {
   @apply mt-3 text-[12px] text-bad;
 }
 
-// Nav row anchors at the bottom of the column. justify-between keeps Back
-// at the left edge and Next at the right edge, no floating mid-page.
 .review-view__nav {
-  @apply mt-auto flex items-center justify-between gap-3 pt-6;
+  @apply mt-6 flex items-center justify-between gap-3;
 }
 
 .review-view__upsell {
-  @apply mt-8;
+  @apply mt-6;
 }
 
 // Soft fade between steps so the transition feels considered, not jarring.

@@ -11,6 +11,8 @@ import en from '@/i18n/locales/en.json'
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
+  AppScreenHeading: true,
+  AppCard: { template: '<div><slot /></div>' },
   AppButton: {
     template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
     props: ['disabled', 'variant', 'size'],
