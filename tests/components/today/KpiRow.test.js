@@ -52,6 +52,7 @@ describe('KpiRow', () => {
       props: { kpis: { ...fakeKpis, focusMinutes: 45 } },
       global: globalConfig
     })
+
     expect(wrapper.text()).toContain('0h 45m')
   })
 
@@ -92,6 +93,7 @@ describe('KpiRow', () => {
       props: { kpis: { ...fakeKpis, focusMinutes: 0 } },
       global: globalConfig
     })
+
     expect(wrapper.text()).toContain('0h 0m')
   })
 
@@ -100,6 +102,7 @@ describe('KpiRow', () => {
       props: { kpis: { ...fakeKpis, focusMinutes: 60 } },
       global: globalConfig
     })
+
     expect(wrapper.text()).toContain('1h 0m')
   })
 
@@ -108,6 +111,7 @@ describe('KpiRow', () => {
       props: { kpis: { ...fakeKpis, streak: 0 } },
       global: globalConfig
     })
+
     expect(wrapper.text()).toContain('0')
   })
 
@@ -116,6 +120,19 @@ describe('KpiRow', () => {
       props: { kpis: { ...fakeKpis, todayDone: 0, todayTotal: 5 } },
       global: globalConfig
     })
+
     expect(wrapper.text()).toContain('0/5')
+  })
+
+  it('renders custom tiles when tiles prop is passed', () => {
+    const tiles = [
+      { key: 'a', label: 'A', value: '1', unit: 'one' },
+      { key: 'b', label: 'B', value: '2', unit: 'two' },
+      { key: 'c', label: 'C', value: '3', unit: 'three' }
+    ]
+    const wrapper = mount(KpiRow, { props: { tiles }, global: globalConfig })
+    expect(wrapper.findAll('.kpi-tile')).toHaveLength(3)
+    expect(wrapper.text()).toContain('A')
+    expect(wrapper.text()).toContain('three')
   })
 })

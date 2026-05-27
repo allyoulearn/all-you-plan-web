@@ -1,27 +1,22 @@
 <template>
-  <div class="kpi-row">
+  <div class="kpi-row" :style="{ '--kpi-cols': resolvedTiles.length }">
     <KpiTile
-      v-for="tile in tiles"
+      v-for="tile in resolvedTiles"
       :key="tile.key"
       :label="tile.label"
-      :value="tile.get(kpis)"
+      :value="tile.value"
       :unit="tile.unit"
     />
   </div>
 </template>
 
 <script>
-/** KpiRow — four-column grid of KPI tiles for the Today view header. */
+/** KpiRow — grid of KPI tiles. Defaults to the 4 Today-view tiles; pass `tiles` to override. */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import KpiTile from './KpiTile.vue'
 
-/**
- * Stable tile definitions. Labels/units route through i18n so the row
- * responds to locale changes (WEB-W3-14). The duration formatter uses the
- * `kpi.hoursMinutes` key so the "1h 5m" glyph is overridable per locale.
- */
-const TILE_DEFS = [
+const TODAY_TILE_DEFS = [
   { key: 'streak', labelKey: 'kpi.streak', unitKey: 'kpi.unitDays', get: k => k.streak },
   {
     key: 'today',
@@ -42,32 +37,42 @@ export default {
   name: 'KpiRow',
   components: { KpiTile },
   props: {
-    /** KPI data object with streak, todayDone, todayTotal, activeProjects, and focusMinutes */
-    kpis: { type: Object, required: true }
+    /** Today-view KPI bag. Used only when `tiles` is not provided. */
+    kpis: { type: Object, default: null },
+    /** Pre-resolved tiles. Each: { key, label, value, unit }. Overrides `kpis`. */
+    tiles: { type: Array, default: null }
   },
-  setup() {
+  setup(props) {
     const { t } = useI18n()
-    const tiles = computed(() =>
-      TILE_DEFS.map(def => ({
+
+    const resolvedTiles = computed(() => {
+      if (props.tiles) return props.tiles
+      const k = props.kpis ?? {}
+      return TODAY_TILE_DEFS.map(def => ({
         key: def.key,
         label: t(def.labelKey),
-        unit: t(def.unitKey),
-        get:
-          def.get ??
-          (k => {
-            const h = Math.floor((k.focusMinutes ?? 0) / 60)
-            const m = (k.focusMinutes ?? 0) % 60
-            return t('kpi.hoursMinutes', { h, m })
-          })
+        value: def.get
+          ? def.get(k)
+          : t('kpi.hoursMinutes', {
+              h: Math.floor((k.focusMinutes ?? 0) / 60),
+              m: (k.focusMinutes ?? 0) % 60
+            }),
+        unit: t(def.unitKey)
       }))
-    )
-    return { tiles }
+    })
+
+    return { resolvedTiles }
   }
 }
 </script>
 
 <style lang="scss" scoped>
 .kpi-row {
-  @apply grid grid-cols-4 gap-3.5;
+  // Default 2-up on phones; expand to the count of tiles on sm+.
+  @apply grid grid-cols-2 gap-2.5 sm:gap-3.5;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(var(--kpi-cols, 4), minmax(0, 1fr));
+  }
 }
 </style>
