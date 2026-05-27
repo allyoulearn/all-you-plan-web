@@ -1,8 +1,9 @@
 <template>
   <div class="review-view">
-    <!-- Progress strip: dotted line + caption. Hidden on the finale because
-         the closer is the moment, not another step. -->
-    <div v-if="!isFinale" class="review-view__progress">
+    <!-- Progress strip: 5-segment track with the step caption inline at the
+         right so the eye picks up "where you are" in one glance. Hidden on
+         the finale because the closer is the moment, not another step. -->
+    <header v-if="!isFinale" class="review-view__progress">
       <ol
         class="review-view__progress-track"
         :aria-label="t('nav.itemDailyReview')"
@@ -31,7 +32,7 @@
           {{ t(`review.stepLabel.${currentStepKey}`) }}
         </span>
       </p>
-    </div>
+    </header>
 
     <!-- Step content. One section visible at a time, with a soft fade between. -->
     <Transition name="review-fade" mode="out-in">
@@ -101,8 +102,9 @@
       </div>
     </Transition>
 
-    <!-- Step navigation. Big targets so it's easy on touch. -->
-    <div v-if="!isFinale" class="review-view__nav">
+    <!-- Step navigation. Anchored to the bottom of the column so the Next
+         button never floats in the middle of the page. -->
+    <nav v-if="!isFinale" class="review-view__nav">
       <AppButton
         v-if="currentStep > 1"
         variant="ghost"
@@ -111,7 +113,7 @@
         ← {{ t('review.back') }}
       </AppButton>
 
-      <div class="review-view__nav-spacer" />
+      <span v-else />
 
       <AppButton
         variant="primary"
@@ -120,7 +122,7 @@
       >
         {{ nextLabel }} →
       </AppButton>
-    </div>
+    </nav>
 
     <!-- Wren cross-app upsell only on the finale — the close is the emotional
          close; the upsell is an offer beneath. -->
@@ -498,97 +500,101 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// The whole review is a vertical flex column that fills most of the
+// viewport. Progress sticks at the top, the step content lives in the
+// middle (vertically centered so each step "lands" in the same place
+// visually), and the Back/Next nav sticks to the bottom. This stops the
+// Next button from floating mid-page when the step content is short.
 .review-view {
-  @apply mx-auto max-w-[42rem];
+  @apply mx-auto flex w-full max-w-[56rem] flex-col;
+  min-height: calc(100vh - 8rem);
+}
 
-  &__progress {
-    @apply mb-12 flex flex-col gap-2;
+.review-view__progress {
+  @apply mb-4 flex items-center gap-4;
+}
+
+.review-view__progress-track {
+  @apply flex flex-1 items-center gap-1.5;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.review-view__progress-item {
+  @apply flex-1;
+}
+
+.review-view__progress-dot {
+  @apply block h-1 w-full rounded-pill bg-rule-soft transition-colors;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent;
+
+  &--done {
+    @apply bg-accent opacity-60;
   }
 
-  &__progress-track {
-    @apply flex items-center gap-1.5;
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  &--active {
+    @apply bg-accent;
   }
+}
 
-  &__progress-item {
-    @apply flex-1;
-  }
+.review-view__progress-caption {
+  @apply shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+}
 
-  &__progress-dot {
-    @apply block h-1 w-full rounded-pill bg-rule-soft transition-colors;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent;
+.review-view__progress-step {
+  @apply text-ink;
+}
 
-    &--done {
-      @apply bg-accent opacity-60;
-    }
+.review-view__progress-sep {
+  @apply mx-1 opacity-40;
+}
 
-    &--active {
-      @apply bg-accent;
-    }
-  }
+.review-view__progress-label {
+  @apply opacity-80;
+}
 
-  &__progress-caption {
-    @apply mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
-  }
+// Step grows to fill the available vertical space and centers its content
+// so the prompt + answer sit at the visual midpoint, not pinned to the top.
+.review-view__step {
+  @apply flex flex-1 flex-col justify-center py-12;
+}
 
-  &__progress-step {
-    @apply text-ink;
-  }
+.review-view__prompt {
+  // Large italic serif is the page focal point — the entire screen
+  // resolves around answering this one question.
+  @apply font-serif text-[40px] italic leading-tight text-ink;
+}
 
-  &__progress-sep {
-    @apply mx-1 opacity-40;
-  }
+.review-view__callout {
+  @apply mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+}
 
-  &__progress-label {
-    @apply opacity-80;
-  }
+.review-view__body {
+  @apply mt-8;
+}
 
-  &__step {
-    // Anchor each step at a similar vertical position so the layout doesn't
-    // jump as the user moves Next/Back.
-    @apply mb-10 min-h-[20rem];
-  }
+.review-view__bulk {
+  @apply mb-4 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent underline opacity-80;
+  @apply hover:opacity-100;
+}
 
-  &__prompt {
-    // Large italic serif is the page focal point — the entire screen
-    // resolves around answering this one question.
-    @apply font-serif text-[28px] italic leading-tight text-ink;
-  }
+.review-view__empty {
+  @apply mt-6 text-[16px] text-muted;
+}
 
-  &__callout {
-    @apply mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
-  }
+.review-view__error {
+  @apply mt-3 text-[12px] text-bad;
+}
 
-  &__body {
-    @apply mt-6;
-  }
+// Nav row anchors at the bottom of the column. justify-between keeps Back
+// at the left edge and Next at the right edge, no floating mid-page.
+.review-view__nav {
+  @apply mt-auto flex items-center justify-between gap-3 pt-6;
+}
 
-  &__bulk {
-    @apply mb-3 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent underline opacity-80;
-    @apply hover:opacity-100;
-  }
-
-  &__empty {
-    @apply mt-6 text-[14px] text-muted;
-  }
-
-  &__error {
-    @apply mt-3 text-[12px] text-bad;
-  }
-
-  &__nav {
-    @apply mt-8 flex items-center gap-3;
-  }
-
-  &__nav-spacer {
-    @apply flex-1;
-  }
-
-  &__upsell {
-    @apply mt-10;
-  }
+.review-view__upsell {
+  @apply mt-8;
 }
 
 // Soft fade between steps so the transition feels considered, not jarring.

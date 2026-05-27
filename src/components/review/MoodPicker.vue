@@ -6,7 +6,7 @@
       role="radio"
       :aria-checked="modelValue === m ? 'true' : 'false'"
       :variant="modelValue === m ? 'accent' : 'default'"
-      size="sm"
+      size="md"
       @click="$emit('update:modelValue', m)"
     >
       {{ t(`review.mood.${m}`) }}
@@ -37,6 +37,6 @@ export default {
 
 <style lang="scss" scoped>
 .mood-picker {
-  @apply flex flex-wrap gap-2;
+  @apply flex flex-wrap gap-3;
 }
 </style>
