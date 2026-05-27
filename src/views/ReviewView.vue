@@ -1,197 +1,384 @@
 <template>
-  <div>
-    <ScreenHeading eyebrow="With Wren · Daily review" title="How did" emphasis="today feel?" />
+  <div class="review-view">
+    <AppScreenHeading
+      :eyebrow="`${t('nav.withWren')} · ${t('nav.itemDailyReview')}`"
+      :title="t('review.headingPrefix')"
+      :emphasis="t('review.headingEmphasis')"
+    />
 
-    <!-- Step 1 — Mood -->
-    <Card class="mb-5">
-      <p class="review-view__step-label">
-        {{ t('review.step1Label') }}
-      </p>
+    <!-- 1. Open + mood -->
+    <section class="review-view__section">
+      <WrenTurn :prompt="t('review.wren.open')" :callout="headlineCallout">
+        <MoodPicker v-model="mood" />
+      </WrenTurn>
+    </section>
 
-      <!--
-        WEB-W4-37: wrap the buttons in role="radiogroup" + role="radio" so
-        screen readers announce a single-selection group instead of five
-        independent buttons. aria-checked tracks the active mood.
-      -->
-      <div
-        class="review-view__mood-row"
-        role="radiogroup"
-        :aria-label="t('review.step1Label')"
-      >
-        <Button
-          v-for="m in MOODS"
-          :key="m"
-          role="radio"
-          :aria-checked="mood === m ? 'true' : 'false'"
-          :variant="mood === m ? 'accent' : 'default'"
-          size="sm"
-          @click="mood = m"
-        >
-          {{ m }}
-        </Button>
-      </div>
-    </Card>
+    <!-- 2. Wins -->
+    <section class="review-view__section">
+      <WrenTurn :prompt="t('review.wren.wins')">
+        <WinPicker v-model="wins" :tasks="doneTasks" />
+      </WrenTurn>
+    </section>
 
-    <!-- Step 2 — What moved -->
-    <Card class="mb-5">
-      <p class="review-view__step-label">
-        {{ t('review.step2Label') }}
-      </p>
+    <!-- 3. Friction -->
+    <section class="review-view__section">
+      <WrenTurn :prompt="t('review.wren.friction')">
+        <FrictionInput v-model="friction" />
+      </WrenTurn>
+    </section>
 
-      <div v-if="todayStore.loading" class="review-view__loading">
-        {{ t('review.loading') }}
-      </div>
+    <!-- 4. Leftovers -->
+    <section class="review-view__section">
+      <WrenTurn :prompt="t('review.wren.leftovers')">
+        <template v-if="pendingTasks.length">
+          <button type="button" class="review-view__bulk" @click="moveAllToTomorrow">
+            {{ t('review.leftover.moveAll') }}
+          </button>
 
-      <div v-else-if="doneTasks.length" class="review-view__task-list">
-        <div
-          v-for="task in doneTasks"
-          :key="task.id"
-          class="review-view__task-row"
-        >
-          <span class="review-view__task-dot review-view__task-dot--ok" />
+          <LeftoverRow
+            v-for="task in pendingTasks"
+            :key="task.id"
+            :task="task"
+            :action="leftoverAction(task.id)"
+            @update:action="kind => setLeftover(task.id, kind)"
+          />
+        </template>
 
-          <span class="review-view__task-title review-view__task-title--done">
-            {{ task.title }}
-          </span>
-        </div>
-      </div>
+        <p v-else class="review-view__empty">
+          {{ t('review.leftover.empty') }}
+        </p>
+      </WrenTurn>
+    </section>
 
-      <p v-else class="review-view__empty">
-        {{ t('review.noDoneTasks') }}
-      </p>
-    </Card>
+    <!-- 5. Tomorrow intent -->
+    <section class="review-view__section">
+      <WrenTurn :prompt="t('review.wren.intent')">
+        <TomorrowIntent v-model="tomorrowIntent" />
+      </WrenTurn>
+    </section>
 
-    <!-- Step 3 — What didn't -->
-    <Card class="mb-5">
-      <p class="review-view__step-label">
-        {{ t('review.step3Label') }}
-      </p>
+    <!-- 6. Send-off -->
+    <section class="review-view__section">
+      <SendoffCard
+        :input="sendoffInput"
+        :saving="reviewStore.saving"
+        :disabled="!mood"
+        :saved="saved && !editing"
+        @finish="finishReview"
+        @edit="editing = true"
+      />
 
-      <div v-if="todayStore.loading" class="review-view__loading">
-        {{ t('review.loading') }}
-      </div>
-
-      <div v-else-if="pendingTasks.length" class="review-view__task-list">
-        <div
-          v-for="task in pendingTasks"
-          :key="task.id"
-          class="review-view__task-row"
-        >
-          <span class="review-view__task-dot review-view__task-dot--pending" />
-          {{ task.title }}
-        </div>
-      </div>
-
-      <p v-else class="review-view__empty">
-        {{ t('review.noPendingTasks') }}
-      </p>
-    </Card>
-
-    <!-- Step 4 — Send-off -->
-    <Card variant="accent" class="mb-5">
-      <p class="review-view__sendoff-label">
-        {{ t('review.step4Label') }}
-      </p>
-
-      <p class="review-view__sendoff-quote">
-        {{ t('review.sendoffQuote') }}
-      </p>
-
-      <div class="review-view__sendoff-action">
-        <Button
-          variant="default"
-          :disabled="!mood || reviewStore.saving"
-          @click="finishReview"
-        >
-          {{ reviewStore.saving ? t('review.saving') : t('review.finishReview') }}
-        </Button>
-      </div>
-
-      <p v-if="reviewStore.review?.id && !reviewStore.saving" class="review-view__saved-note">
-        {{ t('review.reviewSaved') }}
-      </p>
-
-      <p v-if="reviewStore.error" class="review-view__error-note">
+      <p v-if="reviewStore.error" class="review-view__error">
         {{ reviewStore.error }}
       </p>
-    </Card>
+    </section>
+
+    <!-- Wren cross-app upsell. Lives below the send-off so the close is the
+         emotional closer; the upsell is an offer beneath. -->
+    <WrenCrossAppUpsell
+      v-if="showWrenUpsell"
+      class="review-view__upsell"
+      plan="managed_multi_monthly"
+      @dismiss="onDismissWrenUpsell"
+    />
   </div>
 </template>
 
 <script>
-/** ReviewView — guided daily review with mood selector, task summary, and Wren send-off card. */
+/**
+ * ReviewView — Wren-led daily review. Composes section components and owns
+ * the canonical local state for the in-progress review. Hydrates from the
+ * review store on mount; on Finish saves the structured payload + fires
+ * carry-forward mutations only for newly-changed leftover decisions.
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
+
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import WrenTurn from '@/components/review/WrenTurn.vue'
+import MoodPicker from '@/components/review/MoodPicker.vue'
+import WinPicker from '@/components/review/WinPicker.vue'
+import FrictionInput from '@/components/review/FrictionInput.vue'
+import LeftoverRow from '@/components/review/LeftoverRow.vue'
+import TomorrowIntent from '@/components/review/TomorrowIntent.vue'
+import SendoffCard from '@/components/review/SendoffCard.vue'
+import WrenCrossAppUpsell from '@/components/wren/WrenCrossAppUpsell.vue'
+
 import { useTodayStore } from '@/stores/today.store.js'
 import { useReviewStore } from '@/stores/review.store.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
+import { localISOToday, toLocalISODate } from '@/utils/date.js'
+import { diffLeftovers } from '@/components/review/leftoverDiff.js'
 
-const MOODS = ['heavy', 'low', 'ok', 'good', 'alight']
+const WREN_UPSELL_DISMISSED_KEY = 'wren-cross-app-upsell-dismissed'
+
+function localISOTomorrow() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return toLocalISODate(d)
+}
+
+function emptyResponses() {
+  return {
+    wins: { starred: [], freeText: '' },
+    friction: { text: '', tags: [] },
+    leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
+    tomorrowIntent: ''
+  }
+}
 
 export default {
   name: 'ReviewView',
-  components: { ScreenHeading, Card, Button },
+  components: {
+    AppScreenHeading,
+    WrenTurn,
+    MoodPicker,
+    WinPicker,
+    FrictionInput,
+    LeftoverRow,
+    TomorrowIntent,
+    SendoffCard,
+    WrenCrossAppUpsell
+  },
   setup() {
-    // -- State --
     const { t } = useI18n()
-    const { toastSuccess } = useErrorToast()
+    const { toastSuccess, toastError } = useErrorToast()
     const todayStore = useTodayStore()
     const reviewStore = useReviewStore()
+
+    // -- Local state (canonical for the in-progress review) --
     const mood = ref('')
+    const wins = ref({ starred: [], freeText: '' })
+    const friction = ref({ text: '', tags: [] })
+    const leftoverActions = ref({}) // taskId -> { kind, date? }
+    const tomorrowIntent = ref('')
+    const editing = ref(false)
+
+    const todayDate = localISOToday()
+    const tomorrow = localISOTomorrow()
+
+    const showWrenUpsell = ref(
+      typeof window === 'undefined'
+        ? true
+        : window.localStorage.getItem(WREN_UPSELL_DISMISSED_KEY) !== 'true'
+    )
 
     // -- Computed --
 
-    /** ISO date string for today, captured once at setup time. */
-    const d = new Date()
-    const todayDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const doneTasks = computed(() => (todayStore.view?.tasks ?? []).filter(t => t.done))
+    const pendingTasks = computed(() => (todayStore.view?.tasks ?? []).filter(t => !t.done))
 
-    /** Tasks from today's view that are marked done. */
-    const doneTasks = computed(() => (todayStore.view?.tasks ?? []).filter((t) => t.done))
+    const headlineCallout = computed(() => {
+      const total = todayStore.view?.kpis?.todayTotal ?? 0
+      const streak = todayStore.view?.kpis?.streak ?? 0
+      // Spec: hide the callout entirely when streak is 0 or total is 0 — keeps
+      // the opening from feeling sterile on a freshly-started habit.
+      if (total === 0 || streak === 0) return ''
+      const done = todayStore.view?.kpis?.todayDone ?? 0
+      return t('review.headline', { done, total }) + t('review.headlineStreak', { streak })
+    })
 
-    /** Tasks from today's view that are not yet done. */
-    const pendingTasks = computed(() => (todayStore.view?.tasks ?? []).filter((t) => !t.done))
+    const saved = computed(() => Boolean(reviewStore.review?.id))
 
-    // -- Lifecycle --
-    onMounted(async () => {
-      await Promise.all([todayStore.load(todayDate), reviewStore.load(todayDate)])
-      if (reviewStore.review?.mood) {
-        mood.value = reviewStore.review.mood
+    const sendoffInput = computed(() => {
+      const topId = wins.value.starred[0]
+      const topWin = doneTasks.value.find(t => t.id === topId)
+      return {
+        mood: mood.value || 'steady',
+        doneCount: todayStore.view?.kpis?.todayDone ?? 0,
+        totalCount: todayStore.view?.kpis?.todayTotal ?? 0,
+        streak: todayStore.view?.kpis?.streak ?? 0,
+        topWinTitle: topWin?.title ?? '',
+        tomorrowIntent: tomorrowIntent.value,
+        frictionTagCount: friction.value.tags.length
       }
     })
 
-    // -- Function definitions --
+    // -- Lifecycle --
 
-    /**
-     * Persists the review with the selected mood and task lists. Surfaces a
-     * success toast on completion so the save is discoverable beyond the
-     * inline "Review saved." paragraph that appears once `review.id`
-     * populates (WEB-W4-29).
-     */
-    async function finishReview() {
-      try {
-        await reviewStore.save(todayDate, mood.value, {
-          moved: doneTasks.value.map(task => task.id),
-          pending: pendingTasks.value.map(task => task.id)
-        })
-        toastSuccess(t('review.reviewSaved'))
-      } catch {
-        // The store already toasts the error via useErrorToast.
-      }
-    }
+    onMounted(async () => {
+      await Promise.all([todayStore.load(todayDate), reviewStore.load(todayDate)])
+      hydrateFromStore()
+    })
 
     return {
       t,
-      MOODS,
       todayStore,
       reviewStore,
       mood,
-      todayDate,
+      wins,
+      friction,
+      leftoverActions,
+      tomorrowIntent,
+      editing,
+      saved,
       doneTasks,
       pendingTasks,
+      headlineCallout,
+      sendoffInput,
+      showWrenUpsell,
+      leftoverAction,
+      setLeftover,
+      moveAllToTomorrow,
       finishReview,
+      onDismissWrenUpsell,
+      todayDate
+    }
+
+    // -- Functions --
+
+    function hydrateFromStore() {
+      const r = reviewStore.review
+      if (!r) {
+        // Default: every pending task gets "tomorrow"
+        for (const task of pendingTasks.value) {
+          leftoverActions.value[task.id] = { kind: 'tomorrow' }
+        }
+        return
+      }
+
+      if (r.mood) mood.value = r.mood
+      const resp = r.responses || emptyResponses()
+
+      if (resp.wins) {
+        wins.value = {
+          starred: resp.wins.starred ?? [],
+          freeText: resp.wins.freeText ?? ''
+        }
+      }
+
+      if (resp.friction) {
+        friction.value = {
+          text: resp.friction.text ?? '',
+          tags: resp.friction.tags ?? []
+        }
+      }
+
+      if (resp.tomorrowIntent) tomorrowIntent.value = resp.tomorrowIntent
+
+      const lo = resp.leftovers || emptyResponses().leftovers
+      for (const id of lo.tomorrow ?? []) leftoverActions.value[id] = { kind: 'tomorrow' }
+      for (const p of lo.picked ?? []) leftoverActions.value[p.id] = { kind: 'pick', date: p.date }
+      for (const id of lo.dropped ?? []) leftoverActions.value[id] = { kind: 'drop' }
+      for (const id of lo.kept ?? []) leftoverActions.value[id] = { kind: 'keep' }
+
+      // Tasks not represented in the saved payload (e.g. created after the
+      // review was saved) default to "tomorrow".
+      for (const task of pendingTasks.value) {
+        if (!leftoverActions.value[task.id]) {
+          leftoverActions.value[task.id] = { kind: 'tomorrow' }
+        }
+      }
+    }
+
+    function leftoverAction(id) {
+      return leftoverActions.value[id] ?? { kind: 'tomorrow' }
+    }
+
+    function setLeftover(id, action) {
+      leftoverActions.value = { ...leftoverActions.value, [id]: action }
+    }
+
+    function moveAllToTomorrow() {
+      const next = { ...leftoverActions.value }
+      for (const task of pendingTasks.value) {
+        next[task.id] = { kind: 'tomorrow' }
+      }
+      leftoverActions.value = next
+    }
+
+    function composeResponses() {
+      const tomorrowIds = []
+      const picked = []
+      const dropped = []
+      const kept = []
+
+      for (const task of pendingTasks.value) {
+        const a = leftoverActions.value[task.id] ?? { kind: 'tomorrow' }
+        if (a.kind === 'tomorrow') tomorrowIds.push(task.id)
+        else if (a.kind === 'pick' && a.date) picked.push({ id: task.id, date: a.date })
+        else if (a.kind === 'drop') dropped.push(task.id)
+        else if (a.kind === 'keep') kept.push(task.id)
+      }
+
+      return {
+        wins: { ...wins.value, freeText: wins.value.freeText.trim() },
+        friction: { ...friction.value, text: friction.value.text.trim() },
+        leftovers: { tomorrow: tomorrowIds, picked, dropped, kept },
+        tomorrowIntent: tomorrowIntent.value.trim()
+      }
+    }
+
+    async function finishReview() {
+      if (!mood.value) return
+
+      const responses = composeResponses()
+      const prevLeftovers = reviewStore.review?.responses?.leftovers ?? null
+      const diff = diffLeftovers(prevLeftovers, responses.leftovers)
+
+      try {
+        await reviewStore.save(todayDate, mood.value, responses)
+      } catch {
+        // Store already toasts; do not fire any carry-forward.
+        return
+      }
+
+      const failures = await dispatchCarryForward(diff)
+      editing.value = false
+
+      if (failures > 0) {
+        toastError(new Error('partial'), t('review.sendoff.saveError', { n: failures }))
+      } else {
+        toastSuccess(t('review.reviewSaved'))
+      }
+    }
+
+    async function dispatchCarryForward(diff) {
+      let failures = 0
+
+      for (const id of diff.tomorrow) {
+        try {
+          await todayStore.rescheduleTask(id, { scheduledDate: tomorrow })
+        } catch {
+          failures += 1
+        }
+      }
+
+      for (const p of diff.picked) {
+        try {
+          await todayStore.rescheduleTask(p.id, { scheduledDate: p.date })
+        } catch {
+          failures += 1
+        }
+      }
+
+      for (const id of diff.dropped) {
+        try {
+          await deleteTaskById(id)
+        } catch {
+          failures += 1
+        }
+      }
+
+      return failures
+    }
+
+    async function deleteTaskById(id) {
+      // Inline mutation rather than adding a new store action; the review
+      // is the only caller and the today store reload after a deletion is
+      // unnecessary here (the user is closing out the day).
+      const { apolloClient } = await import('@/api/apollo.js')
+      const { DELETE_TASK } = await import('@/api/operations/index.js')
+      await apolloClient.mutate({ mutation: DELETE_TASK, variables: { id } })
+    }
+
+    function onDismissWrenUpsell() {
+      showWrenUpsell.value = false
+      try {
+        window.localStorage.setItem(WREN_UPSELL_DISMISSED_KEY, 'true')
+      } catch {
+        // localStorage can be blocked; the local ref already hides the card.
+      }
     }
   }
 }
@@ -199,66 +386,25 @@ export default {
 
 <style lang="scss" scoped>
 .review-view {
-  &__step-label {
-    @apply mb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+  &__section {
+    @apply mb-5;
   }
 
-  &__mood-row {
-    @apply mt-3 flex flex-wrap gap-2;
-  }
-
-  &__loading {
-    @apply mt-2 text-[13px] text-muted;
-  }
-
-  &__task-list {
-    @apply mt-2 flex flex-col gap-1;
-  }
-
-  &__task-row {
-    @apply flex items-center gap-2.5 py-1 text-[14px] text-ink;
-  }
-
-  &__task-dot {
-    @apply mt-0.5 h-1.5 w-1.5 shrink-0 rounded-pill;
-
-    &--ok {
-      @apply bg-ok;
-    }
-
-    &--pending {
-      @apply border border-rule-soft bg-paper-3;
-    }
-  }
-
-  &__task-title {
-    &--done {
-      @apply line-through opacity-60;
-    }
+  &__bulk {
+    @apply mb-2 inline-block font-mono text-[11px] uppercase tracking-[0.14em] underline opacity-80;
+    @apply hover:opacity-100;
   }
 
   &__empty {
-    @apply mt-2 text-[13px] text-muted;
+    @apply text-[13px] opacity-80;
   }
 
-  &__sendoff-label {
-    @apply font-mono text-[11px] uppercase tracking-[0.14em] text-accent-ink opacity-70;
-  }
-
-  &__sendoff-quote {
-    @apply mt-3 font-serif text-[20px] italic leading-snug text-accent-ink;
-  }
-
-  &__sendoff-action {
-    @apply mt-5;
-  }
-
-  &__saved-note {
-    @apply mt-3 font-mono text-[11px] text-accent-ink opacity-70;
-  }
-
-  &__error-note {
+  &__error {
     @apply mt-2 text-[12px] text-bad;
+  }
+
+  &__upsell {
+    @apply mb-5;
   }
 }
 </style>
