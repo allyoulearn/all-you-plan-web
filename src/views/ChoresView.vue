@@ -12,8 +12,13 @@
 
     <!-- Error state -->
     <div v-else-if="store.error" class="chores-view__status chores-view__status--error">
-      <span>{{ store.error }}</span>
-      <AppButton size="sm" variant="ghost" @click="store.load()">{{ t('common.retry') }}</AppButton>
+      <span>
+        {{ store.error }}
+      </span>
+
+      <AppButton size="sm" variant="ghost" @click="store.load()">
+        {{ t('common.retry') }}
+      </AppButton>
     </div>
 
     <!-- Empty state (loaded, no chores) -->
@@ -46,6 +51,7 @@
 
         <template v-if="groups.upcoming.length">
           <AppSectionHeader :label="t('chores.upcoming')" :count="groups.upcoming.length" />
+
           <div class="chores-view__group-list">
             <ChoreRow
               v-for="(chore, idx) in groups.upcoming"
@@ -68,6 +74,7 @@
             :label="group.label"
             :count="group.items.length"
           />
+
           <div v-if="group.items.length" class="chores-view__group-list">
             <ChoreRow
               v-for="(chore, idx) in group.items"
@@ -87,6 +94,7 @@
         <AppButton variant="primary" icon="plus" @click="showCreate = true">
           {{ t('chores.newChore') }}
         </AppButton>
+
         <AppButton variant="ghost" @click="toggleViewMode">
           {{ viewMode === 'flow' ? t('chores.byCadence') : t('chores.byFlow') }}
         </AppButton>
@@ -95,6 +103,7 @@
 
     <!-- Modals -->
     <CreateChoreModal v-model="showCreate" />
+
     <EditChoreModal v-model="showEdit" :chore="editingChore" />
 
     <AppConfirmDialog
@@ -185,10 +194,13 @@ export default {
       const dueToday = allChores.value.filter(
         c => !isSnoozedNow(c, today.value) && isDueOn(c, today.value)
       )
+
       const todayIso = new Date().toLocaleDateString('en-CA')
+
       const done = dueToday.filter(
         c => String(c.lastCompletedOn ?? '').slice(0, 10) === todayIso
       ).length
+
       const currentStreak = allChores.value.reduce((m, c) => Math.max(m, c.streak ?? 0), 0)
       const bestStreak = allChores.value.reduce((m, c) => Math.max(m, c.bestStreak ?? 0), 0)
       return [
@@ -302,11 +314,13 @@ export default {
 
     async function performDelete() {
       if (!pendingDeleteId.value) return
+
       try {
         await store.deleteChore(pendingDeleteId.value)
       } catch {
         // toasted by store
       }
+
       pendingDeleteId.value = null
       confirmDelete.value = false
     }
@@ -318,6 +332,7 @@ export default {
             ? groups.value.due
             : groups.value.upcoming
           : (cadenceGroups.value.find(g => g.items.some(c => c.id === id))?.items ?? [])
+
       const idx = list.findIndex(c => c.id === id)
       if (idx < 0) return
       const next = idx + delta
@@ -325,6 +340,7 @@ export default {
       const reordered = [...list]
       const [moved] = reordered.splice(idx, 1)
       reordered.splice(next, 0, moved)
+
       try {
         await store.reorderChores(reordered.map(c => c.id))
       } catch {

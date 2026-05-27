@@ -17,16 +17,22 @@
           class="chore-row__title"
           :class="titleClass"
           @click="$emit('edit', chore.id)"
-        >{{ chore.title }}</button>
+        >
+          {{ chore.title }}
+        </button>
+
         <WrenOriginBadge ref-type="chore" :ref-id="chore.id" />
       </span>
 
-      <span class="chore-row__cadence">{{ cadenceText }}</span>
+      <span class="chore-row__cadence">
+        {{ cadenceText }}
+      </span>
 
       <span v-if="snoozed" class="chore-row__meta">
         <AppIcon name="clock" :size="11" />
         {{ t('chores.snoozedUntil', { date: snoozedUntilDate }) }}
       </span>
+
       <span v-else-if="chore.skipNextDate" class="chore-row__meta">
         <AppIcon name="arrow-right" :size="11" />
         {{ t('chores.skipNextScheduled', { date: skipNextLabel }) }}
@@ -50,41 +56,86 @@
         <AppIcon name="more" :size="16" />
       </button>
 
-      <ul v-if="menuOpen" ref="menuList" class="chore-row__menu-list" role="menu">
+      <ul
+        v-if="menuOpen"
+        ref="menuList"
+        class="chore-row__menu-list"
+        role="menu"
+      >
         <li role="none">
-          <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('edit')">
+          <button
+            type="button"
+            role="menuitem"
+            class="chore-row__menu-item"
+            @click="trigger('edit')"
+          >
             {{ t('chores.edit') }}
           </button>
         </li>
 
         <li v-if="snoozed" role="none">
-          <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('resume')">
+          <button
+            type="button"
+            role="menuitem"
+            class="chore-row__menu-item"
+            @click="trigger('resume')"
+          >
             {{ t('chores.resume') }}
           </button>
         </li>
+
         <template v-else>
           <li role="none">
-            <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('snooze', 1)">
+            <button
+              type="button"
+              role="menuitem"
+              class="chore-row__menu-item"
+              @click="trigger('snooze', 1)"
+            >
               {{ t('chores.snooze1d') }}
             </button>
           </li>
+
           <li role="none">
-            <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('snooze', 3)">
+            <button
+              type="button"
+              role="menuitem"
+              class="chore-row__menu-item"
+              @click="trigger('snooze', 3)"
+            >
               {{ t('chores.snooze3d') }}
             </button>
           </li>
+
           <li role="none">
-            <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('snooze', 7)">
+            <button
+              type="button"
+              role="menuitem"
+              class="chore-row__menu-item"
+              @click="trigger('snooze', 7)"
+            >
               {{ t('chores.snooze7d') }}
             </button>
           </li>
+
           <li role="none">
-            <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('snooze-until')">
+            <button
+              type="button"
+              role="menuitem"
+              class="chore-row__menu-item"
+              @click="trigger('snooze-until')"
+            >
               {{ t('chores.snoozeUntil') }}
             </button>
           </li>
+
           <li role="none">
-            <button type="button" role="menuitem" class="chore-row__menu-item" @click="trigger('skip-next')">
+            <button
+              type="button"
+              role="menuitem"
+              class="chore-row__menu-item"
+              @click="trigger('skip-next')"
+            >
               {{ t('chores.skipNext') }}
             </button>
           </li>
@@ -103,6 +154,7 @@
             {{ t('chores.moveUp') }}
           </button>
         </li>
+
         <li role="none">
           <button
             type="button"
@@ -186,6 +238,7 @@ export default {
     const menuList = ref(null)
 
     const snoozed = computed(() => isSnoozedNow(props.chore))
+
     const completedToday = computed(() => {
       if (!props.chore.lastCompletedOn) return false
       const today = new Date().toLocaleDateString('en-CA')
@@ -229,6 +282,7 @@ export default {
 
     function trigger(action, days) {
       menuOpen.value = false
+
       if (action === 'snooze') {
         const until = new Date()
         until.setDate(until.getDate() + days)

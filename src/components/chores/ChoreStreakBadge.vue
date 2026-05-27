@@ -2,8 +2,12 @@
   <span class="chore-streak-badge" :aria-label="ariaLabel">
     <span class="chore-streak-badge__main">
       <AppIcon name="fire" :size="13" class="chore-streak-badge__icon" />
-      <span class="chore-streak-badge__count">{{ streak }}</span>
+
+      <span class="chore-streak-badge__count">
+        {{ streak }}
+      </span>
     </span>
+
     <span v-if="showBest" class="chore-streak-badge__best">
       {{ t('chores.streakBest', { count: bestStreak }) }}
     </span>

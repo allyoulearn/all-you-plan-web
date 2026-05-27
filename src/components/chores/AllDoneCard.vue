@@ -1,9 +1,15 @@
 <template>
   <div class="all-done-card" role="status">
     <AppIcon name="check" :size="20" class="all-done-card__icon" />
+
     <div class="all-done-card__text">
-      <span class="all-done-card__title">{{ t('chores.allDoneTitle') }}</span>
-      <span class="all-done-card__sub">{{ t('chores.allDoneSub') }}</span>
+      <span class="all-done-card__title">
+        {{ t('chores.allDoneTitle') }}
+      </span>
+
+      <span class="all-done-card__sub">
+        {{ t('chores.allDoneSub') }}
+      </span>
     </div>
   </div>
 </template>

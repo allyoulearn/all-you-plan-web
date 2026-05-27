@@ -15,6 +15,7 @@
       <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
       </AppButton>
+
       <AppButton variant="primary" :disabled="saving || !formValid" @click="handleSubmit">
         {{ saving ? t('chores.creating') : t('chores.create') }}
       </AppButton>
@@ -69,9 +70,11 @@ export default {
 
     function buildCadence(c) {
       if (c.type === 'weekly') return { type: 'weekly', daysOfWeek: c.daysOfWeek, interval: 1 }
+
       if (c.type === 'monthly') {
         return { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: c.dayOfMonth }
       }
+
       return { type: 'daily', daysOfWeek: [], interval: c.interval }
     }
 
@@ -79,11 +82,13 @@ export default {
       submitted.value = true
       if (!formValid.value || saving.value) return
       saving.value = true
+
       try {
         await store.createChore({
           title: form.value.title.trim(),
           cadence: buildCadence(form.value.cadence)
         })
+
         emit('update:modelValue', false)
       } catch {
         // toasted by store

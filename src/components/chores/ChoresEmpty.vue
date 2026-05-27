@@ -1,8 +1,15 @@
 <template>
   <div class="chores-empty">
     <AppIcon name="sparkles" :size="32" class="chores-empty__icon" />
-    <h2 class="chores-empty__title">{{ t('chores.emptyHeadline') }}</h2>
-    <p class="chores-empty__sub">{{ t('chores.emptySub') }}</p>
+
+    <h2 class="chores-empty__title">
+      {{ t('chores.emptyHeadline') }}
+    </h2>
+
+    <p class="chores-empty__sub">
+      {{ t('chores.emptySub') }}
+    </p>
+
     <AppButton variant="primary" icon="plus" @click="$emit('create')">
       {{ t('chores.newChore') }}
     </AppButton>

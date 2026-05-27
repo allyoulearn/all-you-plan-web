@@ -26,6 +26,7 @@ export default {
       const due = props.strip.filter(d => d.state !== 'not-due').length
       return `${done} of ${due} completed in the last 7 days`
     })
+
     return { ariaLabel }
   }
 }

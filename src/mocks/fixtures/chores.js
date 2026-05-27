@@ -121,12 +121,14 @@ export const registry = {
     const dd = String(now.getDate()).padStart(2, '0')
     const isoDay = `${yyyy}-${mm}-${dd}`
     const chore = chores.find(c => c.id === variables.id)
+
     if (chore) {
       chore.lastCompletedOn = isoDay
       const existing = new Set(chore.recentCompletions ?? [])
       existing.add(isoDay)
       chore.recentCompletions = [...existing].sort()
     }
+
     return {
       completeChore: {
         id: variables.id,
@@ -156,6 +158,7 @@ export const registry = {
       recentCompletions: [],
       createdAt: new Date().toISOString()
     }
+
     chores = [...chores, newChore]
     return { createChore: newChore }
   },
@@ -163,7 +166,8 @@ export const registry = {
     const chore = chores.find(c => c.id === variables.id)
     if (!chore) return { updateChore: null }
     if (variables.title !== undefined && variables.title !== null) chore.title = variables.title
-    if (variables.cadence !== undefined && variables.cadence !== null) chore.cadence = variables.cadence
+    if (variables.cadence !== undefined && variables.cadence !== null)
+      chore.cadence = variables.cadence
     if (variables.active !== undefined && variables.active !== null) chore.active = variables.active
     if (variables.order !== undefined && variables.order !== null) chore.order = variables.order
     return {
@@ -207,10 +211,12 @@ export const registry = {
   },
   resumeChore: (variables = {}) => {
     const chore = chores.find(c => c.id === variables.id)
+
     if (chore) {
       chore.snoozedUntil = null
       chore.skipNextDate = null
     }
+
     return {
       resumeChore: {
         id: variables.id,

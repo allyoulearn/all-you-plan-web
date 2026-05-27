@@ -244,6 +244,7 @@ export const useChoresStore = defineStore('chores', () => {
           variables: { id: ids[i], order: i }
         })
       }
+
       await load()
     } catch (e) {
       error.value = e.message

@@ -68,7 +68,13 @@ export const CREATE_CHORE = gql`
 
 /** Update a chore's title, cadence, active flag, and/or order index. */
 export const UPDATE_CHORE = gql`
-  mutation UpdateChore($id: ID!, $title: String, $cadence: ChoreCadenceInput, $active: Boolean, $order: Int) {
+  mutation UpdateChore(
+    $id: ID!
+    $title: String
+    $cadence: ChoreCadenceInput
+    $active: Boolean
+    $order: Int
+  ) {
     updateChore(id: $id, title: $title, cadence: $cadence, active: $active, order: $order) {
       id
       title

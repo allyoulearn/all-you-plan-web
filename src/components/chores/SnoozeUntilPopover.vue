@@ -1,7 +1,10 @@
 <template>
   <div class="snooze-until-popover" role="dialog" :aria-label="t('chores.snoozeUntilTitle')">
     <label class="snooze-until-popover__label">
-      <span class="snooze-until-popover__label-text">{{ t('chores.snoozeUntilTitle') }}</span>
+      <span class="snooze-until-popover__label-text">
+        {{ t('chores.snoozeUntilTitle') }}
+      </span>
+
       <input
         ref="dateInput"
         v-model="value"
@@ -10,6 +13,7 @@
         class="snooze-until-popover__input"
       />
     </label>
+
     <div class="snooze-until-popover__actions">
       <button
         type="button"
@@ -18,6 +22,7 @@
       >
         {{ t('common.cancel') }}
       </button>
+
       <button
         type="button"
         class="snooze-until-popover__confirm"
@@ -50,12 +55,12 @@ export default {
 
     onMounted(() => dateInput.value?.focus())
 
+    return { t, value, dateInput, minDate, confirm }
+
     function confirm() {
       if (!value.value) return
       emit('confirm', value.value)
     }
-
-    return { t, value, dateInput, minDate, confirm }
   }
 }
 </script>

@@ -9,7 +9,10 @@
     />
 
     <label class="chore-form__field">
-      <span class="chore-form__label">{{ t('chores.cadenceLabel') }}</span>
+      <span class="chore-form__label">
+        {{ t('chores.cadenceLabel') }}
+      </span>
+
       <AppSegmentedControl
         :model-value="modelValue.cadence.type"
         :options="cadenceOptions"
@@ -19,7 +22,10 @@
     </label>
 
     <div v-if="modelValue.cadence.type === 'weekly'" class="chore-form__field">
-      <span class="chore-form__label">{{ t('chores.daysOfWeekLabel') }}</span>
+      <span class="chore-form__label">
+        {{ t('chores.daysOfWeekLabel') }}
+      </span>
+
       <div class="chore-form__dow">
         <button
           v-for="(label, idx) in dayLabels"
@@ -30,7 +36,9 @@
           :aria-pressed="modelValue.cadence.daysOfWeek.includes(idx)"
           :aria-label="dayFullLabels[idx]"
           @click="toggleDay(idx)"
-        >{{ label }}</button>
+        >
+          {{ label }}
+        </button>
       </div>
     </div>
 
@@ -65,7 +73,10 @@
         :checked="modelValue.active"
         @change="patch({ active: $event.target.checked })"
       />
-      <span>{{ t('chores.activeLabel') }}</span>
+
+      <span>
+        {{ t('chores.activeLabel') }}
+      </span>
     </label>
 
     <p class="chore-form__preview" aria-live="polite">
@@ -121,12 +132,15 @@ export default {
     const cadenceValid = computed(() => {
       const c = props.modelValue.cadence
       if (c.type === 'weekly') return c.daysOfWeek.length > 0
+
       if (c.type === 'monthly') {
         return Number.isInteger(c.dayOfMonth) && c.dayOfMonth >= 1 && c.dayOfMonth <= 31
       }
+
       if (c.type === 'daily') {
         return Number.isInteger(c.interval) && c.interval >= 1
       }
+
       return true
     })
 
@@ -149,9 +163,11 @@ export default {
 
     function toggleDay(idx) {
       const days = props.modelValue.cadence.daysOfWeek
+
       const next = days.includes(idx)
         ? days.filter(d => d !== idx)
         : [...days, idx].sort((a, b) => a - b)
+
       patch({ cadence: { ...props.modelValue.cadence, daysOfWeek: next } })
     }
 
@@ -162,6 +178,7 @@ export default {
         interval: 1,
         dayOfMonth: type === 'monthly' ? 1 : null
       }
+
       patch({ cadence })
     }
   }

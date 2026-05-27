@@ -2,10 +2,13 @@
   <div class="chores-skeleton" role="status" :aria-label="ariaLabel">
     <div v-for="n in count" :key="n" class="chores-skeleton__row">
       <div class="chores-skeleton__check" />
+
       <div class="chores-skeleton__body">
         <div class="chores-skeleton__title" />
+
         <div class="chores-skeleton__meta" />
       </div>
+
       <div class="chores-skeleton__pill" />
     </div>
   </div>
