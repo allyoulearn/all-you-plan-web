@@ -46,6 +46,7 @@ const names = {
   tag: 'TagIcon',
   clock: 'ClockIcon',
   sparkles: 'SparklesIcon',
+  star: 'StarIcon',
   menu: 'Bars3Icon',
   'map-pin': 'MapPinIcon',
   fire: 'FireIcon',
