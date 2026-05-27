@@ -386,8 +386,10 @@ export default {
 
 <style lang="scss" scoped>
 .review-view {
+  // Generous vertical rhythm between sections so each Wren turn reads as
+  // its own moment now that there's no card chrome separating them.
   &__section {
-    @apply mb-5;
+    @apply mb-8;
   }
 
   &__bulk {

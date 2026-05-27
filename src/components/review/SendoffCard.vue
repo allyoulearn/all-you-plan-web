@@ -51,9 +51,30 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// SendoffCard reinstates card chrome on top of WrenTurn — the conversation's
+// closer earns the visual weight that the section prompts don't.
 .sendoff-card {
+  @apply rounded-md bg-accent p-5 text-accent-ink shadow-accent-glow;
+
+  // Override WrenTurn's defaults so prompt/mark/callout sit on the accent.
+  :deep(.wren-turn) {
+    @apply mb-0;
+  }
+
+  :deep(.wren-turn__prompt) {
+    @apply text-accent-ink;
+  }
+
+  :deep(.wren-turn__mark) {
+    @apply text-accent-ink opacity-90;
+  }
+
+  :deep(.wren-turn__callout) {
+    @apply text-accent-ink opacity-80;
+  }
+
   &__body {
-    @apply mt-3 text-[14px] leading-relaxed;
+    @apply mt-2 text-[14px] leading-relaxed text-accent-ink;
   }
 
   &__action {
@@ -61,7 +82,7 @@ export default {
   }
 
   &__saved {
-    @apply font-mono text-[11px] opacity-80;
+    @apply font-mono text-[11px] text-accent-ink opacity-80;
   }
 }
 </style>

@@ -28,23 +28,27 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// Default WrenTurn: typographic only — italic serif prompt + small accent
+// mark + optional callout. No card chrome. Each section reads as a turn in
+// a conversation rather than a stacked block. The SendoffCard layers its
+// own card chrome on top via `.wren-turn--card` when used as the closer.
 .wren-turn {
-  @apply mb-3 rounded-md bg-accent p-4 text-accent-ink shadow-accent-glow;
+  @apply mb-2;
 
   &__header {
     @apply flex items-start gap-2;
   }
 
   &__mark {
-    @apply mt-1 shrink-0 opacity-90;
+    @apply mt-1 shrink-0 text-accent opacity-80;
   }
 
   &__prompt {
-    @apply font-serif text-[18px] italic leading-snug;
+    @apply font-serif text-[18px] italic leading-snug text-ink;
   }
 
   &__callout {
-    @apply mt-2 font-mono text-[11px] uppercase tracking-[0.14em] opacity-80;
+    @apply mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
   }
 
   &__body {
