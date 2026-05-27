@@ -15,6 +15,7 @@ vi.mock('@/api/operations/index.js', () => ({
 }))
 
 const mockToastError = vi.fn()
+
 vi.mock('@/composables/useErrorToast', () => ({
   useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
 }))
@@ -107,6 +108,7 @@ describe('review.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('first error'))
         .mockResolvedValueOnce({ data: { dailyReview: fakeReview } })
+
       const store = useReviewStore()
       await store.load('2026-05-22')
       expect(store.error).toBe('first error')
@@ -180,6 +182,48 @@ describe('review.store', () => {
       store.error = 'stale error'
       await store.save('2026-05-22', '4', [])
       expect(store.error).toBe('')
+    })
+  })
+
+  describe('diffLeftovers()', () => {
+    it('returns an empty diff when previous and next are identical', () => {
+      const store = useReviewStore()
+      const prev = { tomorrow: ['a'], picked: [], dropped: ['b'], kept: [] }
+      const next = { tomorrow: ['a'], picked: [], dropped: ['b'], kept: [] }
+      expect(store.diffLeftovers(prev, next)).toEqual({
+        tomorrow: [],
+        picked: [],
+        dropped: []
+      })
+    })
+
+    it('returns only newly-added ids for each kind', () => {
+      const store = useReviewStore()
+      const prev = { tomorrow: ['a'], picked: [], dropped: [], kept: [] }
+      const next = {
+        tomorrow: ['a', 'b'],
+        picked: [{ id: 'c', date: '2026-06-01' }],
+        dropped: ['d'],
+        kept: []
+      }
+      expect(store.diffLeftovers(prev, next)).toEqual({
+        tomorrow: ['b'],
+        picked: [{ id: 'c', date: '2026-06-01' }],
+        dropped: ['d']
+      })
+    })
+
+    it('treats a missing previous payload as an empty baseline', () => {
+      const store = useReviewStore()
+      const next = { tomorrow: ['a'], picked: [], dropped: [], kept: [] }
+      expect(store.diffLeftovers(null, next).tomorrow).toEqual(['a'])
+    })
+
+    it('does not return tasks that were already in the previous tomorrow set', () => {
+      const store = useReviewStore()
+      const prev = { tomorrow: ['a', 'b'], picked: [], dropped: [], kept: [] }
+      const next = { tomorrow: ['a', 'b', 'c'], picked: [], dropped: [], kept: [] }
+      expect(store.diffLeftovers(prev, next).tomorrow).toEqual(['c'])
     })
   })
 })

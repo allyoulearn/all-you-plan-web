@@ -25,12 +25,14 @@ export const useReviewStore = defineStore('review', () => {
   async function load(date) {
     loading.value = true
     error.value = ''
+
     try {
       const { data } = await apolloClient.query({
         query: DAILY_REVIEW_QUERY,
         variables: { date },
         fetchPolicy: 'network-only'
       })
+
       review.value = data.dailyReview
     } catch (e) {
       error.value = e.message
@@ -49,11 +51,13 @@ export const useReviewStore = defineStore('review', () => {
     const { toastError } = useErrorToast()
     saving.value = true
     error.value = ''
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: SAVE_DAILY_REVIEW,
         variables: { date, mood, responses }
       })
+
       review.value = data.saveDailyReview
     } catch (e) {
       error.value = e.message
@@ -64,5 +68,26 @@ export const useReviewStore = defineStore('review', () => {
     }
   }
 
-  return { review, loading, saving, error, load, save }
+  /**
+   * Diff a new leftovers payload against the previously-saved one. Returns
+   * only the *new* additions per kind, so consumers can fire reschedule /
+   * delete mutations exactly once per decision.
+   *
+   * @param {object|null} prev - previously saved `responses.leftovers` or null
+   * @param {object} next - the about-to-save `responses.leftovers`
+   * @returns {{ tomorrow: string[], picked: {id:string,date:string}[], dropped: string[] }}
+   */
+  function diffLeftovers(prev, next) {
+    const prevTomorrow = new Set(prev?.tomorrow ?? [])
+    const prevDropped = new Set(prev?.dropped ?? [])
+    const prevPickedKey = new Set((prev?.picked ?? []).map(p => `${p.id}|${p.date}`))
+
+    return {
+      tomorrow: (next.tomorrow ?? []).filter(id => !prevTomorrow.has(id)),
+      dropped: (next.dropped ?? []).filter(id => !prevDropped.has(id)),
+      picked: (next.picked ?? []).filter(p => !prevPickedKey.has(`${p.id}|${p.date}`))
+    }
+  }
+
+  return { review, loading, saving, error, load, save, diffLeftovers }
 })
