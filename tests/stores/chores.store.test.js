@@ -14,11 +14,16 @@ vi.mock('@/api/operations', () => ({
   COMPLETE_CHORE: 'COMPLETE_CHORE',
   CREATE_CHORE: 'CREATE_CHORE',
   UPDATE_CHORE: 'UPDATE_CHORE',
-  DELETE_CHORE: 'DELETE_CHORE'
+  DELETE_CHORE: 'DELETE_CHORE',
+  SNOOZE_CHORE: 'SNOOZE_CHORE',
+  SKIP_NEXT_CHORE: 'SKIP_NEXT_CHORE',
+  RESUME_CHORE: 'RESUME_CHORE'
 }))
 
+const mockToastError = vi.fn()
+
 vi.mock('@/composables/useErrorToast', () => ({
-  useErrorToast: () => ({ toastError: vi.fn(), toastSuccess: vi.fn() })
+  useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
 }))
 
 import { apolloClient } from '@/api/apollo'
@@ -53,6 +58,7 @@ describe('chores.store', () => {
       apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
       const store = useChoresStore()
       await store.load()
+
       expect(apolloClient.query).toHaveBeenCalledWith(
         expect.objectContaining({ fetchPolicy: 'network-only' })
       )
@@ -71,6 +77,7 @@ describe('chores.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('old error'))
         .mockResolvedValueOnce({ data: { chores: fakeChores } })
+
       const store = useChoresStore()
       await store.load()
       expect(store.error).toBe('old error')
@@ -219,6 +226,214 @@ describe('chores.store', () => {
       store.error = 'stale error'
       await store.deleteChore('c1')
       expect(store.error).toBe('')
+    })
+  })
+
+  describe('createChore()', () => {
+    it('returns the created chore and triggers a reload', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { createChore: { id: 'new', title: 't' } }
+      })
+
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      const result = await store.createChore({ title: 't', cadence: { type: 'daily' } })
+
+      expect(result).toEqual({ id: 'new', title: 't' })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { title: 't', cadence: { type: 'daily' } }
+        })
+      )
+
+      expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useChoresStore()
+
+      await expect(store.createChore({ title: 't', cadence: { type: 'daily' } })).rejects.toThrow(
+        'create failed'
+      )
+
+      expect(store.error).toBe('create failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to create chore')
+    })
+  })
+
+  describe('updateChore()', () => {
+    it('passes id plus diff fields to UPDATE_CHORE', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      await store.updateChore('c1', { title: 'New', active: false })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { id: 'c1', title: 'New', active: false }
+        })
+      )
+    })
+
+    it('returns the updated chore', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { updateChore: { id: 'c1', title: 'New' } }
+      })
+
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      const result = await store.updateChore('c1', { title: 'New' })
+      expect(result).toEqual({ id: 'c1', title: 'New' })
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('update failed'))
+      const store = useChoresStore()
+      await expect(store.updateChore('c1', { title: 'X' })).rejects.toThrow('update failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to update chore')
+    })
+  })
+
+  describe('deleteChore()', () => {
+    it('calls DELETE_CHORE and reloads', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: [] } })
+      const store = useChoresStore()
+      await store.deleteChore('c1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { id: 'c1' } })
+      )
+
+      expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('delete failed'))
+      const store = useChoresStore()
+      await expect(store.deleteChore('c1')).rejects.toThrow('delete failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to delete chore')
+    })
+  })
+
+  describe('snoozeChore()', () => {
+    it('calls SNOOZE_CHORE with id and until', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { snoozeChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      const result = await store.snoozeChore('c1', '2026-06-01')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { id: 'c1', until: '2026-06-01' }
+        })
+      )
+
+      expect(result).toEqual({ id: 'c1' })
+      expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('toggles saving', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { snoozeChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+      const promise = store.snoozeChore('c1', '2026-06-01')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('snooze failed'))
+      const store = useChoresStore()
+      await expect(store.snoozeChore('c1', '2026-06-01')).rejects.toThrow('snooze failed')
+      expect(store.error).toBe('snooze failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to snooze chore')
+    })
+
+    it('resets saving on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('fail'))
+      const store = useChoresStore()
+      await store.snoozeChore('c1', '2026-06-01').catch(() => {})
+      expect(store.saving).toBe(false)
+    })
+  })
+
+  describe('skipNextChore()', () => {
+    it('calls SKIP_NEXT_CHORE and reloads', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { skipNextChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      const result = await store.skipNextChore('c1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { id: 'c1' } })
+      )
+
+      expect(result).toEqual({ id: 'c1' })
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('skip failed'))
+      const store = useChoresStore()
+      await expect(store.skipNextChore('c1')).rejects.toThrow('skip failed')
+      expect(store.error).toBe('skip failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to skip chore')
+    })
+  })
+
+  describe('resumeChore()', () => {
+    it('calls RESUME_CHORE and reloads', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { resumeChore: { id: 'c1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      const result = await store.resumeChore('c1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { id: 'c1' } })
+      )
+
+      expect(result).toEqual({ id: 'c1' })
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('resume failed'))
+      const store = useChoresStore()
+      await expect(store.resumeChore('c1')).rejects.toThrow('resume failed')
+      expect(store.error).toBe('resume failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to resume chore')
+    })
+  })
+
+  describe('reorderChores()', () => {
+    it('issues one updateChore mutation per id with the new order index', async () => {
+      apolloClient.mutate.mockResolvedValue({ data: { updateChore: {} } })
+      apolloClient.query.mockResolvedValueOnce({ data: { chores: fakeChores } })
+      const store = useChoresStore()
+
+      await store.reorderChores(['c2', 'c1'])
+
+      const orderedCalls = apolloClient.mutate.mock.calls.filter(
+        call => call[0].mutation === 'UPDATE_CHORE'
+      )
+      expect(orderedCalls).toHaveLength(2)
+      expect(orderedCalls[0][0].variables).toEqual({ id: 'c2', order: 0 })
+      expect(orderedCalls[1][0].variables).toEqual({ id: 'c1', order: 1 })
+    })
+
+    it('toasts and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('reorder failed'))
+      const store = useChoresStore()
+      await expect(store.reorderChores(['c1'])).rejects.toThrow('reorder failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to reorder chores')
     })
   })
 })
