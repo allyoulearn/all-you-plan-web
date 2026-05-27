@@ -1,261 +1,96 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('chores.createTitle')"
     :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <form class="create-chore-modal__form" @submit.prevent="handleSubmit">
-      <TextField
-        v-model="title"
-        :label="t('tasks.title')"
-        :placeholder="t('chores.titlePlaceholder')"
-        :invalid="submitted && !title.trim()"
-      />
-
-      <label class="create-chore-modal__field">
-        <span class="create-chore-modal__label">
-          {{ t('chores.cadenceLabel') }}
-        </span>
-
-        <SegmentedControl
-          v-model="cadenceType"
-          :options="cadenceOptions"
-          :group-label="t('chores.cadenceLabel')"
-        />
-      </label>
-
-      <div v-if="cadenceType === 'weekly'" class="create-chore-modal__field">
-        <span class="create-chore-modal__label">
-          {{ t('chores.daysOfWeekLabel') }}
-        </span>
-
-        <div class="create-chore-modal__dow">
-          <button
-            v-for="(label, idx) in dayLabels"
-            :key="idx"
-            type="button"
-            class="create-chore-modal__dow-btn"
-            :class="daysOfWeek.includes(idx) ? 'create-chore-modal__dow-btn--active' : ''"
-            :aria-pressed="daysOfWeek.includes(idx)"
-            :aria-label="dayFullLabels[idx]"
-            @click="toggleDay(idx)"
-          >
-            {{ label }}
-          </button>
-        </div>
-      </div>
-
-      <TextField
-        v-if="cadenceType === 'daily'"
-        v-model="interval"
-        type="number"
-        :label="t('chores.intervalLabel')"
-        placeholder="1"
-        min="1"
-        step="1"
-        :invalid="submitted && !cadenceValid"
-      />
-
-      <TextField
-        v-if="cadenceType === 'monthly'"
-        v-model="dayOfMonth"
-        type="number"
-        :label="t('chores.dayOfMonthLabel')"
-        placeholder="1"
-        min="1"
-        max="31"
-        step="1"
-        :invalid="submitted && !cadenceValid"
-      />
-    </form>
+    <ChoreForm
+      v-model="form"
+      :submitted="submitted"
+      @valid="formValid = $event"
+    />
 
     <template #footer>
-      <Button variant="ghost" :disabled="saving" @click="cancel">
+      <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
-
-      <Button
-        variant="primary"
-        :disabled="saving || !title.trim() || !cadenceValid"
-        @click="handleSubmit"
-      >
+      </AppButton>
+      <AppButton variant="primary" :disabled="saving || !formValid" @click="handleSubmit">
         {{ saving ? t('chores.creating') : t('chores.create') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
-/** CreateChoreModal — form to create a new recurring chore with cadence options. */
-import { ref, computed, watch } from 'vue'
+/** CreateChoreModal — wraps the shared ChoreForm with the create-flow chrome. */
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChoresStore } from '@/stores/chores.store.js'
-import Modal from '@/components/ui/Modal.vue'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
-import SegmentedControl from '@/components/ui/SegmentedControl.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import ChoreForm from './ChoreForm.vue'
 
-// Full day names parallel to dayLabels so screen readers announce the
-// distinguishing word (Sunday vs. Saturday) instead of the duplicated
-// single-letter abbreviations (WEB-W3-22).
-const DAY_FULL_LABELS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday'
-]
+const DEFAULT_FORM = () => ({
+  title: '',
+  cadence: { type: 'daily', daysOfWeek: [], interval: 1, dayOfMonth: 1 },
+  active: true
+})
 
 export default {
   name: 'CreateChoreModal',
-  components: { Modal, TextField, Button, SegmentedControl },
-  props: {
-    modelValue: { type: Boolean, default: false }
-  },
+  components: { AppModal, AppButton, ChoreForm },
+  props: { modelValue: { type: Boolean, default: false } },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
     const { t } = useI18n()
     const store = useChoresStore()
-
-    const title = ref('')
-    const cadenceType = ref('daily')
-    const daysOfWeek = ref([1, 2, 3, 4, 5])
-    const interval = ref('1')
-    const dayOfMonth = ref('1')
+    const form = ref(DEFAULT_FORM())
     const submitted = ref(false)
     const saving = ref(false)
-
-    const cadenceOptions = computed(() => [
-      { value: 'daily', label: t('chores.cadenceDaily') },
-      { value: 'weekly', label: t('chores.cadenceWeekly') },
-      { value: 'monthly', label: t('chores.cadenceMonthly') }
-    ])
-
-    const dayLabels = computed(() => [
-      t('chores.dayShortSun'),
-      t('chores.dayShortMon'),
-      t('chores.dayShortTue'),
-      t('chores.dayShortWed'),
-      t('chores.dayShortThu'),
-      t('chores.dayShortFri'),
-      t('chores.dayShortSat')
-    ])
-
-    const cadenceValid = computed(() => {
-      if (cadenceType.value === 'weekly') return daysOfWeek.value.length > 0
-      if (cadenceType.value === 'monthly') {
-        const n = Number(dayOfMonth.value)
-        return Number.isInteger(n) && n >= 1 && n <= 31
-      }
-      if (cadenceType.value === 'daily') {
-        const n = Number(interval.value)
-        return Number.isInteger(n) && n >= 1
-      }
-      return true
-    })
-
-    function reset() {
-      title.value = ''
-      cadenceType.value = 'daily'
-      daysOfWeek.value = [1, 2, 3, 4, 5]
-      interval.value = '1'
-      dayOfMonth.value = '1'
-      submitted.value = false
-      saving.value = false
-    }
+    const formValid = ref(false)
 
     watch(
       () => props.modelValue,
       open => {
-        if (open) reset()
+        if (open) {
+          form.value = DEFAULT_FORM()
+          submitted.value = false
+          saving.value = false
+        }
       }
     )
 
-    function toggleDay(idx) {
-      if (daysOfWeek.value.includes(idx)) {
-        daysOfWeek.value = daysOfWeek.value.filter(d => d !== idx)
-      } else {
-        daysOfWeek.value = [...daysOfWeek.value, idx].sort((a, b) => a - b)
-      }
-    }
+    return { t, form, submitted, saving, formValid, cancel, handleSubmit }
 
     function cancel() {
       emit('update:modelValue', false)
     }
 
-    function buildCadence() {
-      if (cadenceType.value === 'weekly') {
-        return { type: 'weekly', daysOfWeek: daysOfWeek.value, interval: 1 }
+    function buildCadence(c) {
+      if (c.type === 'weekly') return { type: 'weekly', daysOfWeek: c.daysOfWeek, interval: 1 }
+      if (c.type === 'monthly') {
+        return { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: c.dayOfMonth }
       }
-      if (cadenceType.value === 'monthly') {
-        return { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: Number(dayOfMonth.value) }
-      }
-      return { type: 'daily', daysOfWeek: [], interval: Number(interval.value) }
+      return { type: 'daily', daysOfWeek: [], interval: c.interval }
     }
 
     async function handleSubmit() {
       submitted.value = true
-      if (!title.value.trim() || !cadenceValid.value || saving.value) return
+      if (!formValid.value || saving.value) return
       saving.value = true
       try {
-        await store.createChore({ title: title.value.trim(), cadence: buildCadence() })
+        await store.createChore({
+          title: form.value.title.trim(),
+          cadence: buildCadence(form.value.cadence)
+        })
         emit('update:modelValue', false)
       } catch {
-        // Error already toasted by the store
+        // toasted by store
       } finally {
         saving.value = false
       }
     }
-
-    return {
-      t,
-      title,
-      cadenceType,
-      cadenceOptions,
-      daysOfWeek,
-      dayLabels,
-      dayFullLabels: DAY_FULL_LABELS,
-      interval,
-      dayOfMonth,
-      submitted,
-      saving,
-      cadenceValid,
-      toggleDay,
-      cancel,
-      handleSubmit
-    }
   }
 }
 </script>
-
-<style lang="scss" scoped>
-.create-chore-modal {
-  &__form {
-    @apply flex flex-col gap-3.5;
-  }
-
-  &__field {
-    @apply flex flex-col gap-1.5;
-  }
-
-  &__label {
-    @apply text-[12px] font-medium text-muted;
-  }
-
-  &__dow {
-    @apply flex gap-1.5;
-  }
-
-  &__dow-btn {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-pill border border-rule-soft bg-paper-2 text-[12px] font-medium text-ink transition-colors hover:bg-paper-3;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
-
-    &--active {
-      @apply bg-ink text-paper border-ink;
-    }
-  }
-}
-</style>
