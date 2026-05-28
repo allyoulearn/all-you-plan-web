@@ -66,6 +66,7 @@ describe('GoalForm', () => {
     const wrapper = mountForm({
       modelValue: baseModel({ title: 'X', why: 'Y', targetDate: '2026-12-31' })
     })
+
     const events = wrapper.emitted('valid')
     expect(events?.at(-1)?.[0]).toBe(true)
   })
@@ -74,6 +75,7 @@ describe('GoalForm', () => {
     const wrapper = mountForm({
       modelValue: baseModel({ title: 'X', why: 'Y', targetDate: 'not-a-date' })
     })
+
     const events = wrapper.emitted('valid')
     expect(events?.at(-1)?.[0]).toBe(false)
   })

@@ -53,9 +53,9 @@ describe('CreateGoalModal', () => {
 
   it('cancel emits update:modelValue=false', async () => {
     const wrapper = mountModal()
-    const cancelBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'ghost')
+
+    const cancelBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'ghost')
+
     await cancelBtn.trigger('click')
     expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
   })
@@ -63,9 +63,9 @@ describe('CreateGoalModal', () => {
   it('submit no-ops when form is invalid', async () => {
     const wrapper = mountModal()
     const store = useGoalsStore()
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
     expect(store.create).not.toHaveBeenCalled()
@@ -80,9 +80,8 @@ describe('CreateGoalModal', () => {
     await wrapper.find('textarea').setValue('  because it matters  ')
     await wrapper.find('input[type="date"]').setValue('2026-12-31')
 
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
 
@@ -102,9 +101,8 @@ describe('CreateGoalModal', () => {
     await wrapper.find('textarea').setValue('because')
     await wrapper.find('input[type="date"]').setValue('2026-12-31')
 
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
 
@@ -120,9 +118,8 @@ describe('CreateGoalModal', () => {
     await wrapper.find('textarea').setValue('because')
     await wrapper.find('input[type="date"]').setValue('2026-12-31')
 
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
 

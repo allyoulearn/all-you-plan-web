@@ -55,18 +55,20 @@ describe('EditGoalModal', () => {
 
   it('seeds the form from the goal prop', () => {
     const wrapper = mountModal()
+
     expect(wrapper.find('input[data-placeholder="A short, vivid name…"]').element.value).toBe(
       'Memoir'
     )
+
     expect(wrapper.find('textarea').element.value).toBe('because writers write')
     expect(wrapper.find('input[type="date"]').element.value).toBe('2026-12-31')
   })
 
   it('cancel emits update:modelValue=false', async () => {
     const wrapper = mountModal()
-    const cancelBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'ghost')
+
+    const cancelBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'ghost')
+
     await cancelBtn.trigger('click')
     expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
   })
@@ -78,9 +80,8 @@ describe('EditGoalModal', () => {
 
     await wrapper.find('input[data-placeholder="A short, vivid name…"]').setValue('Memoir v2')
 
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
 
@@ -96,9 +97,8 @@ describe('EditGoalModal', () => {
     const store = useGoalsStore()
     store.update.mockResolvedValue({})
 
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
 
@@ -110,9 +110,8 @@ describe('EditGoalModal', () => {
     const store = useGoalsStore()
     store.update.mockRejectedValue(new Error('boom'))
 
-    const saveBtn = wrapper
-      .findAll('button')
-      .find(b => b.attributes('data-variant') === 'primary')
+    const saveBtn = wrapper.findAll('button').find(b => b.attributes('data-variant') === 'primary')
+
     await saveBtn.trigger('click')
     await flushPromises()
 

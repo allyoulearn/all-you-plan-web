@@ -7,8 +7,13 @@
   >
     <template #header>
       <div class="goal-modal__header">
-        <span class="goal-modal__eyebrow">{{ t('goals.createEyebrow') }}</span>
-        <h2 class="goal-modal__title">{{ t('goals.createPrompt') }}</h2>
+        <span class="goal-modal__eyebrow">
+          {{ t('goals.createEyebrow') }}
+        </span>
+
+        <h2 class="goal-modal__title">
+          {{ t('goals.createPrompt') }}
+        </h2>
       </div>
     </template>
 
