@@ -6,6 +6,14 @@ import en from '@/i18n/locales/en.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
+const AppDatePickerStub = {
+  name: 'AppDatePicker',
+  props: ['modelValue', 'placeholder'],
+  emits: ['update:modelValue'],
+  template:
+    '<input type="date" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
+}
+
 function mountRow(props = {}) {
   return mount(LeftoverRow, {
     props: {
@@ -13,7 +21,7 @@ function mountRow(props = {}) {
       action: { kind: 'tomorrow' },
       ...props
     },
-    global: { plugins: [i18n] }
+    global: { plugins: [i18n], stubs: { AppDatePicker: AppDatePickerStub } }
   })
 }
 

@@ -1,18 +1,15 @@
 <template>
   <div class="snooze-until-popover" role="dialog" :aria-label="t('chores.snoozeUntilTitle')">
-    <label class="snooze-until-popover__label">
+    <div class="snooze-until-popover__label">
       <span class="snooze-until-popover__label-text">
         {{ t('chores.snoozeUntilTitle') }}
       </span>
 
-      <input
-        ref="dateInput"
+      <AppDatePicker
         v-model="value"
-        type="date"
-        :min="minDate"
-        class="snooze-until-popover__input"
+        :min-date="minDate"
       />
-    </label>
+    </div>
 
     <div class="snooze-until-popover__actions">
       <button
@@ -36,26 +33,25 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 
 export default {
   name: 'SnoozeUntilPopover',
+  components: { AppDatePicker },
   emits: ['confirm', 'cancel'],
   setup(_, { emit }) {
     const { t } = useI18n()
     const value = ref('')
-    const dateInput = ref(null)
 
     const minDate = computed(() => {
       const d = new Date()
       d.setDate(d.getDate() + 1)
-      return d.toLocaleDateString('en-CA')
+      return d
     })
 
-    onMounted(() => dateInput.value?.focus())
-
-    return { t, value, dateInput, minDate, confirm }
+    return { t, value, minDate, confirm }
 
     function confirm() {
       if (!value.value) return

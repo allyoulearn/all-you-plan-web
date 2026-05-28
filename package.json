@@ -23,6 +23,7 @@
     "@fontsource/instrument-serif": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@heroicons/vue": "^2.2.0",
+    "@vuepic/vue-datepicker": "^13.0.0",
     "graphql": "^16.10.0",
     "graphql-ws": "^5.16.0",
     "pinia": "^3.0.2",

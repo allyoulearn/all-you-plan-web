@@ -16,13 +16,12 @@
       </button>
     </div>
 
-    <input
+    <AppDatePicker
       v-if="action.kind === 'pick'"
-      type="date"
       class="leftover-row__date"
-      :aria-label="t('review.leftover.pickDayLabel')"
-      :value="action.date || ''"
-      @input="onDate"
+      :model-value="action.date || ''"
+      :placeholder="t('review.leftover.pickDayLabel')"
+      @update:model-value="onDate"
     />
   </div>
 </template>
@@ -33,11 +32,13 @@
  * date picker when the user chose "Pick day".
  */
 import { useI18n } from 'vue-i18n'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 
 const KINDS = ['tomorrow', 'pick', 'drop', 'keep']
 
 export default {
   name: 'LeftoverRow',
+  components: { AppDatePicker },
   props: {
     task: { type: Object, required: true },
     action: {
@@ -56,8 +57,8 @@ export default {
       else emit('update:action', { kind })
     }
 
-    function onDate(e) {
-      emit('update:action', { kind: 'pick', date: e.target.value })
+    function onDate(date) {
+      emit('update:action', { kind: 'pick', date: date || '' })
     }
   }
 }
@@ -85,7 +86,7 @@ export default {
   }
 
   &__date {
-    @apply rounded-md border border-rule-soft bg-paper px-2 py-1 text-[13px] text-ink;
+    min-width: 180px;
   }
 }
 </style>

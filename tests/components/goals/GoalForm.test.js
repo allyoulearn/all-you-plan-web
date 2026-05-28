@@ -12,6 +12,13 @@ const globalStubs = {
     emits: ['update:modelValue'],
     template:
       '<input :data-label="label" :data-placeholder="placeholder" :value="modelValue" :type="type || \'text\'" @input="$emit(\'update:modelValue\', $event.target.value)" />'
+  },
+  AppDatePicker: {
+    name: 'AppDatePicker',
+    props: ['modelValue', 'label', 'placeholder', 'invalid'],
+    emits: ['update:modelValue'],
+    template:
+      '<input type="date" :data-label="label" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
   }
 }
 

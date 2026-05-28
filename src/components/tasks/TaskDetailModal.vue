@@ -1,19 +1,22 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('tasks.detailTitle')"
     :close-on-backdrop="!busy"
     initial-focus-selector="input[name='title']"
     @update:model-value="$emit('update:modelValue', $event)"
   >
+    <!-- Form fields -->
     <form v-if="task" class="task-detail-modal__form" @submit.prevent="handleSubmit">
-      <TextField
+      <!-- Title field -->
+      <AppTextField
         v-model="form.title"
         name="title"
         :label="t('tasks.title')"
         :invalid="submitted && !form.title.trim()"
       />
 
+      <!-- Note field -->
       <label class="task-detail-modal__label">
         {{ t('tasks.noteLabel') }}
 
@@ -25,28 +28,29 @@
         />
       </label>
 
+      <!-- Schedule (date + time) -->
       <div class="task-detail-modal__row">
-        <TextField
+        <AppDatePicker
           v-model="form.scheduledDate"
-          type="date"
           :label="t('tasks.dateLabel')"
         />
 
-        <TextField
+        <AppTextField
           v-model="form.scheduledTime"
           type="time"
           :label="t('tasks.timeLabel')"
         />
       </div>
 
+      <!-- Tag and effort -->
       <div class="task-detail-modal__row">
-        <TextField
+        <AppTextField
           v-model="form.tag"
           :label="t('tasks.tagLabel')"
           :placeholder="t('tasks.tagPlaceholder')"
         />
 
-        <TextField
+        <AppTextField
           v-model="form.effortMinutes"
           type="number"
           :label="t('tasks.effort')"
@@ -56,6 +60,7 @@
         />
       </div>
 
+      <!-- Column select -->
       <div v-if="columns.length" class="task-detail-modal__row">
         <label class="task-detail-modal__label">
           {{ t('tasks.columnLabel') }}
@@ -68,18 +73,20 @@
         </label>
       </div>
 
+      <!-- Priority -->
       <div class="task-detail-modal__priority">
         <span class="task-detail-modal__priority-label">
           {{ t('tasks.priorityLabel') }}
         </span>
 
-        <SegmentedControl
+        <AppSegmentedControl
           v-model="form.priority"
           :group-label="t('tasks.priorityLabel')"
           :options="priorityOptions"
         />
       </div>
 
+      <!-- Subtasks -->
       <fieldset class="task-detail-modal__subtasks">
         <legend class="task-detail-modal__subtasks-legend">
           {{ t('tasks.subtasksLabel') }}
@@ -89,6 +96,7 @@
           </span>
         </legend>
 
+        <!-- Subtask list -->
         <ul v-if="task.subtasks?.length" class="task-detail-modal__subtask-list">
           <li
             v-for="st in task.subtasks"
@@ -117,11 +125,12 @@
               :aria-label="t('common.delete')"
               @click="$emit('delete-subtask', { subtaskId: st.id })"
             >
-              <Icon name="trash" :size="14" />
+              <AppIcon name="trash" :size="14" />
             </button>
           </li>
         </ul>
 
+        <!-- Add subtask -->
         <form class="task-detail-modal__subtask-add" @submit.prevent="commitNewSubtask">
           <input
             v-model="newSubtaskText"
@@ -135,7 +144,7 @@
             class="task-detail-modal__subtask-add-button"
             :disabled="!newSubtaskText.trim()"
           >
-            <Icon name="plus" :size="14" />
+            <AppIcon name="plus" :size="14" />
 
             <span>
               {{ t('common.add') }}
@@ -145,24 +154,25 @@
       </fieldset>
     </form>
 
+    <!-- Actions -->
     <template #footer>
-      <Button variant="ghost" :disabled="busy" @click="$emit('delete-task')">
+      <AppButton variant="ghost" :disabled="busy" @click="$emit('delete-task')">
         {{ t('common.delete') }}
-      </Button>
+      </AppButton>
 
-      <Button variant="ghost" :disabled="busy" @click="cancel">
+      <AppButton variant="ghost" :disabled="busy" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
+      </AppButton>
 
-      <Button
+      <AppButton
         variant="primary"
         :disabled="busy || !form.title.trim()"
         @click="handleSubmit"
       >
         {{ busy ? t('common.loading') : t('common.save') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
@@ -175,12 +185,18 @@
  */
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Modal from '@/components/ui/Modal.vue'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
-import SegmentedControl from '@/components/ui/SegmentedControl.vue'
-import Icon from '@/components/ui/Icon.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppSegmentedControl from '@/components/ui/AppSegmentedControl.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
+/**
+ * Build a blank form scaffold. Returned shape matches every editable field
+ * the modal renders.
+ * @returns {object}
+ */
 function emptyForm() {
   return {
     title: '',
@@ -194,6 +210,11 @@ function emptyForm() {
   }
 }
 
+/**
+ * Project a task object into the editable form shape used by the modal.
+ * @param {object|null} task
+ * @returns {object}
+ */
 function toForm(task) {
   if (!task) return emptyForm()
   return {
@@ -215,34 +236,42 @@ function diffForm(form, task) {
   if (!task) return updates
   const normalize = v => (v === '' || v == null ? null : v)
   if (form.title.trim() !== task.title) updates.title = form.title.trim()
+
   if (normalize(form.note) !== normalize(task.note)) {
     updates.note = form.note.trim() || null
   }
+
   if (normalize(form.tag) !== normalize(task.tag)) {
     updates.tag = form.tag.trim() || null
   }
+
   const formDate = form.scheduledDate || null
   const taskDate = task.scheduledDate ? task.scheduledDate.slice(0, 10) : null
   if (formDate !== taskDate) updates.scheduledDate = formDate
   const formTime = form.scheduledTime || null
   const taskTime = task.scheduledTime ?? null
   if (formTime !== taskTime) updates.scheduledTime = formTime
+
   const formEffort =
     form.effortMinutes === '' ? null : Number(form.effortMinutes)
+
   const taskEffort = task.effortMinutes ?? null
   if (formEffort !== taskEffort) updates.effortMinutes = formEffort
+
   if (form.columnId && form.columnId !== task.columnId) {
     updates.columnId = form.columnId
   }
+
   if (form.priority !== (task.priority ?? 'normal')) {
     updates.priority = form.priority
   }
+
   return updates
 }
 
 export default {
   name: 'TaskDetailModal',
-  components: { Modal, TextField, Button, SegmentedControl, Icon },
+  components: { AppModal, AppTextField, AppDatePicker, AppButton, AppSegmentedControl, AppIcon },
   props: {
     modelValue: { type: Boolean, default: false },
     /** The task being edited; pass null to render an empty body. */
@@ -279,6 +308,7 @@ export default {
       { immediate: true }
     )
 
+    /** Localised options for the priority segmented control. */
     const priorityOptions = computed(() => [
       { value: 'urgent', label: t('tasks.priorityUrgent') },
       { value: 'high', label: t('tasks.priorityHigh') },
@@ -286,39 +316,12 @@ export default {
       { value: 'low', label: t('tasks.priorityLow') }
     ])
 
+    /** Subtask progress as a "done/total" fraction shown next to the legend. */
     const subtaskProgress = computed(() => {
       const list = props.task?.subtasks ?? []
       const done = list.filter(s => s.done).length
       return `${done}/${list.length}`
     })
-
-    function cancel() {
-      emit('update:modelValue', false)
-    }
-
-    function handleSubmit() {
-      submitted.value = true
-      if (!form.title.trim() || props.busy) return
-      const updates = diffForm(form, props.task)
-      emit('save', updates)
-    }
-
-    function commitNewSubtask() {
-      const text = newSubtaskText.value.trim()
-      if (!text) return
-      emit('add-subtask', { text })
-      newSubtaskText.value = ''
-    }
-
-    function onSubtaskTextBlur(subtask, e) {
-      const next = e.target.value.trim()
-      if (next && next !== subtask.text) {
-        emit('update-subtask', { subtaskId: subtask.id, text: next })
-      } else {
-        // Restore the visual text if the edit was emptied or unchanged.
-        e.target.value = subtask.text
-      }
-    }
 
     return {
       t,
@@ -331,6 +334,46 @@ export default {
       handleSubmit,
       commitNewSubtask,
       onSubtaskTextBlur
+    }
+
+    // -- Function definitions --
+
+    /** Close the modal without saving. */
+    function cancel() {
+      emit('update:modelValue', false)
+    }
+
+    /** Validate the title and emit `save` with a diffed update payload. */
+    function handleSubmit() {
+      submitted.value = true
+      if (!form.title.trim() || props.busy) return
+      const updates = diffForm(form, props.task)
+      emit('save', updates)
+    }
+
+    /** Emit `add-subtask` with the trimmed text and clear the input. */
+    function commitNewSubtask() {
+      const text = newSubtaskText.value.trim()
+      if (!text) return
+      emit('add-subtask', { text })
+      newSubtaskText.value = ''
+    }
+
+    /**
+     * Subtask-text blur handler: emits `update-subtask` when the value
+     * changed; restores the original text in the DOM otherwise.
+     * @param {object} subtask
+     * @param {FocusEvent} e
+     */
+    function onSubtaskTextBlur(subtask, e) {
+      const next = e.target.value.trim()
+
+      if (next && next !== subtask.text) {
+        emit('update-subtask', { subtaskId: subtask.id, text: next })
+      } else {
+        // Restore the visual text if the edit was emptied or unchanged.
+        e.target.value = subtask.text
+      }
     }
   }
 }

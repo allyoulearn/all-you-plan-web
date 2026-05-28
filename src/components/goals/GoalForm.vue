@@ -27,20 +27,18 @@
     </label>
 
     <!-- Target date -->
-    <label class="goal-form__field">
+    <div class="goal-form__field">
       <span class="goal-form__eyebrow">
         {{ t('goals.targetDateLabel') }}
       </span>
 
-      <input
-        type="date"
-        :value="modelValue.targetDate"
-        :aria-invalid="submitted && !dateValid ? 'true' : undefined"
-        class="goal-form__date"
-        :class="submitted && !dateValid ? 'goal-form__date--invalid' : ''"
-        @input="patch({ targetDate: $event.target.value })"
+      <AppDatePicker
+        :model-value="modelValue.targetDate"
+        :invalid="submitted && !dateValid"
+        :placeholder="t('goals.targetDateLabel')"
+        @update:model-value="patch({ targetDate: $event || '' })"
       />
-    </label>
+    </div>
   </form>
 </template>
 
@@ -48,12 +46,13 @@
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppTextField from '@/components/ui/AppTextField.vue'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export default {
   name: 'GoalForm',
-  components: { AppTextField },
+  components: { AppTextField, AppDatePicker },
   props: {
     modelValue: { type: Object, required: true },
     submitted: { type: Boolean, default: false }
@@ -111,13 +110,5 @@ export default {
     }
   }
 
-  &__date {
-    @apply rounded-md border border-rule-soft bg-paper-2 px-3.5 py-2.5 font-mono text-[14px] text-ink outline-none transition-colors;
-    @apply focus:border-muted;
-
-    &--invalid {
-      @apply border-bad;
-    }
-  }
 }
 </style>

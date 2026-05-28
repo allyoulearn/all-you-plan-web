@@ -67,6 +67,14 @@
       @update:model-value="patch({ cadence: { ...modelValue.cadence, dayOfMonth: Number($event) } })"
     />
 
+    <AppDatePicker
+      v-if="modelValue.cadence.type === 'once'"
+      :model-value="modelValue.cadence.dueDate ?? ''"
+      :label="t('chores.dueDateLabel')"
+      :invalid="submitted && !cadenceValid"
+      @update:model-value="patch({ cadence: { ...modelValue.cadence, dueDate: $event || '' } })"
+    />
+
     <label class="chore-form__active">
       <input
         type="checkbox"
@@ -89,12 +97,13 @@
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppTextField from '@/components/ui/AppTextField.vue'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import AppSegmentedControl from '@/components/ui/AppSegmentedControl.vue'
 import { cadenceLabel } from '@/utils/chores.js'
 
 export default {
   name: 'ChoreForm',
-  components: { AppTextField, AppSegmentedControl },
+  components: { AppTextField, AppDatePicker, AppSegmentedControl },
   props: {
     modelValue: { type: Object, required: true },
     submitted: { type: Boolean, default: false }
@@ -106,7 +115,8 @@ export default {
     const cadenceOptions = computed(() => [
       { value: 'daily', label: t('chores.cadenceDaily') },
       { value: 'weekly', label: t('chores.cadenceWeekly') },
-      { value: 'monthly', label: t('chores.cadenceMonthly') }
+      { value: 'monthly', label: t('chores.cadenceMonthly') },
+      { value: 'once', label: t('chores.cadenceOnceShort') }
     ])
 
     const dayLabels = computed(() => [
@@ -141,6 +151,10 @@ export default {
         return Number.isInteger(c.interval) && c.interval >= 1
       }
 
+      if (c.type === 'once') {
+        return typeof c.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.dueDate)
+      }
+
       return true
     })
 
@@ -172,11 +186,19 @@ export default {
     }
 
     function onCadenceTypeChange(type) {
+      // Switching cadence rebuilds the cadence object from scratch so a
+      // stale dayOfMonth doesn't accidentally survive a weekly → monthly
+      // → weekly round trip. Default the one-off dueDate to today so the
+      // date picker isn't blank on first reveal.
+      const today = new Date()
+      const todayIso = today.toISOString().slice(0, 10)
+
       const cadence = {
         type,
         daysOfWeek: type === 'weekly' ? [1, 2, 3, 4, 5] : [],
         interval: 1,
-        dayOfMonth: type === 'monthly' ? 1 : null
+        dayOfMonth: type === 'monthly' ? 1 : null,
+        dueDate: type === 'once' ? todayIso : null
       }
 
       patch({ cadence })
