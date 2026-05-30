@@ -34,7 +34,7 @@ import ChoreForm from './ChoreForm.vue'
 
 const DEFAULT_FORM = () => ({
   title: '',
-  cadence: { type: 'daily', daysOfWeek: [], interval: 1, dayOfMonth: 1 },
+  cadence: { type: 'daily', daysOfWeek: [], interval: 1, dayOfMonth: 1, dueDate: null },
   active: true
 })
 
@@ -73,6 +73,10 @@ export default {
 
       if (c.type === 'monthly') {
         return { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: c.dayOfMonth }
+      }
+
+      if (c.type === 'once') {
+        return { type: 'once', daysOfWeek: [], interval: 1, dueDate: c.dueDate }
       }
 
       return { type: 'daily', daysOfWeek: [], interval: c.interval }

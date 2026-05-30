@@ -5,7 +5,7 @@
  * Mutations: COMPLETE_TASK, CREATE_TASK, RESCHEDULE_TASK, MOVE_UNFINISHED.
  * COMPLETE_TASK is re-exported as COMPLETE_PROJECT_TASK from projects.js so
  * both stores share the same document node and the Apollo cache stays
- * coherent (WEB-W1-12, WEB-T05-015).
+ * coherent (, WEB-T05-015).
  */
 import { gql } from '@apollo/client/core'
 

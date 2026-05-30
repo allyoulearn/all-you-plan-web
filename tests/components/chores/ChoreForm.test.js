@@ -36,6 +36,7 @@ describe('ChoreForm', () => {
       props: { modelValue: baseModel() },
       global: { plugins: [i18n], stubs: globalStubs }
     })
+
     expect(wrapper.find('input[data-label="Title"]').exists()).toBe(true)
     expect(wrapper.find('button[data-value="daily"]').exists()).toBe(true)
     expect(wrapper.find('button[data-value="weekly"]').exists()).toBe(true)
@@ -52,6 +53,7 @@ describe('ChoreForm', () => {
       },
       global: { plugins: [i18n], stubs: globalStubs }
     })
+
     expect(wrapper.text()).toContain('Repeats')
   })
 
@@ -60,6 +62,7 @@ describe('ChoreForm', () => {
       props: { modelValue: baseModel() },
       global: { plugins: [i18n], stubs: globalStubs }
     })
+
     await wrapper.find('input[data-label="Title"]').setValue('Walk')
     const emitted = wrapper.emitted('update:modelValue')
     expect(emitted).toBeTruthy()
@@ -71,6 +74,7 @@ describe('ChoreForm', () => {
       props: { modelValue: baseModel({ title: 'X' }) },
       global: { plugins: [i18n], stubs: globalStubs }
     })
+
     const events = wrapper.emitted('valid')
     expect(events?.at(-1)?.[0]).toBe(true)
   })

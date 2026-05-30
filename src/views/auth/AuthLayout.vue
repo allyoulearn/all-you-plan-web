@@ -1,12 +1,14 @@
 <template>
   <div class="auth-layout">
     <div class="auth-layout__inner">
+      <!-- Wordmark -->
       <p class="auth-layout__wordmark">
         all you <em>
           plan
         </em>
       </p>
 
+      <!-- Routed auth screen -->
       <div class="auth-layout__card">
         <RouterView />
       </div>

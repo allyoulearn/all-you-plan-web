@@ -15,9 +15,11 @@ describe('WrenSettingsPanel', () => {
 
   it('loads existing settings on mount and populates form', async () => {
     const store = useWrenStore()
+
     vi.spyOn(store, 'loadSettings').mockImplementation(async () => {
       store.settings = { displayName: 'Lucas', tone: 'direct', enabled: true, dailyTurnCap: 50 }
     })
+
     const w = mount(WrenSettingsPanel)
     await flushPromises()
     expect(w.find('input[type=text]').element.value).toBe('Lucas')
@@ -27,9 +29,11 @@ describe('WrenSettingsPanel', () => {
   it('calls updateSettings on save and shows Saved', async () => {
     const store = useWrenStore()
     vi.spyOn(store, 'loadSettings').mockResolvedValue()
+
     const update = vi
       .spyOn(store, 'updateSettings')
       .mockResolvedValue({ displayName: null, tone: 'warm', enabled: true, dailyTurnCap: null })
+
     const w = mount(WrenSettingsPanel)
     await flushPromises()
     await w.find('form').trigger('submit.prevent')
@@ -61,12 +65,15 @@ describe('WrenSettingsPanel', () => {
 
   it('clears displayName when the user leaves the input empty (sends null, not "")', async () => {
     const store = useWrenStore()
+
     vi.spyOn(store, 'loadSettings').mockImplementation(async () => {
       store.settings = { displayName: 'Lucas', tone: 'warm', enabled: true, dailyTurnCap: null }
     })
+
     const update = vi
       .spyOn(store, 'updateSettings')
       .mockResolvedValue({ displayName: null, tone: 'warm', enabled: true, dailyTurnCap: null })
+
     const w = mount(WrenSettingsPanel)
     await flushPromises()
     await w.find('input[type=text]').setValue('')
@@ -77,12 +84,15 @@ describe('WrenSettingsPanel', () => {
 
   it('sends null for dailyTurnCap when the number input is blank', async () => {
     const store = useWrenStore()
+
     vi.spyOn(store, 'loadSettings').mockImplementation(async () => {
       store.settings = { displayName: 'Lucas', tone: 'warm', enabled: true, dailyTurnCap: 50 }
     })
+
     const update = vi
       .spyOn(store, 'updateSettings')
       .mockResolvedValue({ displayName: null, tone: 'warm', enabled: true, dailyTurnCap: null })
+
     const w = mount(WrenSettingsPanel)
     await flushPromises()
     await w.find('input[type=number]').setValue('')

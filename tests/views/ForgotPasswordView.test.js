@@ -20,7 +20,7 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   RouterLink: { template: '<a><slot /></a>' },
-  Icon: true
+  AppIcon: true
 }
 
 function mountForgot() {
@@ -30,6 +30,7 @@ function mountForgot() {
       plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
     }
   })
+
   const store = useAuthStore()
   return { wrapper, store }
 }
@@ -146,7 +147,7 @@ describe('ForgotPasswordView', () => {
     expect(wrapper.find('.forgot-password-view__success').exists()).toBe(true)
     // No error paragraph should be shown
     expect(wrapper.find('.forgot-password-view__error').exists()).toBe(false)
-    // The mutation failure IS logged for dev diagnostics (WEB-W4-17)
+    // The mutation failure IS logged for dev diagnostics
     expect(errorSpy).toHaveBeenCalledWith('[forgotPassword] mutation failed', expect.any(Error))
     errorSpy.mockRestore()
   })
@@ -194,8 +195,8 @@ describe('ForgotPasswordView', () => {
     expect(wrapper.find('input[type="email"]').exists()).toBe(true)
   })
 
-  it('email TextField is present for browser autofill', () => {
-    // Verify the email input exists (autocomplete prop is on the TextField component)
+  it('email AppTextField is present for browser autofill', () => {
+    // Verify the email input exists (autocomplete prop is on the AppTextField component)
     const { wrapper } = mountForgot()
     expect(wrapper.find('input[type="email"]').exists()).toBe(true)
   })

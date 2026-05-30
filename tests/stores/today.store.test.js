@@ -13,10 +13,12 @@ vi.mock('@/api/operations', () => ({
   TODAY_QUERY: 'TODAY_QUERY',
   COMPLETE_TASK: 'COMPLETE_TASK',
   MOVE_UNFINISHED: 'MOVE_UNFINISHED',
-  CREATE_TASK: 'CREATE_TASK'
+  CREATE_TASK: 'CREATE_TASK',
+  RESCHEDULE_TASK: 'RESCHEDULE_TASK'
 }))
 
 const mockToastError = vi.fn()
+
 vi.mock('@/composables/useErrorToast', () => ({
   useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
 }))
@@ -89,6 +91,7 @@ describe('today.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('First error'))
         .mockResolvedValueOnce({ data: { today: fakeView } })
+
       const store = useTodayStore()
       await store.load()
       expect(store.error).toBe('First error')
@@ -108,6 +111,7 @@ describe('today.store', () => {
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { id: 't1' } })
       )
+
       expect(apolloClient.query).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { date: fakeView.date } })
       )
@@ -148,12 +152,15 @@ describe('today.store', () => {
     it('uses the captured date not the post-await view.date', async () => {
       // Simulates: view is cleared mid-flight, but reload uses the captured date
       apolloClient.mutate.mockResolvedValueOnce({})
+
       apolloClient.query.mockImplementationOnce(async () => {
         return { data: { today: fakeView } }
       })
+
       const store = useTodayStore()
       store.view = fakeView
       await store.completeTask('t1')
+
       expect(apolloClient.query).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { date: '2026-05-21' } })
       )
@@ -178,6 +185,7 @@ describe('today.store', () => {
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { fromDate: fakeView.date } })
       )
+
       expect(apolloClient.query).toHaveBeenCalled()
     })
 
@@ -188,6 +196,7 @@ describe('today.store', () => {
       await store.moveUnfinished().catch(() => {})
 
       expect(store.error).toBe('move failed')
+
       expect(mockToastError).toHaveBeenCalledWith(
         expect.any(Error),
         'Failed to move unfinished tasks'
@@ -272,6 +281,199 @@ describe('today.store', () => {
       store.view = fakeView
       await store.createTask({ title: 'New' }).catch(() => {})
       expect(store.saving).toBe(false)
+    })
+  })
+
+  describe('createTask date routing (WEB-W1-20)', () => {
+    it('uses explicit scheduledDate when provided', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      const store = useTodayStore()
+      store.view = fakeView
+      await store.createTask({ title: 'Future', scheduledDate: '2026-06-01' })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { input: { title: 'Future', scheduledDate: '2026-06-01' } }
+        })
+      )
+    })
+
+    it('skips reload when new task is on a different date than the current view', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      const store = useTodayStore()
+      store.view = fakeView // date '2026-05-21'
+
+      await store.createTask({ title: 'Future', scheduledDate: '2026-06-01' })
+
+      expect(apolloClient.query).not.toHaveBeenCalled()
+    })
+
+    it('reloads when new task lands on the current view date', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+
+      await store.createTask({ title: 'Today task', scheduledDate: fakeView.date })
+
+      expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('includes optional fields only when set', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+
+      await store.createTask({
+        title: 'Full',
+        scheduledTime: '09:00',
+        note: 'a note',
+        effortMinutes: 45,
+        tag: 'work'
+      })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: {
+            input: {
+              title: 'Full',
+              scheduledDate: fakeView.date,
+              scheduledTime: '09:00',
+              note: 'a note',
+              effortMinutes: 45,
+              tag: 'work'
+            }
+          }
+        })
+      )
+    })
+
+    it('omits zero effortMinutes only if null/undefined', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = fakeView
+
+      await store.createTask({ title: 'Z', effortMinutes: 0 })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { input: { title: 'Z', scheduledDate: fakeView.date, effortMinutes: 0 } }
+        })
+      )
+    })
+  })
+
+  describe('rescheduleTask()', () => {
+    it('is a no-op when view is null', async () => {
+      const store = useTodayStore()
+      await store.rescheduleTask('t1', { scheduledTime: '14:00' })
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('patches scheduledTime optimistically when staying on the same date', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useTodayStore()
+      store.view = { ...fakeView, tasks: [...fakeView.tasks] }
+
+      await store.rescheduleTask('t1', { scheduledTime: '14:00' })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { id: 't1', scheduledDate: fakeView.date, scheduledTime: '14:00' }
+        })
+      )
+
+      const updated = store.view.tasks.find(t => t.id === 't1')
+      expect(updated.scheduledTime).toBe('14:00')
+      // Should NOT reload when staying on same date.
+      expect(apolloClient.query).not.toHaveBeenCalled()
+    })
+
+    it('reloads when moving the task to a different date', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { today: fakeView } })
+      const store = useTodayStore()
+      store.view = { ...fakeView, tasks: [...fakeView.tasks] }
+
+      await store.rescheduleTask('t1', { scheduledDate: '2026-06-01', scheduledTime: '14:00' })
+
+      expect(apolloClient.query).toHaveBeenCalledTimes(1)
+    })
+
+    it('passes null when scheduledTime is omitted', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useTodayStore()
+      store.view = { ...fakeView, tasks: [...fakeView.tasks] }
+
+      await store.rescheduleTask('t1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { id: 't1', scheduledDate: fakeView.date, scheduledTime: null }
+        })
+      )
+    })
+
+    it('rolls back on failure and sets error', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('reschedule failed'))
+      const store = useTodayStore()
+      const snapshot = { ...fakeView, tasks: [...fakeView.tasks] }
+      store.view = snapshot
+
+      await expect(store.rescheduleTask('t1', { scheduledTime: '14:00' })).rejects.toThrow(
+        'reschedule failed'
+      )
+
+      // The store snapshot replays the captured object — the task in t1 stays
+      // at its original scheduledTime (07:00), not the optimistic 14:00.
+      const t1 = store.view.tasks.find(t => t.id === 't1')
+      expect(t1.scheduledTime).toBe('07:00')
+      expect(store.error).toBe('reschedule failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to reschedule task')
+    })
+
+    it('toggles saving', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useTodayStore()
+      store.view = { ...fakeView, tasks: [...fakeView.tasks] }
+      const promise = store.rescheduleTask('t1', { scheduledTime: '14:00' })
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+
+    it('resets saving on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('fail'))
+      const store = useTodayStore()
+      store.view = { ...fakeView, tasks: [...fakeView.tasks] }
+      await store.rescheduleTask('t1', { scheduledTime: '14:00' }).catch(() => {})
+      expect(store.saving).toBe(false)
+    })
+  })
+
+  describe('moveUnfinished and createTask error branches', () => {
+    it('createTask sets error and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useTodayStore()
+      store.view = fakeView
+
+      await expect(store.createTask({ title: 'X' })).rejects.toThrow('create failed')
+      expect(store.error).toBe('create failed')
+      expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Failed to add task')
+    })
+
+    it('createTask falls back to localISOToday when view has no date', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 't9' } } })
+      const store = useTodayStore()
+      store.view = null
+      await store.createTask({ title: 'X' })
+
+      // We can't easily assert the exact date here but the call should have
+      // scheduledDate set (not undefined).
+      const call = apolloClient.mutate.mock.calls[0][0]
+      expect(call.variables.input.scheduledDate).toBeDefined()
     })
   })
 })

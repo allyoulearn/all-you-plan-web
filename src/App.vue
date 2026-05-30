@@ -1,4 +1,5 @@
 <template>
+  <!-- Toast provider -->
   <Toaster
     position="top-right"
     :theme="mode"
@@ -6,6 +7,7 @@
     close-button
   />
 
+  <!-- Router outlet -->
   <RouterView />
 </template>
 
@@ -21,7 +23,7 @@ export default {
   setup() {
     // Wire the Toaster's theme to the user's current mode so toasts adapt to
     // dark mode (CLAUDE.md "Dark mode required") and enable rich-colors plus
-    // a close button for accessibility (WEB-W4-36).
+    // a close button for accessibility.
     const { mode } = useTheme()
     return { mode }
   }

@@ -1,6 +1,8 @@
 <template>
   <div class="leftover-row">
-    <span class="leftover-row__title">{{ task.title }}</span>
+    <span class="leftover-row__title">
+      {{ task.title }}
+    </span>
 
     <div class="leftover-row__chips">
       <button

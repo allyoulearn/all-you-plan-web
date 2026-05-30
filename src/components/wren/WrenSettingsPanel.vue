@@ -1,12 +1,15 @@
 <template>
   <div class="wren-settings">
+    <!-- Header -->
     <header class="wren-settings__header">
       <h2 class="wren-settings__title">
         Wren settings
       </h2>
     </header>
 
+    <!-- Settings form -->
     <form class="wren-settings__form" @submit.prevent="onSave">
+      <!-- Display name field -->
       <label class="wren-settings__field">
         <span class="wren-settings__label">
           Display name
@@ -21,6 +24,7 @@
         />
       </label>
 
+      <!-- Tone field -->
       <label class="wren-settings__field">
         <span class="wren-settings__label">
           Tone
@@ -45,6 +49,7 @@
         </select>
       </label>
 
+      <!-- Enable toggle -->
       <label class="wren-settings__field wren-settings__field--inline">
         <input
           v-model="form.enabled"
@@ -58,6 +63,7 @@
         </span>
       </label>
 
+      <!-- Daily turn cap field -->
       <label class="wren-settings__field">
         <span class="wren-settings__label">
           Daily turn cap (1-1000, blank for default)
@@ -73,21 +79,24 @@
         />
       </label>
 
+      <!-- Submit button -->
       <div class="wren-settings__actions">
-        <Button
+        <AppButton
           type="submit"
           variant="primary"
           size="md"
           :disabled="saving || loading"
         >
           {{ saving ? 'Saving…' : 'Save' }}
-        </Button>
+        </AppButton>
       </div>
 
+      <!-- Error message -->
       <p v-if="error" class="wren-settings__error" role="alert">
         {{ error }}
       </p>
 
+      <!-- Saved confirmation -->
       <p v-if="saved" class="wren-settings__saved">
         Saved
       </p>
@@ -119,58 +128,79 @@
  *   - Save status is rendered inline (no toast) because the panel sits in
  *     a settings context where inline feedback is preferred.
  */
-import Button from '@/components/ui/Button.vue'
+import { ref, onMounted } from 'vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { useWrenStore } from '@/stores/wren.store.js'
 
 export default {
   name: 'WrenSettingsPanel',
-  components: { Button },
-  data() {
-    return {
-      form: { displayName: '', tone: 'warm', enabled: true, dailyTurnCap: null },
-      loading: true,
-      saving: false,
-      error: '',
-      saved: false
-    }
-  },
-  async mounted() {
-    const store = useWrenStore()
-    try {
-      await store.loadSettings()
-      if (store.settings) {
-        this.form = {
-          displayName: store.settings.displayName ?? '',
-          tone: store.settings.tone ?? 'warm',
-          enabled: store.settings.enabled ?? true,
-          dailyTurnCap: store.settings.dailyTurnCap ?? null
-        }
-      }
-    } catch (e) {
-      this.error = e?.message || 'Failed to load settings'
-    } finally {
-      this.loading = false
-    }
-  },
-  methods: {
-    async onSave() {
+  components: { AppButton },
+  setup() {
+    // -- State --
+    const form = ref({ displayName: '', tone: 'warm', enabled: true, dailyTurnCap: null })
+    const loading = ref(true)
+    const saving = ref(false)
+    const error = ref('')
+    const saved = ref(false)
+
+    // -- Lifecycle --
+    onMounted(async () => {
       const store = useWrenStore()
-      this.saving = true
-      this.saved = false
-      this.error = ''
-      const patch = {
-        displayName: this.form.displayName || null,
-        tone: this.form.tone,
-        enabled: this.form.enabled,
-        dailyTurnCap:
-          this.form.dailyTurnCap === '' || this.form.dailyTurnCap == null
-            ? null
-            : Number(this.form.dailyTurnCap)
+
+      try {
+        await store.loadSettings()
+
+        if (store.settings) {
+          form.value = {
+            displayName: store.settings.displayName ?? '',
+            tone: store.settings.tone ?? 'warm',
+            enabled: store.settings.enabled ?? true,
+            dailyTurnCap: store.settings.dailyTurnCap ?? null
+          }
+        }
+      } catch (e) {
+        error.value = e?.message || 'Failed to load settings'
+      } finally {
+        loading.value = false
       }
+    })
+
+    return {
+      form,
+      loading,
+      saving,
+      error,
+      saved,
+      onSave,
+    }
+
+    // -- Function definitions --
+
+    /**
+     * Persist the current form values via `useWrenStore().updateSettings`.
+     * Normalises empty strings to `null` so the resolver treats them as
+     * explicit unsets rather than literal empty values.
+     */
+    async function onSave() {
+      const store = useWrenStore()
+      saving.value = true
+      saved.value = false
+      error.value = ''
+
+      const patch = {
+        displayName: form.value.displayName || null,
+        tone: form.value.tone,
+        enabled: form.value.enabled,
+        dailyTurnCap:
+          form.value.dailyTurnCap === '' || form.value.dailyTurnCap == null
+            ? null
+            : Number(form.value.dailyTurnCap)
+      }
+
       const res = await store.updateSettings(patch)
-      this.saving = false
-      if (res) this.saved = true
-      else this.error = 'Save failed'
+      saving.value = false
+      if (res) saved.value = true
+      else error.value = 'Save failed'
     }
   }
 }

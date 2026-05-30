@@ -26,7 +26,30 @@
 
     <!-- Content -->
     <template v-else-if="loaded">
-      <KpiRow :tiles="kpiTiles" />
+      <!-- Slim stat line — replaces the old triple KPI tile block -->
+      <p class="chores-view__lede">
+        <span class="chores-view__lede-part">
+          {{ metaText.today }}
+        </span>
+
+        <span class="chores-view__lede-sep" aria-hidden="true">
+          ·
+        </span>
+
+        <span class="chores-view__lede-part">
+          {{ metaText.streak }}
+        </span>
+
+        <span class="chores-view__lede-sep" aria-hidden="true">
+          ·
+        </span>
+
+        <span class="chores-view__lede-part">
+          <em>
+            {{ metaText.best }}
+          </em>
+        </span>
+      </p>
 
       <template v-if="viewMode === 'flow'">
         <AppSectionHeader
@@ -37,32 +60,50 @@
 
         <AllDoneCard v-if="hasAnyDueScheduled && groups.due.length === 0" />
 
-        <div v-else-if="groups.due.length" class="chores-view__group-list">
-          <ChoreRow
-            v-for="(chore, idx) in groups.due"
-            :key="chore.id"
-            :chore="chore"
-            :at-top="idx === 0"
-            :at-bottom="idx === groups.due.length - 1"
-            :show-handle="true"
-            v-on="rowHandlers"
-          />
-        </div>
+        <AppCard v-else-if="dueList.length" class="chores-view__group-card">
+          <draggable
+            :list="dueList"
+            item-key="id"
+            :animation="180"
+            filter="button, .chore-row__title, .checkbox"
+            :prevent-on-filter="false"
+            ghost-class="chore-row--ghost"
+            @end="onReorderFlow"
+          >
+            <template #item="{ element: chore, index: idx }">
+              <ChoreRow
+                :chore="chore"
+                :at-top="idx === 0"
+                :at-bottom="idx === dueList.length - 1"
+                v-on="rowHandlers"
+              />
+            </template>
+          </draggable>
+        </AppCard>
 
-        <template v-if="groups.upcoming.length">
-          <AppSectionHeader :label="t('chores.upcoming')" :count="groups.upcoming.length" />
+        <template v-if="upcomingList.length">
+          <AppSectionHeader :label="t('chores.upcoming')" :count="upcomingList.length" />
 
-          <div class="chores-view__group-list">
-            <ChoreRow
-              v-for="(chore, idx) in groups.upcoming"
-              :key="chore.id"
-              :chore="chore"
-              :at-top="idx === 0"
-              :at-bottom="idx === groups.upcoming.length - 1"
-              :show-handle="true"
-              v-on="rowHandlers"
-            />
-          </div>
+          <AppCard class="chores-view__group-card">
+            <draggable
+              :list="upcomingList"
+              item-key="id"
+              :animation="180"
+              filter="button, .chore-row__title, .chore-checkbox"
+              :prevent-on-filter="false"
+              ghost-class="chore-row--ghost"
+              @end="onReorderFlow"
+            >
+              <template #item="{ element: chore, index: idx }">
+                <ChoreRow
+                  :chore="chore"
+                  :at-top="idx === 0"
+                  :at-bottom="idx === upcomingList.length - 1"
+                  v-on="rowHandlers"
+                />
+              </template>
+            </draggable>
+          </AppCard>
         </template>
       </template>
 
@@ -70,22 +111,31 @@
         <!-- cadence mode -->
         <template v-for="group in cadenceGroups" :key="group.key">
           <AppSectionHeader
-            v-if="group.items.length"
+            v-if="cadenceLists[group.key].length"
             :label="group.label"
-            :count="group.items.length"
+            :count="cadenceLists[group.key].length"
           />
 
-          <div v-if="group.items.length" class="chores-view__group-list">
-            <ChoreRow
-              v-for="(chore, idx) in group.items"
-              :key="chore.id"
-              :chore="chore"
-              :at-top="idx === 0"
-              :at-bottom="idx === group.items.length - 1"
-              :show-handle="true"
-              v-on="rowHandlers"
-            />
-          </div>
+          <AppCard v-if="cadenceLists[group.key].length" class="chores-view__group-card">
+            <draggable
+              :list="cadenceLists[group.key]"
+              item-key="id"
+              :animation="180"
+              filter="button, .chore-row__title, .chore-checkbox"
+              :prevent-on-filter="false"
+              ghost-class="chore-row--ghost"
+              @end="onReorderCadence"
+            >
+              <template #item="{ element: chore, index: idx }">
+                <ChoreRow
+                  :chore="chore"
+                  :at-top="idx === 0"
+                  :at-bottom="idx === cadenceLists[group.key].length - 1"
+                  v-on="rowHandlers"
+                />
+              </template>
+            </draggable>
+          </AppCard>
         </template>
       </template>
 
@@ -119,12 +169,13 @@
 /** ChoresView — Due-today / Upcoming groups (flow mode) or Daily/Weekly/Monthly (cadence mode). */
 import { onMounted, computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import draggable from 'vuedraggable'
 import { useChoresStore } from '@/stores/chores.store.js'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppCard from '@/components/ui/AppCard.vue'
 import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
-import KpiRow from '@/components/today/KpiRow.vue'
 import ChoreRow from '@/components/chores/ChoreRow.vue'
 import ChoresSkeleton from '@/components/chores/ChoresSkeleton.vue'
 import ChoresEmpty from '@/components/chores/ChoresEmpty.vue'
@@ -141,14 +192,15 @@ export default {
     AppScreenHeading,
     AppSectionHeader,
     AppButton,
+    AppCard,
     AppConfirmDialog,
-    KpiRow,
     ChoreRow,
     ChoresSkeleton,
     ChoresEmpty,
     AllDoneCard,
     CreateChoreModal,
-    EditChoreModal
+    EditChoreModal,
+    draggable
   },
   setup() {
     // -- State --
@@ -182,6 +234,11 @@ export default {
         key: 'monthly',
         label: t('chores.cadenceMonthly'),
         items: allChores.value.filter(c => c.cadence.type === 'monthly')
+      },
+      {
+        key: 'once',
+        label: t('chores.cadenceOnce'),
+        items: allChores.value.filter(c => c.cadence.type === 'once')
       }
     ])
 
@@ -190,7 +247,40 @@ export default {
       allChores.value.some(c => !isSnoozedNow(c, today.value) && isDueOn(c, today.value))
     )
 
-    const kpiTiles = computed(() => {
+    /*
+     * Drag-reorder needs mutable per-group lists for vuedraggable to splice
+     * into. We mirror the computed groups into refs and keep them in sync
+     * whenever the store reloads — that's also what bounces the visible
+     * order back into agreement after a persist.
+     */
+    const dueList = ref([])
+    const upcomingList = ref([])
+    const cadenceLists = ref({ daily: [], weekly: [], monthly: [], once: [] })
+
+    watch(
+      groups,
+      ({ due, upcoming }) => {
+        dueList.value = [...due]
+        upcomingList.value = [...upcoming]
+      },
+      { immediate: true }
+    )
+
+    watch(
+      cadenceGroups,
+      list => {
+        const next = { daily: [], weekly: [], monthly: [], once: [] }
+        for (const g of list) next[g.key] = [...g.items]
+        cadenceLists.value = next
+      },
+      { immediate: true }
+    )
+
+    /**
+     * Three short phrases shown under the heading — replaces the old fat
+     * KPI tile row. Returns rendered strings so the template stays dumb.
+     */
+    const metaText = computed(() => {
       const dueToday = allChores.value.filter(
         c => !isSnoozedNow(c, today.value) && isDueOn(c, today.value)
       )
@@ -203,30 +293,20 @@ export default {
 
       const currentStreak = allChores.value.reduce((m, c) => Math.max(m, c.streak ?? 0), 0)
       const bestStreak = allChores.value.reduce((m, c) => Math.max(m, c.bestStreak ?? 0), 0)
-      return [
-        {
-          key: 'today',
-          label: t('chores.kpiToday'),
-          value: `${done}/${dueToday.length}`,
-          unit: t('chores.kpiTodayUnit')
-        },
-        {
-          key: 'current',
-          label: t('chores.kpiCurrent'),
-          value: currentStreak,
-          unit: t('chores.kpiCurrentUnit')
-        },
-        {
-          key: 'best',
-          label: t('chores.kpiBest'),
-          value: bestStreak,
-          unit: t('chores.kpiBestUnit')
-        }
-      ]
+
+      return {
+        today: t('chores.metaToday', { done, total: dueToday.length }),
+        streak:
+          currentStreak === 1
+            ? t('chores.metaStreakSingular')
+            : t('chores.metaStreak', { count: currentStreak }),
+        best: t('chores.metaBest', { count: bestStreak })
+      }
     })
 
     const rowHandlers = {
       complete: id => store.completeChore(id).catch(() => {}),
+      uncomplete: id => store.uncompleteChore(id).catch(() => {}),
       snooze: onSnooze,
       'snooze-until': onSnoozeUntilRequest,
       'skip-next': id => store.skipNextChore(id).catch(() => {}),
@@ -258,15 +338,48 @@ export default {
       groups,
       cadenceGroups,
       hasAnyDueScheduled,
-      kpiTiles,
+      metaText,
       viewMode,
       showCreate,
       showEdit,
       editingChore,
       confirmDelete,
       rowHandlers,
+      dueList,
+      upcomingList,
+      cadenceLists,
+      onReorderFlow,
+      onReorderCadence,
       toggleViewMode,
       performDelete
+    }
+
+    /*
+     * Persist the new global order whenever the user drops a row in flow
+     * mode. We compose the combined sequence (due → upcoming) so every
+     * chore gets a fresh, gap-free order index — leaving gaps would let
+     * the next sort by `order` re-shuffle the unaffected list.
+     */
+    async function onReorderFlow() {
+      const combined = [...dueList.value, ...upcomingList.value]
+
+      try {
+        await store.reorderChores(combined.map(c => c.id))
+      } catch {
+        /* toasted by store */
+      }
+    }
+
+    /** Cadence-mode variant — daily → weekly → monthly → once. */
+    async function onReorderCadence() {
+      const { daily, weekly, monthly, once } = cadenceLists.value
+      const combined = [...daily, ...weekly, ...monthly, ...once]
+
+      try {
+        await store.reorderChores(combined.map(c => c.id))
+      } catch {
+        /* toasted by store */
+      }
     }
 
     // -- Function definitions --
@@ -361,8 +474,29 @@ export default {
     }
   }
 
-  &__group-list {
-    @apply rounded-md bg-paper-2 px-2.5 py-1 shadow-sm;
+  &__lede {
+    // Pull the stat strip up against the page heading so it reads as a
+    // subtitle rather than a separate band. AppScreenHeading owns its own
+    // bottom margin (mb-7); we negate part of it to tighten the gap.
+    @apply -mt-4 mb-7 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-relaxed text-muted;
+  }
+
+  &__lede-part {
+    @apply inline-flex items-center;
+
+    em {
+      @apply font-serif text-[14px] italic text-ink;
+    }
+  }
+
+  &__lede-sep {
+    @apply text-rule;
+  }
+
+  // Specificity-doubled selector so AppCard's `.card` padding can't win when
+  // Vite happens to emit the child stylesheet after the parent's.
+  &__group-card.chores-view__group-card {
+    @apply gap-0 px-5 py-0;
   }
 
   &__actions {

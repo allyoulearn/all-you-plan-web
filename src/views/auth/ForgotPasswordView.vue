@@ -26,7 +26,7 @@
     <!-- Form -->
     <form v-else class="forgot-password-view__form" @submit.prevent="handleSubmit">
       <!-- Email field -->
-      <TextField
+      <AppTextField
         v-model="email"
         type="email"
         :label="t('auth.email')"
@@ -39,7 +39,7 @@
       </p>
 
       <!-- Submit button -->
-      <Button
+      <AppButton
         variant="accent"
         type="submit"
         :disabled="loading"
@@ -47,7 +47,7 @@
         class="forgot-password-view__submit"
       >
         {{ loading ? t('common.loading') : t('auth.forgotPasswordCta') }}
-      </Button>
+      </AppButton>
 
       <!-- Back to login link -->
       <p class="forgot-password-view__footer">
@@ -64,12 +64,12 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'ForgotPasswordView',
-  components: { TextField, Button },
+  components: { AppTextField, AppButton },
   setup() {
     // -- State --
     const { t } = useI18n()
@@ -97,11 +97,12 @@ export default {
      * whether an email exists. Server-side failures (5xx, mailer issues) are
      * still surfaced via `console.error` so developers can diagnose problems
      * during local testing — the user-facing UI continues to show the success
-     * state regardless (WEB-W4-17).
+     * state regardless.
      */
     async function handleSubmit() {
       error.value = ''
       loading.value = true
+
       try {
         await authStore.forgotPassword(email.value)
         sent.value = true

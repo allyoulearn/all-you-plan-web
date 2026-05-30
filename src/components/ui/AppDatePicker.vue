@@ -1,6 +1,8 @@
 <template>
   <label class="date-picker">
-    <span v-if="label" class="date-picker__label">{{ label }}</span>
+    <span v-if="label" class="date-picker__label">
+      {{ label }}
+    </span>
 
     <VueDatePicker
       :model-value="modelValue"

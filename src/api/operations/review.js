@@ -4,7 +4,7 @@
  * Queries: DAILY_REVIEW_QUERY (a single date's review record).
  * Mutations: SAVE_DAILY_REVIEW (upsert).
  * Responses are stored as JSON-shaped reflections; the server validates
- * shape (WEB-W1-12).
+ * shape.
  */
 import { gql } from '@apollo/client/core'
 

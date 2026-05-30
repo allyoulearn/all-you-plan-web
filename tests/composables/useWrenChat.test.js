@@ -30,6 +30,7 @@ function mountComposable(bodyRefValue = null) {
 
   // Ensure store.load() is a function returning a resolved Promise before mount
   const store = useWrenStore()
+
   if (!store.load || typeof store.load.mockResolvedValue !== 'function') {
     store.load = vi.fn().mockResolvedValue(undefined)
   } else {
@@ -43,6 +44,7 @@ function mountComposable(bodyRefValue = null) {
     },
     template: '<div />'
   })
+
   return { ...result, bodyRef }
 }
 
@@ -266,6 +268,7 @@ describe('useWrenChat', () => {
     const store = useWrenStore()
     store.load = vi.fn().mockResolvedValue(undefined)
     store.teardown = vi.fn()
+
     const wrapper = mount({
       setup() {
         useWrenChat(ref(null))
@@ -273,6 +276,7 @@ describe('useWrenChat', () => {
       },
       template: '<div />'
     })
+
     expect(store.teardown).not.toHaveBeenCalled()
     wrapper.unmount()
     expect(store.teardown).toHaveBeenCalledOnce()

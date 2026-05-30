@@ -58,33 +58,37 @@ describe('WrenBubble', () => {
     it('renders the coach message text', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.text()).toContain('Hi there! How can I help?')
     })
 
     it('aligns to the left (wren-bubble--coach)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble--coach').exists()).toBe(true)
     })
 
     it('does not render action buttons when actions is empty', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
-      const actionArea = wrapper.findAll('button-stub')
+
+      const actionArea = wrapper.findAll('app-button-stub')
       expect(actionArea).toHaveLength(0)
     })
 
     it('renders action buttons when actions are present', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
-        global: { stubs: { Button: { template: '<button><slot/></button>' } } }
+        global: { stubs: { AppButton: { template: '<button><slot/></button>' } } }
       })
+
       const buttons = wrapper.findAll('button')
       expect(buttons).toHaveLength(2)
       expect(buttons[0].text()).toBe('Plan my day')
@@ -95,9 +99,10 @@ describe('WrenBubble', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
         global: {
-          stubs: { Button: { template: '<button @click="$emit(\'click\')"><slot/></button>' } }
+          stubs: { AppButton: { template: '<button @click="$emit(\'click\')"><slot/></button>' } }
         }
       })
+
       await wrapper.findAll('button')[0].trigger('click')
       expect(wrapper.emitted('action')?.[0]).toEqual(['Plan my day'])
     })
@@ -106,9 +111,10 @@ describe('WrenBubble', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
         global: {
-          stubs: { Button: { template: '<button @click="$emit(\'click\')"><slot/></button>' } }
+          stubs: { AppButton: { template: '<button @click="$emit(\'click\')"><slot/></button>' } }
         }
       })
+
       await wrapper.findAll('button')[1].trigger('click')
       expect(wrapper.emitted('action')?.[0]).toEqual(['Review goals'])
     })
@@ -116,40 +122,45 @@ describe('WrenBubble', () => {
     it('applies accent styling when actions are present (wren-bubble__body--accent)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__body--accent').exists()).toBe(true)
     })
 
     it('uses default background when no actions (wren-bubble__body--default)', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__body--default').exists()).toBe(true)
     })
 
     it('does not apply accent class when actions is empty', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__body--accent').exists()).toBe(false)
     })
 
     it('actions area is hidden when no actions', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
     })
 
     it('actions area is visible when actions present', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachWithActions },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__actions').exists()).toBe(true)
     })
 
@@ -157,8 +168,9 @@ describe('WrenBubble', () => {
       // The &--coach SCSS modifier was dead code and has been removed
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__body--coach').exists()).toBe(false)
     })
   })
@@ -167,8 +179,9 @@ describe('WrenBubble', () => {
     it('renders a formatted time for user message', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: userMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       // The formatted time contains AM/PM or colon — just ensure it's not empty
       const timeEl = wrapper.find('.wren-bubble__timestamp')
       expect(timeEl.text()).not.toBe('')
@@ -184,8 +197,9 @@ describe('WrenBubble', () => {
     it('renders timestamp for coach message', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       const timeEl = wrapper.find('.wren-bubble__timestamp')
       expect(timeEl.text()).not.toBe('')
     })
@@ -198,8 +212,9 @@ describe('WrenBubble', () => {
     it('coach timestamp does not have --right alignment class', () => {
       const wrapper = mount(WrenBubble, {
         props: { message: coachMessage },
-        global: { stubs: { Button: true } }
+        global: { stubs: { AppButton: true } }
       })
+
       expect(wrapper.find('.wren-bubble__timestamp--right').exists()).toBe(false)
     })
   })
@@ -225,6 +240,7 @@ describe('WrenBubble — action union', () => {
       undoToken: 'u1',
       undoExpiresAt: new Date(Date.now() + 60_000).toISOString()
     }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -237,6 +253,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     expect(wrapper.text()).toContain('Added "X"')
     expect(wrapper.text()).toContain('Undo')
   })
@@ -247,6 +264,7 @@ describe('WrenBubble — action union', () => {
       confirmToken: 'ct1',
       summary: 'Delete "X"?'
     }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -259,6 +277,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     expect(wrapper.text()).toContain('Delete "X"?')
     expect(wrapper.text()).toContain('Confirm')
     expect(wrapper.text()).toContain('Cancel')
@@ -277,6 +296,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(true)
   })
 
@@ -293,6 +313,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(false)
   })
 
@@ -309,6 +330,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     // Partial text preserved, cursor gone, indicator visible.
     expect(wrapper.text()).toContain('partial reply')
     expect(wrapper.find('.wren-bubble__cursor').exists()).toBe(false)
@@ -324,6 +346,7 @@ describe('WrenBubble — action union', () => {
       undoToken: 'u1',
       undoExpiresAt: new Date(Date.now() + 60_000).toISOString()
     }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -336,6 +359,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     await wrapper.find('button').trigger('click')
     expect(wrapper.emitted('undo')).toEqual([['u1']])
   })
@@ -346,6 +370,7 @@ describe('WrenBubble — action union', () => {
       confirmToken: 'ct1',
       summary: 'X?'
     }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -358,6 +383,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     const btns = wrapper.findAll('button')
     await btns[0].trigger('click') // Cancel
     expect(wrapper.emitted('cancel')).toEqual([['ct1']])
@@ -377,8 +403,9 @@ describe('WrenBubble — action union', () => {
           createdAt: ''
         }
       },
-      global: { stubs: { Button: true } }
+      global: { stubs: { AppButton: true } }
     })
+
     // No actions area rendered because every entry classified to null/garbage.
     expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
   })
@@ -396,6 +423,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     // WrenActionChip renders the summary text.
     expect(wrapper.text()).toContain('No __typename, but has summary')
   })
@@ -413,6 +441,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     expect(wrapper.text()).toContain('Hmm?')
     expect(wrapper.text()).toContain('Confirm')
     expect(wrapper.text()).toContain('Cancel')
@@ -430,8 +459,9 @@ describe('WrenBubble — action union', () => {
           createdAt: ''
         }
       },
-      global: { stubs: { Button: { template: '<button><slot/></button>' } } }
+      global: { stubs: { AppButton: { template: '<button><slot/></button>' } } }
     })
+
     expect(wrapper.text()).toContain('Try this')
   })
 
@@ -447,8 +477,9 @@ describe('WrenBubble — action union', () => {
           createdAt: ''
         }
       },
-      global: { stubs: { Button: true } }
+      global: { stubs: { AppButton: true } }
     })
+
     expect(wrapper.find('.wren-bubble__actions').exists()).toBe(false)
   })
 
@@ -460,6 +491,7 @@ describe('WrenBubble — action union', () => {
       summary: 'Upgrade to Pro for 200 turns/day',
       planId: 'wren-pro'
     }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -472,6 +504,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     // The chip's summary + the body's chat-limit copy both render.
     expect(wrapper.text()).toContain("You've used your 5 free chats for today.")
     expect(wrapper.text()).toContain('Upgrade to Pro for 200 turns/day')
@@ -490,8 +523,9 @@ describe('WrenBubble — action union', () => {
           createdAt: ''
         }
       },
-      global: { stubs: { Button: true } }
+      global: { stubs: { AppButton: true } }
     })
+
     expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(false)
   })
 
@@ -508,12 +542,14 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(true)
     expect(wrapper.text()).toContain('Get Pro')
   })
 
   it('does not render an upgrade chip for user-sender messages', () => {
     const upgrade = { kind: 'upgrade', summary: 'X', planId: 'wren-pro' }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -525,12 +561,14 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     // User bubbles never render the actions row at all.
     expect(wrapper.find('.wren-upgrade-chip').exists()).toBe(false)
   })
 
   it('propagates upgrade event from chip with the planId', async () => {
     const upgrade = { kind: 'upgrade', summary: 'X', planId: 'wren-pro' }
+
     const wrapper = mount(WrenBubble, {
       props: {
         message: {
@@ -543,6 +581,7 @@ describe('WrenBubble — action union', () => {
         }
       }
     })
+
     await wrapper.find('button').trigger('click')
     expect(wrapper.emitted('upgrade')).toEqual([['wren-pro']])
   })

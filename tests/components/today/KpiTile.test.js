@@ -7,6 +7,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Streak', value: 7, unit: 'days' }
     })
+
     expect(wrapper.text()).toContain('Streak')
     expect(wrapper.text()).toContain('7')
     expect(wrapper.text()).toContain('days')
@@ -16,6 +17,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Today', value: '2/5', unit: 'complete' }
     })
+
     expect(wrapper.text()).toContain('2/5')
     expect(wrapper.text()).toContain('complete')
   })
@@ -24,6 +26,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Focus', value: '2h', emphasis: '30m', unit: 'logged' }
     })
+
     expect(wrapper.find('em').exists()).toBe(true)
     expect(wrapper.find('em').text()).toBe('30m')
   })
@@ -32,6 +35,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Streak', value: 7 }
     })
+
     expect(wrapper.find('em').exists()).toBe(false)
   })
 
@@ -39,6 +43,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Streak', value: 7 }
     })
+
     // The unit span has v-if="unit"; verify unit text is absent when no unit prop
     expect(wrapper.text()).not.toContain('days')
   })
@@ -77,6 +82,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Focus', value: '1h', emphasis: '30m' }
     })
+
     expect(wrapper.find('.kpi-tile__emphasis').exists()).toBe(true)
   })
 
@@ -84,6 +90,7 @@ describe('KpiTile', () => {
     const wrapper = mount(KpiTile, {
       props: { label: 'Focus', value: '1h', emphasis: '30m' }
     })
+
     const valueEl = wrapper.find('.kpi-tile__value')
     expect(valueEl.find('em').exists()).toBe(true)
   })

@@ -5,6 +5,7 @@ import MoodPicker from '@/components/review/MoodPicker.vue'
 import en from '@/i18n/locales/en.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+
 const stubs = {
   AppButton: {
     template: '<button :aria-checked="ariaChecked" @click="$emit(\'click\')"><slot /></button>',
@@ -23,6 +24,7 @@ function mountPicker(props = {}) {
 describe('MoodPicker', () => {
   it('renders five mood pills with the new labels', () => {
     const wrapper = mountPicker()
+
     for (const label of ['heavy', 'low', 'steady', 'good', 'lit']) {
       expect(wrapper.text()).toContain(label)
     }

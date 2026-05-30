@@ -3,31 +3,37 @@
     class="wren-action-chip"
     :class="{ 'wren-action-chip--pending': pending && !done && !expired }"
   >
+    <!-- AppIcon -->
     <CheckCircleIcon class="wren-action-chip__icon" aria-hidden="true" />
 
+    <!-- Summary -->
     <span class="wren-action-chip__summary">
       {{ action.summary }}
     </span>
 
-    <Button
+    <!-- Undo button -->
+    <AppButton
       v-if="canUndo"
       variant="ghost"
       size="sm"
       class="wren-action-chip__undo"
       @click="onUndo"
     >
-      Undo
-    </Button>
+      {{ t('wren.actionUndo') }}
+    </AppButton>
 
+    <!-- Undone label -->
     <span v-else-if="done" class="wren-action-chip__resolution">
-      Undone
+      {{ t('wren.actionUndone') }}
     </span>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CheckCircleIcon } from '@heroicons/vue/24/outline'
-import Button from '@/components/ui/Button.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 /**
  * WrenActionChip — renders an applied write action with an optional Undo
@@ -59,7 +65,7 @@ import Button from '@/components/ui/Button.vue'
  */
 export default {
   name: 'WrenActionChip',
-  components: { Button, CheckCircleIcon },
+  components: { AppButton, CheckCircleIcon },
   props: {
     action: {
       type: Object,
@@ -68,42 +74,63 @@ export default {
     }
   },
   emits: ['undo'],
-  data() {
-    return { done: false, expired: false, expiryTimer: null }
-  },
-  computed: {
-    pending() {
-      return Boolean(this.action.pending)
-    },
-    alreadyExpired() {
-      if (!this.action.undoExpiresAt) return false
-      return new Date(this.action.undoExpiresAt).getTime() <= Date.now()
-    },
-    canUndo() {
-      return (
-        Boolean(this.action.undoToken) && !this.done && !this.expired && !this.alreadyExpired
-      )
-    }
-  },
-  mounted() {
-    if (this.action.undoExpiresAt) {
-      const ms = new Date(this.action.undoExpiresAt).getTime() - Date.now()
-      if (ms > 0) {
-        this.expiryTimer = setTimeout(() => {
-          this.expired = true
-        }, ms)
-      } else {
-        this.expired = true
+  setup(props, { emit }) {
+    const { t } = useI18n()
+    // -- State --
+    const done = ref(false)
+    const expired = ref(false)
+    let expiryTimer = null
+
+    // -- Computed --
+    /** True while the action is in the pre-confirmation client-side state. */
+    const pending = computed(() => Boolean(props.action.pending))
+
+    /** True when the undo window was already past at mount time. */
+    const alreadyExpired = computed(() => {
+      if (!props.action.undoExpiresAt) return false
+      return new Date(props.action.undoExpiresAt).getTime() <= Date.now()
+    })
+
+    /** True when the Undo button should currently be offered to the user. */
+    const canUndo = computed(() =>
+      Boolean(props.action.undoToken) && !done.value && !expired.value && !alreadyExpired.value
+    )
+
+    // -- Lifecycle --
+    onMounted(() => {
+      if (props.action.undoExpiresAt) {
+        const ms = new Date(props.action.undoExpiresAt).getTime() - Date.now()
+
+        if (ms > 0) {
+          expiryTimer = setTimeout(() => {
+            expired.value = true
+          }, ms)
+        } else {
+          expired.value = true
+        }
       }
+    })
+
+    onBeforeUnmount(() => {
+      if (expiryTimer) clearTimeout(expiryTimer)
+    })
+
+    return {
+      t,
+      done,
+      expired,
+      pending,
+      alreadyExpired,
+      canUndo,
+      onUndo,
     }
-  },
-  beforeUnmount() {
-    if (this.expiryTimer) clearTimeout(this.expiryTimer)
-  },
-  methods: {
-    onUndo() {
-      this.done = true
-      this.$emit('undo', this.action.undoToken)
+
+    // -- Function definitions --
+
+    /** Flip the chip to its "Undone" state and emit the undo token exactly once. */
+    function onUndo() {
+      done.value = true
+      emit('undo', props.action.undoToken)
     }
   }
 }

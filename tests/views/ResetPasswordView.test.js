@@ -23,17 +23,19 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   RouterLink: { template: '<a><slot /></a>' },
-  Icon: true
+  AppIcon: true
 }
 
 function mountReset(token = 'valid-token-abc') {
   mockToken = token
+
   const wrapper = mount(ResetPasswordView, {
     global: {
       stubs: globalStubs,
       plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
     }
   })
+
   const store = useAuthStore()
   return { wrapper, store }
 }
@@ -190,9 +192,11 @@ describe('ResetPasswordView', () => {
     // When confirmPassword is empty, :invalid="!!confirmPassword && !passwordsMatch"
     // should be false — no red border
     const confirmWrapper = wrapper.findAll('.text-field__wrapper')
+
     const invalidWrappers = confirmWrapper.filter(w =>
       w.classes().includes('text-field__wrapper--invalid')
     )
+
     expect(invalidWrappers.length).toBe(0)
   })
 
@@ -259,6 +263,7 @@ describe('ResetPasswordView', () => {
 
   it('shows error message when resetPassword throws', async () => {
     const { wrapper, store } = mountReset()
+
     store.resetPassword.mockRejectedValue({
       graphQLErrors: [{ message: 'Token expired' }]
     })
@@ -278,7 +283,7 @@ describe('ResetPasswordView', () => {
 
   it('shows resetTokenInvalid fallback error when no graphQLErrors and no err.message', async () => {
     const { wrapper, store } = mountReset()
-    // After WEB-W4-16 the view routes through resolveErrorMessage, which
+    // After the view routes through resolveErrorMessage, which
     // prefers err.message before the fallback. To exercise the fallback
     // branch we reject with an object that has neither graphQLErrors nor
     // a message string.

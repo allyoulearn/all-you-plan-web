@@ -7,130 +7,150 @@
     />
 
     <AppCard class="review-view__card">
-    <!-- Progress strip: 5-segment track with the step caption inline at the
+      <!-- Progress strip: 5-segment track with the step caption inline at the
          right so the eye picks up "where you are" in one glance. Hidden on
          the finale because the closer is the moment, not another step. -->
-    <header v-if="!isFinale" class="review-view__progress">
-      <ol
-        class="review-view__progress-track"
-        :aria-label="t('nav.itemDailyReview')"
-      >
-        <li v-for="n in TOTAL_STEPS" :key="n" class="review-view__progress-item">
-          <button
-            type="button"
-            class="review-view__progress-dot"
-            :class="{
-              'review-view__progress-dot--active': currentStep === n,
-              'review-view__progress-dot--done': n < currentStep
-            }"
-            :aria-current="currentStep === n ? 'step' : 'false'"
-            :aria-label="t('review.stepOf', { n, total: TOTAL_STEPS })"
-            @click="goToStep(n)"
-          />
-        </li>
-      </ol>
-
-      <p class="review-view__progress-caption">
-        <span class="review-view__progress-step">
-          {{ t('review.stepOf', { n: currentStep, total: TOTAL_STEPS }) }}
-        </span>
-        <span class="review-view__progress-sep">·</span>
-        <span class="review-view__progress-label">
-          {{ t(`review.stepLabel.${currentStepKey}`) }}
-        </span>
-      </p>
-    </header>
-
-    <!-- Step content. One section visible at a time, with a soft fade between. -->
-    <Transition name="review-fade" mode="out-in">
-      <div :key="currentStep" ref="stepRef" class="review-view__step">
-        <template v-if="currentStep === 1">
-          <h1 class="review-view__prompt">{{ t('review.wren.open') }}</h1>
-          <p v-if="headlineCallout" class="review-view__callout">{{ headlineCallout }}</p>
-          <MoodPicker v-model="mood" class="review-view__body" />
-        </template>
-
-        <template v-else-if="currentStep === 2">
-          <h1 class="review-view__prompt">{{ t('review.wren.wins') }}</h1>
-          <WinPicker v-model="wins" :tasks="doneTasks" class="review-view__body" />
-        </template>
-
-        <template v-else-if="currentStep === 3">
-          <h1 class="review-view__prompt">{{ t('review.wren.friction') }}</h1>
-          <FrictionInput v-model="friction" class="review-view__body" />
-        </template>
-
-        <template v-else-if="currentStep === 4">
-          <h1 class="review-view__prompt">{{ t('review.wren.leftovers') }}</h1>
-
-          <div v-if="pendingTasks.length" class="review-view__body">
-            <button type="button" class="review-view__bulk" @click="moveAllToTomorrow">
-              {{ t('review.leftover.moveAll') }}
-            </button>
-
-            <LeftoverRow
-              v-for="task in pendingTasks"
-              :key="task.id"
-              :task="task"
-              :action="leftoverAction(task.id)"
-              @update:action="kind => setLeftover(task.id, kind)"
+      <header v-if="!isFinale" class="review-view__progress">
+        <ol
+          class="review-view__progress-track"
+          :aria-label="t('nav.itemDailyReview')"
+        >
+          <li v-for="n in TOTAL_STEPS" :key="n" class="review-view__progress-item">
+            <button
+              type="button"
+              class="review-view__progress-dot"
+              :class="{
+                'review-view__progress-dot--active': currentStep === n,
+                'review-view__progress-dot--done': n < currentStep
+              }"
+              :aria-current="currentStep === n ? 'step' : 'false'"
+              :aria-label="t('review.stepOf', { n, total: TOTAL_STEPS })"
+              @click="goToStep(n)"
             />
-          </div>
+          </li>
+        </ol>
 
-          <p v-else class="review-view__empty">
-            {{ t('review.leftover.empty') }}
-          </p>
-        </template>
+        <p class="review-view__progress-caption">
+          <span class="review-view__progress-step">
+            {{ t('review.stepOf', { n: currentStep, total: TOTAL_STEPS }) }}
+          </span>
 
-        <template v-else-if="currentStep === 5">
-          <h1 class="review-view__prompt">{{ t('review.wren.intent') }}</h1>
-          <TomorrowIntent
-            v-model="tomorrowIntent"
-            class="review-view__body"
-            @keydown.enter.prevent="next"
-          />
-        </template>
+          <span class="review-view__progress-sep">
+            ·
+          </span>
 
-        <template v-else>
-          <!-- Finale: dynamic send-off + Finish. -->
-          <SendoffCard
-            :input="sendoffInput"
-            :saving="reviewStore.saving"
-            :disabled="!mood"
-            :saved="saved && !editing"
-            @finish="finishReview"
-            @edit="onEdit"
-          />
+          <span class="review-view__progress-label">
+            {{ t(`review.stepLabel.${currentStepKey}`) }}
+          </span>
+        </p>
+      </header>
 
-          <p v-if="reviewStore.error" class="review-view__error">
-            {{ reviewStore.error }}
-          </p>
-        </template>
-      </div>
-    </Transition>
+      <!-- Step content. One section visible at a time, with a soft fade between. -->
+      <Transition name="review-fade" mode="out-in">
+        <div :key="currentStep" ref="stepRef" class="review-view__step">
+          <template v-if="currentStep === 1">
+            <h1 class="review-view__prompt">
+              {{ t('review.wren.open') }}
+            </h1>
 
-    <!-- Step navigation. Anchored to the bottom of the column so the Next
+            <p v-if="headlineCallout" class="review-view__callout">
+              {{ headlineCallout }}
+            </p>
+
+            <MoodPicker v-model="mood" class="review-view__body" />
+          </template>
+
+          <template v-else-if="currentStep === 2">
+            <h1 class="review-view__prompt">
+              {{ t('review.wren.wins') }}
+            </h1>
+
+            <WinPicker v-model="wins" :tasks="doneTasks" class="review-view__body" />
+          </template>
+
+          <template v-else-if="currentStep === 3">
+            <h1 class="review-view__prompt">
+              {{ t('review.wren.friction') }}
+            </h1>
+
+            <FrictionInput v-model="friction" class="review-view__body" />
+          </template>
+
+          <template v-else-if="currentStep === 4">
+            <h1 class="review-view__prompt">
+              {{ t('review.wren.leftovers') }}
+            </h1>
+
+            <div v-if="pendingTasks.length" class="review-view__body">
+              <button type="button" class="review-view__bulk" @click="moveAllToTomorrow">
+                {{ t('review.leftover.moveAll') }}
+              </button>
+
+              <LeftoverRow
+                v-for="task in pendingTasks"
+                :key="task.id"
+                :task="task"
+                :action="leftoverAction(task.id)"
+                @update:action="kind => setLeftover(task.id, kind)"
+              />
+            </div>
+
+            <p v-else class="review-view__empty">
+              {{ t('review.leftover.empty') }}
+            </p>
+          </template>
+
+          <template v-else-if="currentStep === 5">
+            <h1 class="review-view__prompt">
+              {{ t('review.wren.intent') }}
+            </h1>
+
+            <TomorrowIntent
+              v-model="tomorrowIntent"
+              class="review-view__body"
+              @keydown.enter.prevent="next"
+            />
+          </template>
+
+          <template v-else>
+            <!-- Finale: dynamic send-off + Finish. -->
+            <SendoffCard
+              :input="sendoffInput"
+              :saving="reviewStore.saving"
+              :disabled="!mood"
+              :saved="saved && !editing"
+              @finish="finishReview"
+              @edit="onEdit"
+            />
+
+            <p v-if="reviewStore.error" class="review-view__error">
+              {{ reviewStore.error }}
+            </p>
+          </template>
+        </div>
+      </Transition>
+
+      <!-- Step navigation. Anchored to the bottom of the column so the Next
          button never floats in the middle of the page. -->
-    <nav v-if="!isFinale" class="review-view__nav">
-      <AppButton
-        v-if="currentStep > 1"
-        variant="ghost"
-        @click="prev"
-      >
-        ← {{ t('review.back') }}
-      </AppButton>
+      <nav v-if="!isFinale" class="review-view__nav">
+        <AppButton
+          v-if="currentStep > 1"
+          variant="ghost"
+          @click="prev"
+        >
+          ← {{ t('review.back') }}
+        </AppButton>
 
-      <span v-else />
+        <span v-else />
 
-      <AppButton
-        variant="primary"
-        :disabled="!canAdvance"
-        @click="next"
-      >
-        {{ nextLabel }} →
-      </AppButton>
-    </nav>
-
+        <AppButton
+          variant="primary"
+          :disabled="!canAdvance"
+          @click="next"
+        >
+          {{ nextLabel }} →
+        </AppButton>
+      </nav>
     </AppCard>
 
     <!-- Wren cross-app upsell only on the finale — the close is the emotional
@@ -285,6 +305,7 @@ export default {
       const el = stepRef.value
       if (!el) return
       const first = el.querySelector('textarea, input[type="text"], input:not([type])')
+
       if (first && typeof first.focus === 'function') {
         first.focus()
       }
@@ -339,10 +360,12 @@ export default {
 
     function hydrateFromStore() {
       const r = reviewStore.review
+
       if (!r) {
         for (const task of pendingTasks.value) {
           leftoverActions.value[task.id] = { kind: 'tomorrow' }
         }
+
         return
       }
 
@@ -388,9 +411,11 @@ export default {
 
     function moveAllToTomorrow() {
       const next = { ...leftoverActions.value }
+
       for (const task of pendingTasks.value) {
         next[task.id] = { kind: 'tomorrow' }
       }
+
       leftoverActions.value = next
     }
 
@@ -502,6 +527,7 @@ export default {
 
     function onDismissWrenUpsell() {
       showWrenUpsell.value = false
+
       try {
         window.localStorage.setItem(WREN_UPSELL_DISMISSED_KEY, 'true')
       } catch {

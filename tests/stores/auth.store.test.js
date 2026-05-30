@@ -5,7 +5,9 @@ import { useAuthStore } from '@/stores/auth.store'
 
 vi.mock('@/api/apollo', () => ({
   apolloClient: {
-    mutate: vi.fn()
+    mutate: vi.fn(),
+    query: vi.fn(),
+    clearStore: vi.fn().mockResolvedValue(undefined)
   },
   setAccessToken: vi.fn(),
   refreshAccessToken: vi.fn()
@@ -15,9 +17,12 @@ vi.mock('@/api/operations', () => ({
   LOGIN: 'LOGIN',
   REGISTER: 'REGISTER',
   LOGOUT: 'LOGOUT',
+  ME: 'ME',
   UPDATE_PROFILE: 'UPDATE_PROFILE',
   FORGOT_PASSWORD: 'FORGOT_PASSWORD',
-  RESET_PASSWORD: 'RESET_PASSWORD'
+  RESET_PASSWORD: 'RESET_PASSWORD',
+  CHANGE_PASSWORD: 'CHANGE_PASSWORD',
+  DELETE_ACCOUNT: 'DELETE_ACCOUNT'
 }))
 
 vi.mock('@/composables/useErrorToast', () => ({
@@ -126,6 +131,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { login: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.login('ada@example.com', 'password')
 
@@ -148,6 +154,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { login: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.login('ada@example.com', 'password')
       expect(store.loading).toBe(false)
@@ -172,6 +179,7 @@ describe('auth.store', () => {
       apolloClient.mutate
         .mockRejectedValueOnce(new Error('first error'))
         .mockResolvedValueOnce({ data: { login: { accessToken: fakeToken, user: fakeUser } } })
+
       const store = useAuthStore()
       await store.login('ada@example.com', 'bad').catch(() => {})
       expect(store.error).toBe('first error')
@@ -183,8 +191,10 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { login: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.login('ada@example.com', 'secret')
+
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { email: 'ada@example.com', password: 'secret' } })
       )
@@ -196,6 +206,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { register: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.register('ada@example.com', 'password', 'Ada')
 
@@ -218,6 +229,7 @@ describe('auth.store', () => {
       await expect(store.register('ada@example.com', 'password', 'Ada')).rejects.toThrow(
         'email taken'
       )
+
       expect(store.error).toBe('email taken')
     })
 
@@ -232,6 +244,7 @@ describe('auth.store', () => {
       apolloClient.mutate
         .mockRejectedValueOnce(new Error('email taken'))
         .mockResolvedValueOnce({ data: { register: { accessToken: fakeToken, user: fakeUser } } })
+
       const store = useAuthStore()
       await store.register('ada@example.com', 'password', 'Ada').catch(() => {})
       expect(store.error).toBe('email taken')
@@ -243,8 +256,10 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { register: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.register('ada@example.com', 'secret', 'Ada')
+
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({
           variables: { email: 'ada@example.com', password: 'secret', name: 'Ada' }
@@ -258,6 +273,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { login: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.login('ada@example.com', 'password')
 
@@ -286,6 +302,7 @@ describe('auth.store', () => {
     it('logs the mutation failure in dev (WEB-W1-10)', async () => {
       vi.stubEnv('DEV', true)
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       apolloClient.mutate
         .mockResolvedValueOnce({ data: { login: { accessToken: fakeToken, user: fakeUser } } })
         .mockRejectedValueOnce(new Error('logout failed'))
@@ -298,6 +315,7 @@ describe('auth.store', () => {
         expect.stringContaining('[auth] server-side logout failed'),
         'logout failed'
       )
+
       warnSpy.mockRestore()
       vi.unstubAllEnvs()
     })
@@ -305,6 +323,7 @@ describe('auth.store', () => {
     it('does not log mutation failure in production (WEB-W1-10)', async () => {
       vi.stubEnv('DEV', false)
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       apolloClient.mutate
         .mockResolvedValueOnce({ data: { login: { accessToken: fakeToken, user: fakeUser } } })
         .mockRejectedValueOnce(new Error('logout failed'))
@@ -350,6 +369,7 @@ describe('auth.store', () => {
         expect.stringContaining('[auth] session restore failed'),
         'Refresh failed'
       )
+
       warnSpy.mockRestore()
       vi.unstubAllEnvs()
     })
@@ -401,6 +421,7 @@ describe('auth.store', () => {
       apolloClient.mutate
         .mockRejectedValueOnce(new Error('not found'))
         .mockResolvedValueOnce({ data: { forgotPassword: true } })
+
       const store = useAuthStore()
       await store.forgotPassword('bad@example.com').catch(() => {})
       expect(store.error).toBe('not found')
@@ -414,6 +435,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { resetPassword: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.resetPassword('reset-token', 'newpass')
 
@@ -433,6 +455,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { resetPassword: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.resetPassword('reset-token', 'newpass')
       expect(store.loading).toBe(false)
@@ -457,6 +480,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockRejectedValueOnce(new Error('token expired')).mockResolvedValueOnce({
         data: { resetPassword: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.resetPassword('bad-token', 'newpass').catch(() => {})
       expect(store.error).toBe('token expired')
@@ -465,9 +489,194 @@ describe('auth.store', () => {
     })
   })
 
+  describe('changePassword()', () => {
+    it('resolves true on success and clears loading state', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { changePassword: true } })
+      const store = useAuthStore()
+
+      const result = await store.changePassword('old', 'newSecret1!')
+
+      expect(result).toBe(true)
+      expect(store.loading).toBe(false)
+    })
+
+    it('sends the currentPassword and newPassword variables to the mutation', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { changePassword: true } })
+      const store = useAuthStore()
+
+      await store.changePassword('old-pw', 'new-pw')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { currentPassword: 'old-pw', newPassword: 'new-pw' }
+        })
+      )
+    })
+
+    it('sets error.value and re-throws on server failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('current password incorrect'))
+      const store = useAuthStore()
+
+      await expect(store.changePassword('wrong', 'newSecret1!')).rejects.toThrow(
+        'current password incorrect'
+      )
+
+      expect(store.error).toBe('current password incorrect')
+    })
+
+    it('resets loading to false on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('boom'))
+      const store = useAuthStore()
+      await store.changePassword('old', 'newSecret1!').catch(() => {})
+      expect(store.loading).toBe(false)
+    })
+
+    it('clears error before each attempt', async () => {
+      apolloClient.mutate
+        .mockRejectedValueOnce(new Error('first error'))
+        .mockResolvedValueOnce({ data: { changePassword: true } })
+
+      const store = useAuthStore()
+      await store.changePassword('old', 'newSecret1!').catch(() => {})
+      expect(store.error).toBe('first error')
+      await store.changePassword('old', 'newSecret2!')
+      expect(store.error).toBe('')
+    })
+  })
+
+  describe('deleteAccount()', () => {
+    it('sends emailConfirmation to the DELETE_ACCOUNT mutation', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { deleteAccount: true } })
+      const store = useAuthStore()
+      store.setAuth({ accessToken: fakeToken, user: fakeUser })
+
+      await store.deleteAccount('ada@example.com')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutation: 'DELETE_ACCOUNT',
+          variables: { emailConfirmation: 'ada@example.com' }
+        })
+      )
+    })
+
+    it('clears local auth on success so the SPA can route to /login cleanly', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { deleteAccount: true } })
+      const store = useAuthStore()
+      store.setAuth({ accessToken: fakeToken, user: fakeUser })
+
+      await store.deleteAccount('ada@example.com')
+
+      expect(store.accessToken).toBeNull()
+      expect(store.user).toBeNull()
+      expect(localStorage.getItem('ayp_user')).toBeNull()
+    })
+
+    it('resolves the server boolean (true on success)', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { deleteAccount: true } })
+      const store = useAuthStore()
+      const result = await store.deleteAccount('ada@example.com')
+      expect(result).toBe(true)
+    })
+
+    it('falls back to true when the server omits the deleteAccount field', async () => {
+      // The mutation resolves a scalar; ?? true keeps the caller flow consistent
+      // when the server omits it from the data envelope (older API contract).
+      apolloClient.mutate.mockResolvedValueOnce({ data: {} })
+      const store = useAuthStore()
+      const result = await store.deleteAccount('ada@example.com')
+      expect(result).toBe(true)
+    })
+
+    it('sets error.value and re-throws on server failure without clearing auth', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('email mismatch'))
+      const store = useAuthStore()
+      store.setAuth({ accessToken: fakeToken, user: fakeUser })
+
+      await expect(store.deleteAccount('wrong@example.com')).rejects.toThrow('email mismatch')
+      expect(store.error).toBe('email mismatch')
+      // Auth must NOT be cleared on failure — the user is still signed in.
+      expect(store.accessToken).toBe(fakeToken)
+      expect(store.user).toEqual(fakeUser)
+    })
+
+    it('clears stale error before the next attempt', async () => {
+      apolloClient.mutate
+        .mockRejectedValueOnce(new Error('first error'))
+        .mockResolvedValueOnce({ data: { deleteAccount: true } })
+
+      const store = useAuthStore()
+      store.setAuth({ accessToken: fakeToken, user: fakeUser })
+
+      await store.deleteAccount('ada@example.com').catch(() => {})
+      expect(store.error).toBe('first error')
+      await store.deleteAccount('ada@example.com')
+      expect(store.error).toBe('')
+    })
+  })
+
+  describe('refreshMe()', () => {
+    it('queries ME with network-only and updates user + localStorage', async () => {
+      const fresh = { ...fakeUser, subscription: { tier: 'pro' } }
+      apolloClient.query.mockResolvedValueOnce({ data: { me: fresh } })
+      const store = useAuthStore()
+
+      const ok = await store.refreshMe()
+
+      expect(ok).toBe(true)
+
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'ME', fetchPolicy: 'network-only' })
+      )
+
+      expect(store.user).toEqual(fresh)
+      expect(JSON.parse(localStorage.getItem('ayp_user'))).toEqual(fresh)
+    })
+
+    it('returns false when the server returns no me field', async () => {
+      apolloClient.query.mockResolvedValueOnce({ data: {} })
+      const store = useAuthStore()
+      const ok = await store.refreshMe()
+      expect(ok).toBe(false)
+      expect(store.user).toBeNull()
+    })
+
+    it('returns false and swallows network errors so a polling caller can retry', async () => {
+      apolloClient.query.mockRejectedValueOnce(new Error('boom'))
+      const store = useAuthStore()
+      const ok = await store.refreshMe()
+      expect(ok).toBe(false)
+    })
+
+    it('does not throw when localStorage.setItem fails', async () => {
+      const fresh = { ...fakeUser, subscription: { tier: 'pro' } }
+      apolloClient.query.mockResolvedValueOnce({ data: { me: fresh } })
+
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('quota exceeded')
+      })
+
+      const store = useAuthStore()
+
+      const ok = await store.refreshMe()
+
+      // Server state is the truth; storage failure must not flip the result.
+      expect(ok).toBe(true)
+      expect(store.user).toEqual(fresh)
+      setItemSpy.mockRestore()
+    })
+  })
+
   describe('updateSettings()', () => {
-    it('merges partial settings with current settings', async () => {
-      const existingUser = { ...fakeUser, settings: { theme: 'warm', mode: 'light' } }
+    it('sends only the partial settings, never spreading current settings', async () => {
+      // Backend resolver uses $set with dotted paths, so partial updates work
+      // server-side. Spreading `current` would forward Apollo's __typename
+      // into UpdateSettingsInput and trigger a 400 at GraphQL validation.
+      const existingUser = {
+        ...fakeUser,
+        settings: { __typename: 'UserSettings', theme: 'warm', mode: 'light' }
+      }
+
       const updatedUser = { ...existingUser, settings: { theme: 'ink', mode: 'light' } }
       apolloClient.mutate.mockResolvedValueOnce({ data: { updateProfile: updatedUser } })
 
@@ -478,13 +687,14 @@ describe('auth.store', () => {
 
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { settings: { theme: 'ink', mode: 'light' } }
+          variables: { settings: { theme: 'ink' } }
         })
       )
+
       expect(store.user).toEqual(updatedUser)
     })
 
-    it('handles users with no existing settings (defaults to empty object)', async () => {
+    it('sends partial settings unchanged when user has no existing settings', async () => {
       const userNoSettings = { ...fakeUser, settings: null }
       const updatedUser = { ...fakeUser, settings: { theme: 'ink' } }
       apolloClient.mutate.mockResolvedValueOnce({ data: { updateProfile: updatedUser } })
@@ -570,14 +780,17 @@ describe('auth.store', () => {
       vi.stubEnv('VITE_USE_MOCKS', 'true')
       const store = useAuthStore()
       store.devLogin()
+
       expect(store.user).toMatchObject({
         id: 'dev-user',
         name: 'Dev Tester',
         email: 'dev@allyouplan.test'
       })
-      // WEB-W1-16: mock user mirrors the LOGIN UserFields shape.
+
+      // mock user mirrors the LOGIN UserFields shape.
       expect(store.user.timezone).toBeTypeOf('string')
       expect(store.user.streak).toEqual({ current: 0, best: 0, lastCompletionDate: null })
+
       expect(store.user.settings).toMatchObject({
         theme: 'default',
         mode: 'auto',
@@ -586,6 +799,7 @@ describe('auth.store', () => {
         stalledNudgeDays: 7,
         journalVisibility: 'private'
       })
+
       expect(Array.isArray(store.user.settings.checkIns)).toBe(true)
       expect(store.accessToken).toBe('dev-mock-token')
       expect(store.isAuthenticated).toBe(true)
@@ -603,6 +817,7 @@ describe('auth.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { login: { accessToken: fakeToken, user: fakeUser } }
       })
+
       const store = useAuthStore()
       await store.login('ada@example.com', 'password')
       expect(store.userName).toBe('Ada')

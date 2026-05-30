@@ -1,12 +1,15 @@
 <template>
   <div class="wren-upgrade-chip">
+    <!-- AppIcon -->
     <SparklesIcon class="wren-upgrade-chip__icon" aria-hidden="true" />
 
+    <!-- Summary -->
     <span class="wren-upgrade-chip__summary">
       {{ action.summary || 'Upgrade to Pro' }}
     </span>
 
-    <Button
+    <!-- Upgrade CTA -->
+    <AppButton
       variant="primary"
       size="sm"
       class="wren-upgrade-chip__btn"
@@ -14,13 +17,13 @@
     >
       Upgrade to Pro
       <ArrowUpRightIcon class="wren-upgrade-chip__btn-icon" aria-hidden="true" />
-    </Button>
+    </AppButton>
   </div>
 </template>
 
 <script>
 import { SparklesIcon, ArrowUpRightIcon } from '@heroicons/vue/24/outline'
-import Button from '@/components/ui/Button.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import { useBilling } from '@/composables/useBilling.js'
 
 /**
@@ -32,20 +35,18 @@ import { useBilling } from '@/composables/useBilling.js'
  * Props:
  *   - action (Object, required): { kind: 'upgrade', summary, planId }. Shape
  *     matches the backend payload from src/domains/wren/resolvers.ts cap-hit
- *     branch (commit 39f75d4).
+ *     branch.
  *
  * Emits:
  *   - upgrade(planId): bubbles up the planId so a parent can intercept and
  *     dispatch a custom checkout flow if needed. By default the chip also
- *     calls useBilling().startUpgrade(planId) so users get the standard flow
- *     even if no parent listener is wired (most call sites today).
- *
- * Stripe checkout is a separate workstream — startUpgrade currently logs and
- * shows a "coming soon" toast.
+ *     calls useBilling().startUpgrade(planId) which runs the
+ *     createCheckoutSession GraphQL mutation and redirects to the hosted
+ *     Stripe Checkout URL.
  */
 export default {
   name: 'WrenUpgradeChip',
-  components: { Button, SparklesIcon, ArrowUpRightIcon },
+  components: { AppButton, SparklesIcon, ArrowUpRightIcon },
   props: {
     action: {
       type: Object,
@@ -54,14 +55,29 @@ export default {
     }
   },
   emits: ['upgrade'],
-  methods: {
-    onUpgrade() {
-      const planId = this.action.planId || 'wren-pro'
-      this.$emit('upgrade', planId)
+  setup(props, { emit }) {
+    return { onUpgrade }
+
+    // -- Function definitions --
+
+    /**
+     * Emit `upgrade` with the resolved planId, then fire-and-forget the
+     * billing composable so the CTA still works when no parent intercepts.
+     */
+    function onUpgrade() {
+      const planId = props.action.planId || 'wren-pro'
+      emit('upgrade', planId)
+
       // Default behaviour: invoke the billing composable so the CTA does
-      // something even when no parent intercepts the event.
+      // something even when no parent intercepts the event. startUpgrade is
+      // async but we deliberately don't await it — the redirect happens
+      // inside the composable and any error surfaces as a toast.
       try {
-        useBilling().startUpgrade(planId)
+        // Catch any rejection so the click handler never reports an
+        // unhandled promise to the console.
+        useBilling().startUpgrade(planId).catch(() => {
+          /* startUpgrade surfaces its own toast on error */
+        })
       } catch {
         // Composable can throw in test envs without Pinia / app context;
         // the emitted event is sufficient for tests.

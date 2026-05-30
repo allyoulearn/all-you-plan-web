@@ -54,7 +54,9 @@ export function createMockLink(registry) {
           observer.complete()
           return
         }
+
         const obs = fixture(operation.variables ?? {})
+
         if (!obs || typeof obs.subscribe !== 'function') {
           const msg = `[mock] Subscription fixture for "${field}" must return an Observable`
           console.warn(msg)
@@ -62,11 +64,13 @@ export function createMockLink(registry) {
           observer.complete()
           return
         }
+
         const sub = obs.subscribe({
           next: value => observer.next(value),
           error: err => observer.error(err),
           complete: () => observer.complete()
         })
+
         return () => sub.unsubscribe()
       }
 
@@ -74,10 +78,12 @@ export function createMockLink(registry) {
         observer.next({ data: fixture(operation.variables ?? {}) })
       } else {
         console.warn(`[mock] No fixture for root field "${field}" — returning error response.`)
+
         observer.next({
           errors: [{ message: `[mock] No fixture for root field "${field}"` }]
         })
       }
+
       observer.complete()
     })
   })

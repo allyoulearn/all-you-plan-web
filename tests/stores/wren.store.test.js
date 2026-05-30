@@ -27,6 +27,7 @@ vi.mock('@/api/operations', () => ({
 }))
 
 const mockToastError = vi.fn()
+
 vi.mock('@/composables/useErrorToast', () => ({
   useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
 }))
@@ -71,11 +72,13 @@ describe('wren.store', () => {
   describe('send()', () => {
     it('optimistically appends the user message before the mutation resolves', async () => {
       let resolvePromise
+
       apolloClient.mutate.mockReturnValueOnce(
         new Promise(resolve => {
           resolvePromise = resolve
         })
       )
+
       const store = useWrenStore()
       const promise = store.send('Hello Wren')
 
@@ -99,11 +102,13 @@ describe('wren.store', () => {
 
     it('the sending guard prevents a double-send', async () => {
       let resolveFirst
+
       apolloClient.mutate.mockReturnValueOnce(
         new Promise(resolve => {
           resolveFirst = resolve
         })
       )
+
       const store = useWrenStore()
       const first = store.send('First')
 
@@ -135,6 +140,7 @@ describe('wren.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
       const store = useWrenStore()
       await store.send('   hello   ')
+
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { text: 'hello' } })
       )
@@ -183,6 +189,7 @@ describe('wren.store', () => {
 
       await store.send('first')
       expect(apolloClient.subscribe).toHaveBeenCalledTimes(1)
+
       expect(apolloClient.subscribe).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { conversationId: 'c1' } })
       )
@@ -198,13 +205,16 @@ describe('wren.store', () => {
       // Wire a real callback through the subscribe stub so emitting an event
       // exercises the next handler.
       let nextCb
+
       apolloClient.subscribe.mockReturnValueOnce({
         subscribe: ({ next }) => {
           nextCb = next
           return { unsubscribe: () => {} }
         }
       })
+
       apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
+
       apolloClient.mutate.mockResolvedValueOnce({
         data: {
           sendWrenMessage: {
@@ -217,23 +227,28 @@ describe('wren.store', () => {
           }
         }
       })
+
       const store = useWrenStore()
       await store.send('hi')
+
       nextCb({
         data: { wrenStream: { __typename: 'WrenTokenDelta', messageId: 'cm1', text: 'hello' } }
       })
+
       const coachMsg = store.messages.find(m => m.id === 'cm1')
       expect(coachMsg.text).toBe('hello')
     })
 
     it('sets error.value when the subscription onError fires', async () => {
       let errCb
+
       apolloClient.subscribe.mockReturnValueOnce({
         subscribe: ({ error }) => {
           errCb = error
           return { unsubscribe: () => {} }
         }
       })
+
       apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
       apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
       const store = useWrenStore()
@@ -268,6 +283,7 @@ describe('useWrenStore — action mutations', () => {
       const store = useWrenStore()
       const ok = await store.undo('u1')
       expect(ok).toBe(true)
+
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { undoToken: 'u1' } })
       )
@@ -296,6 +312,7 @@ describe('useWrenStore — action mutations', () => {
       const store = useWrenStore()
       const res = await store.confirm('ct1')
       expect(res).toEqual(applied)
+
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { confirmToken: 'ct1' } })
       )
@@ -342,6 +359,7 @@ describe('useWrenStore — settings + export', () => {
         wrenSettings: { displayName: 'Lucas', tone: 'direct', enabled: true, dailyTurnCap: 50 }
       }
     })
+
     const store = useWrenStore()
     await store.loadSettings()
     expect(store.settings).toMatchObject({ displayName: 'Lucas', tone: 'direct' })
@@ -361,6 +379,7 @@ describe('useWrenStore — settings + export', () => {
     const res = await store.updateSettings({ displayName: null })
     expect(res).toEqual(next)
     expect(store.settings).toEqual(next)
+
     expect(apolloClient.mutate).toHaveBeenCalledWith(
       expect.objectContaining({ variables: { displayName: null } })
     )
@@ -372,6 +391,7 @@ describe('useWrenStore — settings + export', () => {
         updateWrenSettings: { displayName: null, tone: 'warm', enabled: true, dailyTurnCap: null }
       }
     })
+
     const store = useWrenStore()
     await store.updateSettings({ displayName: null, dailyTurnCap: null })
     const variables = apolloClient.mutate.mock.calls[0][0].variables
@@ -391,6 +411,7 @@ describe('useWrenStore — settings + export', () => {
     apolloClient.query.mockResolvedValueOnce({
       data: { exportWrenConversation: { format: 'markdown', filename: 'x.md', content: '# hi' } }
     })
+
     const store = useWrenStore()
     const res = await store.exportConversation('markdown')
     expect(res).toMatchObject({ format: 'markdown', filename: 'x.md' })
@@ -411,9 +432,11 @@ describe('useWrenStore — streaming events', () => {
 
   it('appends token deltas to the placeholder coach message text', () => {
     const store = useWrenStore()
+
     store.messages = [
       { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
     ]
+
     store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi ' })
     store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'there' })
     expect(store.messages[0].text).toBe('hi there')
@@ -421,9 +444,11 @@ describe('useWrenStore — streaming events', () => {
 
   it('inserts a pending action chip on WrenActionStarted', () => {
     const store = useWrenStore()
+
     store.messages = [
       { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenActionStarted',
       messageId: 'p1',
@@ -431,7 +456,9 @@ describe('useWrenStore — streaming events', () => {
       kind: 'task.creating',
       summary: 'Adding task…'
     })
+
     expect(store.messages[0].actions).toHaveLength(1)
+
     expect(store.messages[0].actions[0]).toMatchObject({
       __typename: 'WrenAppliedAction',
       kind: 'task.creating',
@@ -443,6 +470,7 @@ describe('useWrenStore — streaming events', () => {
 
   it('reconciles a pending chip with WrenActionEvent (matched by tempId)', () => {
     const store = useWrenStore()
+
     store.messages = [
       {
         id: 'p1',
@@ -461,6 +489,7 @@ describe('useWrenStore — streaming events', () => {
         createdAt: ''
       }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenActionEvent',
       messageId: 'p1',
@@ -475,7 +504,9 @@ describe('useWrenStore — streaming events', () => {
         undoExpiresAt: '2030-05-23T00:01:00Z'
       }
     })
+
     expect(store.messages[0].actions).toHaveLength(1)
+
     expect(store.messages[0].actions[0]).toMatchObject({
       kind: 'task.created',
       summary: 'Added "X"',
@@ -485,9 +516,11 @@ describe('useWrenStore — streaming events', () => {
 
   it('appends a pending-confirmation chip on WrenPendingConfirmationEvent', () => {
     const store = useWrenStore()
+
     store.messages = [
       { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenPendingConfirmationEvent',
       messageId: 'p1',
@@ -498,7 +531,9 @@ describe('useWrenStore — streaming events', () => {
       refId: 'abc',
       expiresAt: '2030-05-23T00:05:00Z'
     })
+
     expect(store.messages[0].actions).toHaveLength(1)
+
     expect(store.messages[0].actions[0]).toMatchObject({
       __typename: 'WrenPendingConfirmation',
       confirmToken: 'ct1',
@@ -508,6 +543,7 @@ describe('useWrenStore — streaming events', () => {
 
   it('replaces placeholder with final message on WrenComplete', () => {
     const store = useWrenStore()
+
     store.messages = [
       {
         id: 'p1',
@@ -518,6 +554,7 @@ describe('useWrenStore — streaming events', () => {
         createdAt: ''
       }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenComplete',
       message: {
@@ -529,6 +566,7 @@ describe('useWrenStore — streaming events', () => {
         createdAt: '2026-05-23T00:01:00Z'
       }
     })
+
     expect(store.messages[0].status).toBe('complete')
     expect(store.messages[0].text).toBe('partial complete')
   })
@@ -536,6 +574,7 @@ describe('useWrenStore — streaming events', () => {
   it('appends a final message on WrenComplete when the placeholder is not yet present (mutation-vs-subscription race)', () => {
     const store = useWrenStore()
     store.messages = []
+
     store.applyStreamEvent({
       __typename: 'WrenComplete',
       message: {
@@ -547,6 +586,7 @@ describe('useWrenStore — streaming events', () => {
         createdAt: '2026-05-23T00:01:00Z'
       }
     })
+
     expect(store.messages).toHaveLength(1)
     expect(store.messages[0].id).toBe('p1')
     expect(store.messages[0].status).toBe('complete')
@@ -563,21 +603,25 @@ describe('useWrenStore — streaming events', () => {
   it('WrenError without a placeholder still sets error.value', () => {
     const store = useWrenStore()
     store.messages = []
+
     store.applyStreamEvent({
       __typename: 'WrenError',
       messageId: null,
       code: 'PROVIDER_DOWN',
       message: 'down'
     })
+
     expect(store.error).toMatch(/PROVIDER_DOWN/)
     expect(store.messages).toEqual([])
   })
 
   it('WrenActionEvent appends a chip if no tempId is provided', () => {
     const store = useWrenStore()
+
     store.messages = [
       { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenActionEvent',
       messageId: 'p1',
@@ -590,12 +634,14 @@ describe('useWrenStore — streaming events', () => {
         undoExpiresAt: '2030-05-23T00:00:00Z'
       }
     })
+
     expect(store.messages[0].actions).toHaveLength(1)
     expect(store.messages[0].actions[0]).toMatchObject({ summary: 'Added "Y"', undoToken: 'u2' })
   })
 
   it('WrenConfirmationResolvedEvent (confirmed + action) upgrades the chip to applied', () => {
     const store = useWrenStore()
+
     store.messages = [
       {
         id: 'p1',
@@ -612,6 +658,7 @@ describe('useWrenStore — streaming events', () => {
         createdAt: ''
       }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenConfirmationResolvedEvent',
       messageId: 'p1',
@@ -624,12 +671,14 @@ describe('useWrenStore — streaming events', () => {
         undoExpiresAt: '2030-05-23T00:00:00Z'
       }
     })
+
     expect(store.messages[0].actions[0].__typename).toBe('WrenAppliedAction')
     expect(store.messages[0].actions[0].summary).toBe('Deleted "X"')
   })
 
   it('WrenConfirmationResolvedEvent (cancelled) marks the existing chip resolved without losing fields', () => {
     const store = useWrenStore()
+
     store.messages = [
       {
         id: 'p1',
@@ -646,6 +695,7 @@ describe('useWrenStore — streaming events', () => {
         createdAt: ''
       }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenConfirmationResolvedEvent',
       messageId: 'p1',
@@ -653,21 +703,25 @@ describe('useWrenStore — streaming events', () => {
       resolution: 'cancelled',
       action: null
     })
+
     expect(store.messages[0].actions[0].resolution).toBe('cancelled')
     expect(store.messages[0].actions[0].summary).toBe('Delete?')
   })
 
   it('marks message failed on WrenError', () => {
     const store = useWrenStore()
+
     store.messages = [
       { id: 'p1', sender: 'coach', text: '', actions: [], status: 'streaming', createdAt: '' }
     ]
+
     store.applyStreamEvent({
       __typename: 'WrenError',
       messageId: 'p1',
       code: 'PROVIDER_DOWN',
       errorMessage: 'oops'
     })
+
     expect(store.messages[0].status).toBe('failed')
     expect(store.error).toMatch(/PROVIDER_DOWN|oops/i)
   })
@@ -675,12 +729,14 @@ describe('useWrenStore — streaming events', () => {
   it('WrenError shows a toast so the user sees it (no view renders store.error)', () => {
     const store = useWrenStore()
     store.messages = []
+
     store.applyStreamEvent({
       __typename: 'WrenError',
       messageId: null,
       code: 'NETWORK',
       errorMessage: 'dropped'
     })
+
     expect(mockToastError).toHaveBeenCalledWith(expect.any(Error), 'Wren stream error')
   })
 })
@@ -712,11 +768,13 @@ describe('useWrenStore — reset()', () => {
   it('reset() unsubscribes any active subscription via teardown', () => {
     const store = useWrenStore()
     const unsub = vi.fn()
+
     // Simulate an active subscription by stubbing apolloClient.subscribe to
     // return an observable whose subscribe returns our unsubscribe spy.
     apolloClient.subscribe.mockReturnValueOnce({
       subscribe: () => ({ unsubscribe: unsub })
     })
+
     apolloClient.query.mockResolvedValueOnce({ data: { wrenConversation: { id: 'c1' } } })
     apolloClient.mutate.mockResolvedValueOnce({ data: { sendWrenMessage: coachReply } })
 
@@ -745,6 +803,7 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('resets the window when a delta arrives within the timeout', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
       store.messages = [streamingPlaceholder()]
@@ -765,6 +824,7 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('flips to interrupted + sets error + toasts when the watchdog fires', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
       store.messages = [streamingPlaceholder()]
@@ -784,6 +844,7 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('WrenComplete cancels the watchdog so a late timer is a no-op', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
       store.messages = [streamingPlaceholder()]
@@ -814,6 +875,7 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('WrenError cancels the watchdog (message stays failed, not overwritten to interrupted)', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
       store.messages = [streamingPlaceholder()]
@@ -825,6 +887,7 @@ describe('useWrenStore — stream watchdog', () => {
         code: 'PROVIDER_DOWN',
         message: 'down'
       })
+
       expect(store.messages[0].status).toBe('failed')
 
       // Drain time well past the threshold — status must not flip.
@@ -837,12 +900,14 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('WrenActionEvent on a streaming message also re-arms the watchdog', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
       store.messages = [streamingPlaceholder()]
       store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'hi' })
 
       vi.advanceTimersByTime(20_000)
+
       // Action event with no tempId — still counts as activity.
       store.applyStreamEvent({
         __typename: 'WrenActionEvent',
@@ -850,6 +915,7 @@ describe('useWrenStore — stream watchdog', () => {
         tempId: null,
         action: { summary: 'Added X', undoToken: null, undoExpiresAt: null }
       })
+
       vi.advanceTimersByTime(20_000) // total 40s but only 20s since action event
 
       expect(store.messages[0].status).toBe('streaming')
@@ -861,6 +927,7 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('reset() cancels all pending watchdogs so they cannot fire post-reset', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
       store.messages = [streamingPlaceholder('p1'), streamingPlaceholder('p2')]
@@ -880,14 +947,17 @@ describe('useWrenStore — stream watchdog', () => {
 
   it('does not arm the watchdog for a message that is not in streaming state', () => {
     vi.useFakeTimers()
+
     try {
       const store = useWrenStore()
+
       // Placeholder already 'complete' — incoming late delta should not
       // resurrect a watchdog window. (Defensive: this guards against a stray
       // event for a finalised message overwriting status downstream.)
       store.messages = [
         { id: 'p1', sender: 'coach', text: 'done', actions: [], status: 'complete', createdAt: '' }
       ]
+
       store.applyStreamEvent({ __typename: 'WrenTokenDelta', messageId: 'p1', text: 'late' })
       vi.advanceTimersByTime(60_000)
 

@@ -59,6 +59,27 @@ export const WREN_CONVERSATION_QUERY = gql`
   }
 `
 
+export const WREN_CONVERSATIONS_QUERY = gql`
+  query WrenConversations {
+    wrenConversations {
+      id
+      title
+      preview
+      updatedAt
+      messageCount
+    }
+  }
+`
+
+export const WREN_CONVERSATION_MESSAGES_QUERY = gql`
+  query WrenConversationMessages($conversationId: ID!) {
+    wrenConversationMessages(conversationId: $conversationId) {
+      ...WrenMessageFields
+    }
+  }
+  ${WREN_MESSAGE_FIELDS}
+`
+
 export const SEND_WREN_MESSAGE = gql`
   mutation SendWrenMessage($text: String!) {
     sendWrenMessage(text: $text) {

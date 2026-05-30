@@ -96,6 +96,7 @@ describe('stats.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('first error'))
         .mockResolvedValueOnce({ data: { stats: fakeStats } })
+
       const store = useStatsStore()
       await store.load()
       expect(store.error).toBe('first error')
@@ -105,9 +106,11 @@ describe('stats.store', () => {
 
     it('replaces stats with the new API response', async () => {
       const updatedStats = { ...fakeStats, streakDays: 10 }
+
       apolloClient.query
         .mockResolvedValueOnce({ data: { stats: fakeStats } })
         .mockResolvedValueOnce({ data: { stats: updatedStats } })
+
       const store = useStatsStore()
       await store.load()
       expect(store.stats.streakDays).toBe(7)

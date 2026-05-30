@@ -1,9 +1,9 @@
 <template>
   <div>
-    <ScreenHeading
-      eyebrow="Looking back · Stats"
-      title="Six months of"
-      emphasis="showing up."
+    <AppScreenHeading
+      :eyebrow="`${t('nav.lookingBack')} · ${t('nav.itemStats')}`"
+      :title="t('stats.headingPrefix')"
+      :emphasis="t('stats.headingEmphasis')"
     />
 
     <div v-if="store.loading" class="stats-view__status">
@@ -25,14 +25,14 @@
       </div>
 
       <!-- Activity grid -->
-      <SectionHeader :label="t('stats.activityGrid')" />
+      <AppSectionHeader :label="t('stats.activityGrid')" />
 
-      <Card>
+      <AppCard>
         <Heatmap :values="heatmapValues" />
-      </Card>
+      </AppCard>
 
       <!-- Habits ranked -->
-      <SectionHeader :label="t('stats.habitsRanked')" :count="store.stats.rankedHabits.length" />
+      <AppSectionHeader :label="t('stats.habitsRanked')" :count="store.stats.rankedHabits.length" />
 
       <div v-if="store.stats.rankedHabits.length === 0" class="stats-view__status">
         {{ t('stats.noHabits') }}
@@ -72,15 +72,15 @@
 import { onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStatsStore } from '@/stores/stats.store.js'
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import SectionHeader from '@/components/ui/SectionHeader.vue'
-import Card from '@/components/ui/Card.vue'
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
+import AppCard from '@/components/ui/AppCard.vue'
 import KpiTile from '@/components/today/KpiTile.vue'
 import Heatmap from '@/components/stats/Heatmap.vue'
 
 export default {
   name: 'StatsView',
-  components: { ScreenHeading, SectionHeader, Card, KpiTile, Heatmap },
+  components: { AppScreenHeading, AppSectionHeader, AppCard, KpiTile, Heatmap },
   setup() {
     // -- State --
     const store = useStatsStore()
@@ -122,7 +122,8 @@ export default {
   }
 
   &__kpi-strip {
-    @apply mb-7 grid grid-cols-3 gap-3.5;
+    // 1-up on phones, 3-up from sm+.
+    @apply mb-7 grid grid-cols-1 gap-3.5 sm:grid-cols-3;
   }
 
   &__habits-list {

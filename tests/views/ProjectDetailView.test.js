@@ -20,15 +20,15 @@ vi.mock('vue-router', () => ({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const globalStubs = {
-  ScreenHeading: true,
-  SectionHeader: true,
-  Button: { template: '<button type="button"><slot /></button>' },
-  Card: { template: '<div class="card"><slot /></div>' },
-  Pill: { template: '<span class="pill"><slot /></span>' },
-  Checkbox: { template: '<input type="checkbox" :checked="$attrs.modelValue" />' },
-  ProgressBar: true,
+  AppScreenHeading: true,
+  AppSectionHeader: true,
+  AppButton: { template: '<button type="button"><slot /></button>' },
+  AppCard: { template: '<div class="card"><slot /></div>' },
+  AppPill: { template: '<span class="pill"><slot /></span>' },
+  AppCheckbox: { template: '<input type="checkbox" :checked="$attrs.modelValue" />' },
+  AppProgressBar: true,
   RouterLink: { template: '<a :href="$attrs.to"><slot /></a>' },
-  ConfirmDialog: true,
+  AppConfirmDialog: true,
   CreateProjectTaskModal: true
 }
 
@@ -125,6 +125,7 @@ describe('ProjectDetailView', () => {
       loadingBoard: false,
       errorBoard: ''
     })
+
     expect(wrapper.text()).toContain('Project not found')
   })
 
@@ -191,7 +192,7 @@ describe('ProjectDetailView', () => {
 
   it('renders all 4 section headers', () => {
     const wrapper = mountDetail({ board: BOARD })
-    const headers = wrapper.findAll('section-header-stub')
+    const headers = wrapper.findAll('app-section-header-stub')
     const labels = headers.map(el => el.attributes('label'))
     expect(labels).toContain('This week')
     expect(labels).toContain('Doing')
@@ -223,12 +224,13 @@ describe('ProjectDetailView', () => {
       columns: COLUMNS,
       tasksByColumn: COLUMNS.map(c => ({ columnId: c.id, tasks: [] }))
     }
+
     const wrapper = mountDetail({ board: emptyBoard })
     const empties = wrapper.findAll('.project-detail-view__section-empty')
     expect(empties.length).toBe(4)
   })
 
-  // ── completeTask via Checkbox ──────────────────────────────────────────────
+  // ── completeTask via AppCheckbox ──────────────────────────────────────────────
 
   it('calls store.completeTask when a task checkbox is toggled', async () => {
     const wrapper = mountDetail({ board: BOARD })

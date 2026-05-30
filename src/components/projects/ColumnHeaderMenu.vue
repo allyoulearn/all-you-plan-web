@@ -1,5 +1,6 @@
 <template>
   <div class="column-header-menu" :class="{ 'column-header-menu--open': open }">
+    <!-- Trigger button -->
     <button
       ref="triggerRef"
       type="button"
@@ -9,15 +10,17 @@
       aria-haspopup="menu"
       @click.stop="toggle"
     >
-      <Icon name="more" :size="16" />
+      <AppIcon name="more" :size="16" />
     </button>
 
+    <!-- Dropdown menu -->
     <ul
       v-if="open"
       ref="menuRef"
       class="column-header-menu__list"
       role="menu"
     >
+      <!-- Rename action -->
       <li role="none">
         <button
           type="button"
@@ -25,7 +28,7 @@
           class="column-header-menu__item"
           @click="emitAction('rename')"
         >
-          <Icon name="pencil" :size="14" />
+          <AppIcon name="pencil" :size="14" />
 
           <span>
             {{ t('kanban.rename') }}
@@ -33,6 +36,7 @@
         </button>
       </li>
 
+      <!-- Delete action -->
       <li role="none">
         <button
           type="button"
@@ -40,7 +44,7 @@
           class="column-header-menu__item column-header-menu__item--danger"
           @click="emitAction('delete')"
         >
-          <Icon name="trash" :size="14" />
+          <AppIcon name="trash" :size="14" />
 
           <span>
             {{ t('common.delete') }}
@@ -58,11 +62,11 @@
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Icon from '@/components/ui/Icon.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 export default {
   name: 'ColumnHeaderMenu',
-  components: { Icon },
+  components: { AppIcon },
   emits: ['rename', 'delete'],
   setup(_, { emit }) {
     const { t } = useI18n()
@@ -70,19 +74,40 @@ export default {
     const triggerRef = ref(null)
     const menuRef = ref(null)
 
+    onMounted(() => {
+      document.addEventListener('click', onDocClick)
+      document.addEventListener('keydown', onKey)
+    })
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    })
+
+    return { t, open, triggerRef, menuRef, toggle, emitAction }
+
+    // -- Function definitions --
+
+    /** Flip the dropdown open/closed. */
     function toggle() {
       open.value = !open.value
     }
 
+    /** Force the dropdown closed. */
     function close() {
       open.value = false
     }
 
+    /**
+     * Close the menu and re-emit a menu-item action to the parent.
+     * @param {'rename'|'delete'} name
+     */
     function emitAction(name) {
       close()
       emit(name)
     }
 
+    /** Document click handler: close the menu when clicking outside trigger/list. */
     function onDocClick(e) {
       if (!open.value) return
       const t1 = triggerRef.value
@@ -92,23 +117,13 @@ export default {
       close()
     }
 
+    /** Document keydown handler: close the menu on Escape. */
     function onKey(e) {
       if (e.key === 'Escape' && open.value) {
         e.stopPropagation()
         close()
       }
     }
-
-    onMounted(() => {
-      document.addEventListener('click', onDocClick)
-      document.addEventListener('keydown', onKey)
-    })
-    onBeforeUnmount(() => {
-      document.removeEventListener('click', onDocClick)
-      document.removeEventListener('keydown', onKey)
-    })
-
-    return { t, open, triggerRef, menuRef, toggle, emitAction }
   }
 }
 </script>

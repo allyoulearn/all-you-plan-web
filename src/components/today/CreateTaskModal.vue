@@ -1,31 +1,35 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('tasks.createTitle')"
     :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <form class="create-task-modal__form" @submit.prevent="handleSubmit">
-      <TextField
+      <!-- Title field -->
+      <AppTextField
         v-model="title"
         :label="t('tasks.title')"
         :placeholder="t('tasks.titlePlaceholder')"
         :invalid="submitted && !title.trim()"
       />
 
-      <TextField
+      <!-- Scheduled time -->
+      <AppTextField
         v-model="scheduledTime"
         type="time"
         :label="t('tasks.timeLabel')"
       />
 
-      <TextField
+      <!-- Tag field -->
+      <AppTextField
         v-model="tag"
         :label="t('tasks.tagLabel')"
         :placeholder="t('tasks.tagPlaceholder')"
       />
 
-      <TextField
+      <!-- Effort minutes -->
+      <AppTextField
         v-model="effortMinutes"
         type="number"
         :label="t('tasks.effort')"
@@ -36,20 +40,21 @@
       />
     </form>
 
+    <!-- Footer actions -->
     <template #footer>
-      <Button variant="ghost" :disabled="saving" @click="cancel">
+      <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
+      </AppButton>
 
-      <Button
+      <AppButton
         variant="primary"
         :disabled="saving || !title.trim() || effortInvalid"
         @click="handleSubmit"
       >
         {{ saving ? t('tasks.creating') : t('tasks.create') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
@@ -57,13 +62,13 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTodayStore } from '@/stores/today.store.js'
-import Modal from '@/components/ui/Modal.vue'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'CreateTaskModal',
-  components: { Modal, TextField, Button },
+  components: { AppModal, AppTextField, AppButton },
   props: {
     modelValue: { type: Boolean, default: false }
   },
@@ -82,7 +87,7 @@ export default {
     /**
      * True when the effort field is non-empty AND not a positive integer.
      * Empty effort is allowed (optional), but if provided it must be a
-     * finite integer >= 1 (WEB-W3-03).
+     * finite integer >= 1.
      */
     const effortInvalid = computed(() => {
       if (effortMinutes.value === '' || effortMinutes.value == null) return false
@@ -90,44 +95,12 @@ export default {
       return !Number.isFinite(n) || !Number.isInteger(n) || n < 1
     })
 
-    function reset() {
-      title.value = ''
-      scheduledTime.value = ''
-      tag.value = ''
-      effortMinutes.value = ''
-      submitted.value = false
-      saving.value = false
-    }
-
     watch(
       () => props.modelValue,
       open => {
         if (open) reset()
       }
     )
-
-    function cancel() {
-      emit('update:modelValue', false)
-    }
-
-    async function handleSubmit() {
-      submitted.value = true
-      if (!title.value.trim() || effortInvalid.value || saving.value) return
-      saving.value = true
-      try {
-        await store.createTask({
-          title: title.value.trim(),
-          scheduledTime: scheduledTime.value || undefined,
-          tag: tag.value.trim() || undefined,
-          effortMinutes: effortMinutes.value ? Number(effortMinutes.value) : undefined
-        })
-        emit('update:modelValue', false)
-      } catch {
-        // Error already toasted by the store
-      } finally {
-        saving.value = false
-      }
-    }
 
     return {
       t,
@@ -140,6 +113,45 @@ export default {
       saving,
       cancel,
       handleSubmit
+    }
+
+    // -- Function definitions --
+
+    /** Reset every form field; called whenever the modal opens. */
+    function reset() {
+      title.value = ''
+      scheduledTime.value = ''
+      tag.value = ''
+      effortMinutes.value = ''
+      submitted.value = false
+      saving.value = false
+    }
+
+    /** Close the modal without saving. */
+    function cancel() {
+      emit('update:modelValue', false)
+    }
+
+    /** Validate, then create the today task via the store; closes on success. */
+    async function handleSubmit() {
+      submitted.value = true
+      if (!title.value.trim() || effortInvalid.value || saving.value) return
+      saving.value = true
+
+      try {
+        await store.createTask({
+          title: title.value.trim(),
+          scheduledTime: scheduledTime.value || undefined,
+          tag: tag.value.trim() || undefined,
+          effortMinutes: effortMinutes.value ? Number(effortMinutes.value) : undefined
+        })
+
+        emit('update:modelValue', false)
+      } catch {
+        // Error already toasted by the store
+      } finally {
+        saving.value = false
+      }
     }
   }
 }

@@ -64,9 +64,11 @@ describe('useErrorToast', () => {
 
     it('handles multiple graphQLErrors by using the first message only', () => {
       const { toastError } = useErrorToast()
+
       const err = {
         graphQLErrors: [{ message: 'first error' }, { message: 'second error' }]
       }
+
       toastError(err)
       expect(toast.error).toHaveBeenCalledWith('first error')
     })

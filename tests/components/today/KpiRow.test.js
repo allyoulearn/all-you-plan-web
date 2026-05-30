@@ -130,6 +130,7 @@ describe('KpiRow', () => {
       { key: 'b', label: 'B', value: '2', unit: 'two' },
       { key: 'c', label: 'C', value: '3', unit: 'three' }
     ]
+
     const wrapper = mount(KpiRow, { props: { tiles }, global: globalConfig })
     expect(wrapper.findAll('.kpi-tile')).toHaveLength(3)
     expect(wrapper.text()).toContain('A')

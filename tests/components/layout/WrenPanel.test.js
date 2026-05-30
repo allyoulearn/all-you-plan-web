@@ -128,6 +128,7 @@ describe('WrenPanel', () => {
         { id: '1', sender: 'user', text: 'Hi', actions: [], createdAt: null },
         { id: '2', sender: 'coach', text: 'Hello!', actions: [], createdAt: null }
       ]
+
       const wrapper = mountPanel({ loading: false, messages })
       const bubbles = wrapper.findAll('.wren-bubble-stub')
       expect(bubbles).toHaveLength(2)
@@ -142,6 +143,7 @@ describe('WrenPanel', () => {
       const messages = [
         { id: '1', sender: 'user', text: 'Test message', actions: [], createdAt: null }
       ]
+
       const wrapper = mountPanel({ loading: false, messages })
       expect(wrapper.find('.wren-bubble-stub').text()).toBe('Test message')
     })
@@ -154,9 +156,11 @@ describe('WrenPanel', () => {
       const store = useWrenStore()
       store.load = vi.fn().mockResolvedValue(undefined)
       store.send = vi.fn().mockResolvedValue(undefined)
+
       const messages = [
         { id: '1', sender: 'coach', text: 'Hi', actions: ['Plan tomorrow'], createdAt: null }
       ]
+
       Object.assign(store, { messages, loading: false, sending: false, error: '' })
 
       const wrapper = mount(WrenPanel, {
@@ -189,12 +193,14 @@ describe('WrenPanel', () => {
       store.load = vi.fn().mockResolvedValue(undefined)
       store.send = vi.fn().mockResolvedValue(undefined)
       store[method] = vi.fn().mockResolvedValue(true)
+
       Object.assign(store, {
         messages: [{ id: '1', sender: 'coach', text: 'Hi', actions: [], createdAt: null }],
         loading: false,
         sending: false,
         error: ''
       })
+
       const wrapper = mount(WrenPanel, {
         global: {
           plugins: [i18n],
@@ -208,6 +214,7 @@ describe('WrenPanel', () => {
         },
         attachTo: document.body
       })
+
       await wrapper.find('.wb-stub').trigger('click')
       expect(store[method]).toHaveBeenCalledWith(`tok-${event}`)
     })
@@ -223,6 +230,7 @@ describe('WrenPanel', () => {
     it('renders chip text matching QUICK_PROMPTS', () => {
       const wrapper = mountPanel()
       const chips = wrapper.findAll('.wren-panel__chip')
+
       chips.forEach((chip, i) => {
         expect(chip.text()).toBe(QUICK_PROMPTS[i])
       })
@@ -231,6 +239,7 @@ describe('WrenPanel', () => {
     it('chip buttons have type="button" (WEB-T07-010)', () => {
       const wrapper = mountPanel()
       const chips = wrapper.findAll('.wren-panel__chip')
+
       chips.forEach(chip => {
         expect(chip.attributes('type')).toBe('button')
       })
@@ -346,14 +355,17 @@ describe('WrenPanel', () => {
     it('clicking export calls store.exportConversation with markdown', async () => {
       const wrapper = mountPanel()
       const store = useWrenStore()
+
       store.exportConversation = vi
         .fn()
         .mockResolvedValue({ format: 'markdown', filename: 'wren.md', content: '# hi' })
+
       // Stub URL.createObjectURL / revokeObjectURL for jsdom
       const origCreate = URL.createObjectURL
       const origRevoke = URL.revokeObjectURL
       URL.createObjectURL = vi.fn(() => 'blob:fake')
       URL.revokeObjectURL = vi.fn()
+
       try {
         await wrapper.find('.wren-panel__export-btn').trigger('click')
         await new Promise(r => setTimeout(r, 0))
@@ -367,14 +379,17 @@ describe('WrenPanel', () => {
     it('revokes the object URL after triggering the download', async () => {
       const wrapper = mountPanel()
       const store = useWrenStore()
+
       store.exportConversation = vi
         .fn()
         .mockResolvedValue({ format: 'markdown', filename: 'wren.md', content: '# hi' })
+
       const origCreate = URL.createObjectURL
       const origRevoke = URL.revokeObjectURL
       const revoke = vi.fn()
       URL.createObjectURL = vi.fn(() => 'blob:fake')
       URL.revokeObjectURL = revoke
+
       try {
         await wrapper.find('.wren-panel__export-btn').trigger('click')
         await new Promise(r => setTimeout(r, 0))

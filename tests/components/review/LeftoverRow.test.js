@@ -38,7 +38,11 @@ describe('LeftoverRow', () => {
 
   it('marks the matching chip as pressed', () => {
     const wrapper = mountRow({ action: { kind: 'drop' } })
-    const pressed = wrapper.findAll('.leftover-row__chip').filter(c => c.attributes('aria-pressed') === 'true')
+
+    const pressed = wrapper
+      .findAll('.leftover-row__chip')
+      .filter(c => c.attributes('aria-pressed') === 'true')
+
     expect(pressed).toHaveLength(1)
     expect(pressed[0].text().toLowerCase()).toContain('drop')
   })
@@ -53,7 +57,11 @@ describe('LeftoverRow', () => {
 
   it('emits update:action with kind drop on the Drop chip click', async () => {
     const wrapper = mountRow()
-    const drop = wrapper.findAll('.leftover-row__chip').find(c => c.text().toLowerCase().includes('drop'))
+
+    const drop = wrapper
+      .findAll('.leftover-row__chip')
+      .find(c => c.text().toLowerCase().includes('drop'))
+
     await drop.trigger('click')
     expect(wrapper.emitted('update:action').at(-1)[0]).toEqual({ kind: 'drop' })
   })

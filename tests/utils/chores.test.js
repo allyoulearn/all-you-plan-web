@@ -172,37 +172,37 @@ describe('buildRecentStrip', () => {
 describe('cadenceLabel', () => {
   const t = (key, params) => {
     const map = {
-      'chores.cadenceDaily': 'Daily',
+      'chores.cadenceEveryDay': 'Every day',
       'chores.cadenceWeekly': 'Weekly',
       'chores.cadenceMonthly': 'Monthly',
       'chores.cadenceEveryNDays': `Every ${params?.n} days`,
-      'chores.cadenceDayOfMonth': `Day ${params?.day}`,
-      'chores.dayShortSun': 'Su',
-      'chores.dayShortMon': 'Mo',
-      'chores.dayShortTue': 'Tu',
-      'chores.dayShortWed': 'We',
-      'chores.dayShortThu': 'Th',
-      'chores.dayShortFri': 'Fr',
-      'chores.dayShortSat': 'Sa'
+      'chores.cadenceDayOfMonthOrdinal': `Day ${params?.day} of each month`,
+      'chores.dayAbbrSun': 'Sun',
+      'chores.dayAbbrMon': 'Mon',
+      'chores.dayAbbrTue': 'Tue',
+      'chores.dayAbbrWed': 'Wed',
+      'chores.dayAbbrThu': 'Thu',
+      'chores.dayAbbrFri': 'Fri',
+      'chores.dayAbbrSat': 'Sat'
     }
 
     return map[key] ?? key
   }
 
-  it('returns "Daily" for daily interval=1', () => {
-    expect(cadenceLabel({ type: 'daily', interval: 1 }, t)).toBe('Daily')
+  it('returns "Every day" for daily interval=1', () => {
+    expect(cadenceLabel({ type: 'daily', interval: 1 }, t)).toBe('Every day')
   })
 
   it('returns "Every N days" for daily interval>1', () => {
     expect(cadenceLabel({ type: 'daily', interval: 3 }, t)).toBe('Every 3 days')
   })
 
-  it('returns dot-separated short days for weekly', () => {
-    expect(cadenceLabel({ type: 'weekly', daysOfWeek: [1, 3, 5] }, t)).toBe('Mo · We · Fr')
+  it('returns dot-separated 3-letter abbreviations for weekly', () => {
+    expect(cadenceLabel({ type: 'weekly', daysOfWeek: [1, 3, 5] }, t)).toBe('Mon · Wed · Fri')
   })
 
-  it('returns "Day N" for monthly', () => {
-    expect(cadenceLabel({ type: 'monthly', dayOfMonth: 15 }, t)).toBe('Day 15')
+  it('returns "Day N of each month" for monthly', () => {
+    expect(cadenceLabel({ type: 'monthly', dayOfMonth: 15 }, t)).toBe('Day 15 of each month')
   })
 
   it('falls back to raw type for unknown cadence', () => {

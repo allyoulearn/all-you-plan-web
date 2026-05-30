@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- Heading -->
     <h2 class="register-view__heading">
       {{ t('auth.registerHeadingPrefix') }}
       <em>
@@ -7,30 +8,36 @@
       </em>
     </h2>
 
+    <!-- Register form -->
     <form class="register-view__form" @submit.prevent="handleRegister">
-      <TextField
+      <!-- Name field -->
+      <AppTextField
         v-model="name"
         type="text"
         :label="t('auth.name')"
       />
 
-      <TextField
+      <!-- Email field -->
+      <AppTextField
         v-model="email"
         type="email"
         :label="t('auth.email')"
       />
 
-      <TextField
+      <!-- Password field -->
+      <AppTextField
         v-model="password"
         type="password"
         :label="t('auth.password')"
       />
 
+      <!-- Error message -->
       <p v-if="error" class="register-view__error">
         {{ error }}
       </p>
 
-      <Button
+      <!-- Submit button -->
+      <AppButton
         variant="accent"
         type="submit"
         :disabled="loading"
@@ -38,8 +45,9 @@
         class="register-view__submit"
       >
         {{ loading ? t('common.loading') : t('auth.registerCta') }}
-      </Button>
+      </AppButton>
 
+      <!-- Login link -->
       <p class="register-view__footer">
         {{ t('auth.hasAccount') }}
         <router-link to="/auth/login" class="register-view__login-link">
@@ -57,12 +65,12 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'RegisterView',
-  components: { TextField, Button },
+  components: { AppTextField, AppButton },
   setup() {
     // -- State --
     const { t } = useI18n()
@@ -95,6 +103,7 @@ export default {
     async function handleRegister() {
       error.value = ''
       loading.value = true
+
       try {
         await authStore.register(email.value, password.value, name.value)
         router.push('/')

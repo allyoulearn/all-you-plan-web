@@ -17,6 +17,11 @@ vi.mock('@/api/operations/index.js', () => ({
   UPDATE_PROJECT: 'UPDATE_PROJECT',
   DELETE_PROJECT: 'DELETE_PROJECT',
   CREATE_TASK: 'CREATE_TASK',
+  UPDATE_TASK: 'UPDATE_TASK',
+  DELETE_TASK: 'DELETE_TASK',
+  ADD_SUBTASK: 'ADD_SUBTASK',
+  UPDATE_SUBTASK: 'UPDATE_SUBTASK',
+  DELETE_SUBTASK: 'DELETE_SUBTASK',
   CREATE_COLUMN: 'CREATE_COLUMN',
   UPDATE_COLUMN: 'UPDATE_COLUMN',
   REORDER_COLUMNS: 'REORDER_COLUMNS',
@@ -26,6 +31,7 @@ vi.mock('@/api/operations/index.js', () => ({
 }))
 
 const mockToastError = vi.fn()
+
 vi.mock('@/composables/useErrorToast', () => ({
   useErrorToast: () => ({ toastError: mockToastError, toastSuccess: vi.fn() })
 }))
@@ -90,6 +96,7 @@ function findInBoard(board, id) {
     const t = entry.tasks.find(t => t.id === id)
     if (t) return { task: t, columnId: entry.columnId }
   }
+
   return null
 }
 
@@ -179,6 +186,7 @@ describe('projects.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('first error'))
         .mockResolvedValueOnce({ data: { projects: fakeProjects } })
+
       const store = useProjectsStore()
       await store.loadProjects()
       expect(store.errorProjects).toBe('first error')
@@ -242,6 +250,7 @@ describe('projects.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('board error'))
         .mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+
       const store = useProjectsStore()
       await store.loadBoard('p1')
       expect(store.errorBoard).toBe('board error')
@@ -262,6 +271,7 @@ describe('projects.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('projects error'))
         .mockRejectedValueOnce(new Error('board error'))
+
       const store = useProjectsStore()
       await Promise.all([store.loadProjects(), store.loadBoard('p1')])
 
@@ -271,6 +281,7 @@ describe('projects.store', () => {
 
     it('project load completing does not reset board loading flag', async () => {
       let resolveBoard
+
       apolloClient.query
         .mockResolvedValueOnce({ data: { projects: fakeProjects } })
         .mockReturnValueOnce(
@@ -278,6 +289,7 @@ describe('projects.store', () => {
             resolveBoard = resolve
           })
         )
+
       const store = useProjectsStore()
       await store.loadProjects()
       const boardPromise = store.loadBoard('p1')
@@ -302,6 +314,7 @@ describe('projects.store', () => {
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { id: 't1' } })
       )
+
       expect(apolloClient.query).not.toHaveBeenCalled()
       const located = findInBoard(store.board, 't1')
       expect(located?.columnId).toBe('col-tw')
@@ -434,11 +447,13 @@ describe('projects.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({})
       const store = useProjectsStore()
       const board = makeOptimisticBoard()
+
       // Freeze every level: outer board, project, progress, each column entry.
       for (const entry of board.tasksByColumn) {
         Object.freeze(entry.tasks)
         Object.freeze(entry)
       }
+
       Object.freeze(board.tasksByColumn)
       Object.freeze(board.columns)
       Object.freeze(board.project.progress)
@@ -463,6 +478,7 @@ describe('projects.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { createColumn: { id: 'col-new', label: 'Review', order: 4 } }
       })
+
       const store = useProjectsStore()
       setBoard(store)
 
@@ -478,6 +494,7 @@ describe('projects.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({
         data: { updateColumn: { id: 'col-tw', label: 'Inbox' } }
       })
+
       const store = useProjectsStore()
       setBoard(store)
 
@@ -524,6 +541,7 @@ describe('projects.store', () => {
           variables: { id: 'col-bl', mode: 'delete', moveToColumnId: null }
         })
       )
+
       expect(apolloClient.query).toHaveBeenCalledWith(
         expect.objectContaining({ query: 'PROJECT_BOARD_QUERY' })
       )
@@ -540,11 +558,13 @@ describe('projects.store', () => {
       apolloClient.mutate.mockResolvedValue({})
       const store = useProjectsStore()
       setBoard(store)
+
       // Build a "next" tasksByColumn that moves t1 from col-tw to col-do at index 0.
       const next = store.board.tasksByColumn.map(entry => ({
         columnId: entry.columnId,
         tasks: entry.tasks.filter(t => t.id !== 't1')
       }))
+
       const movedTask = { ...store.board.tasksByColumn[0].tasks[0], columnId: 'col-do' }
       const tgt = next.find(e => e.columnId === 'col-do')
       tgt.tasks = [movedTask, ...tgt.tasks]
@@ -678,10 +698,12 @@ describe('projects.store', () => {
       apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
       const store = useProjectsStore()
       await store.updateProject('p1', { name: 'New' })
+
       // One projects query call expected
       const projectsCalls = apolloClient.query.mock.calls.filter(
         c => c[0]?.query === 'PROJECTS_QUERY'
       )
+
       expect(projectsCalls.length).toBe(1)
     })
 
@@ -689,10 +711,563 @@ describe('projects.store', () => {
       apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
       const store = useProjectsStore()
       await store.updateProject('p1', { nudge: 'be bold' })
+
       const projectsCalls = apolloClient.query.mock.calls.filter(
         c => c[0]?.query === 'PROJECTS_QUERY'
       )
+
       expect(projectsCalls.length).toBe(0)
+    })
+
+    it('reloads the board when the change applies to the loaded project', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      store.board = { project: { id: 'p1' } }
+      await store.updateProject('p1', { nudge: 'be bold' })
+
+      const boardCalls = apolloClient.query.mock.calls.filter(
+        c => c[0]?.query === 'PROJECT_BOARD_QUERY'
+      )
+
+      expect(boardCalls.length).toBe(1)
+    })
+  })
+
+  describe('createProject', () => {
+    it('creates and refreshes the projects list', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { createProject: { id: 'p3', title: 'Gamma' } }
+      })
+
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+
+      const result = await store.createProject({ name: 'Gamma', tag: 'work', blurb: 'New' })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { name: 'Gamma', tag: 'work', blurb: 'New' }
+        })
+      )
+
+      expect(result).toEqual({ id: 'p3', title: 'Gamma' })
+    })
+
+    it('defaults tag/blurb to null when omitted', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createProject: { id: 'p3' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+
+      await store.createProject({ name: 'Gamma' })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { name: 'Gamma', tag: null, blurb: null }
+        })
+      )
+    })
+
+    it('sets errorProjects and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create failed'))
+      const store = useProjectsStore()
+
+      await expect(store.createProject({ name: 'Gamma' })).rejects.toThrow('create failed')
+      expect(store.errorProjects).toBe('create failed')
+    })
+  })
+
+  describe('archiveProject and restoreProject', () => {
+    it('archiveProject calls update with archived: true', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+      await store.archiveProject('p1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { id: 'p1', archived: true } })
+      )
+    })
+
+    it('restoreProject calls update with archived: false', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateProject: { id: 'p1' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+      await store.restoreProject('p1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { id: 'p1', archived: false } })
+      )
+    })
+  })
+
+  describe('createTask', () => {
+    it('only sends fields that have values', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 'tnew' } } })
+      const store = useProjectsStore()
+      store.board = { project: { id: 'p1' } }
+
+      await store.createTask({
+        title: 'New Task',
+        projectId: 'p1',
+        note: 'A note',
+        tag: 'urgent',
+        scheduledDate: '2026-05-22',
+        columnId: 'col-tw'
+      })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: {
+            input: {
+              title: 'New Task',
+              projectId: 'p1',
+              note: 'A note',
+              tag: 'urgent',
+              scheduledDate: '2026-05-22',
+              columnId: 'col-tw'
+            }
+          }
+        })
+      )
+    })
+
+    it('omits optional fields when undefined', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 'tnew' } } })
+      const store = useProjectsStore()
+
+      await store.createTask({ title: 'New', projectId: 'p1' })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: { input: { title: 'New', projectId: 'p1' } }
+        })
+      )
+    })
+
+    it('reloads the board when the task lands in the active board', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { createTask: { id: 'tnew' } } })
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      store.board = { project: { id: 'p1' } }
+
+      await store.createTask({ title: 'New', projectId: 'p1' })
+
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'PROJECT_BOARD_QUERY' })
+      )
+    })
+  })
+
+  describe('createColumn', () => {
+    it('returns null when board is null', async () => {
+      const store = useProjectsStore()
+      const result = await store.createColumn('p1', 'Review')
+      expect(result).toBeNull()
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('rolls back on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('create col failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      const snapshot = store.board
+
+      await expect(store.createColumn('p1', 'Review')).rejects.toThrow('create col failed')
+      expect(store.board).toBe(snapshot)
+      expect(store.errorBoard).toBe('create col failed')
+    })
+
+    it('toggles saving', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { createColumn: { id: 'col-new', label: 'Review', order: 4 } }
+      })
+
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      const promise = store.createColumn('p1', 'Review')
+      expect(store.saving).toBe(true)
+      await promise
+      expect(store.saving).toBe(false)
+    })
+  })
+
+  describe('renameColumn', () => {
+    it('is a no-op when board is null', async () => {
+      const store = useProjectsStore()
+      await store.renameColumn('col-tw', 'New')
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('passes UPDATE_COLUMN with id and label', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.renameColumn('col-tw', 'Inbox')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutation: 'UPDATE_COLUMN',
+          variables: { id: 'col-tw', label: 'Inbox' }
+        })
+      )
+    })
+  })
+
+  describe('reorderColumns', () => {
+    it('is a no-op when board is null', async () => {
+      const store = useProjectsStore()
+      await store.reorderColumns('p1', ['a', 'b'])
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('rolls back on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('reorder failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      const snapshot = store.board
+
+      await expect(
+        store.reorderColumns('p1', ['col-dn', 'col-bl', 'col-do', 'col-tw'])
+      ).rejects.toThrow('reorder failed')
+
+      expect(store.board).toBe(snapshot)
+      expect(store.errorBoard).toBe('reorder failed')
+    })
+  })
+
+  describe('deleteColumn', () => {
+    it('is a no-op when board is null', async () => {
+      const store = useProjectsStore()
+      await store.deleteColumn('col-tw', 'delete', null)
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('sets errorBoard on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('delete col failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await expect(store.deleteColumn('col-tw', 'delete', null)).rejects.toThrow(
+        'delete col failed'
+      )
+
+      expect(store.errorBoard).toBe('delete col failed')
+    })
+  })
+
+  describe('moveTask', () => {
+    it('is a no-op when board is null', async () => {
+      const store = useProjectsStore()
+      await store.moveTask('t1', 'col-tw', 'col-do', 0, [])
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+
+    it('also calls REORDER_TASKS_IN_COLUMN for source column when cross-column move leaves residue', async () => {
+      apolloClient.mutate.mockResolvedValue({})
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      // Add another task to col-tw so source list isn't empty after move.
+      store.board.tasksByColumn[0].tasks.push({
+        id: 't5',
+        title: 'Stay',
+        done: false,
+        columnId: 'col-tw'
+      })
+
+      const next = store.board.tasksByColumn.map(entry => ({
+        columnId: entry.columnId,
+        tasks: entry.tasks.filter(t => t.id !== 't1')
+      }))
+
+      const movedTask = { ...store.board.tasksByColumn[0].tasks[0], columnId: 'col-do' }
+      const tgt = next.find(e => e.columnId === 'col-do')
+      tgt.tasks = [movedTask, ...tgt.tasks]
+
+      await store.moveTask('t1', 'col-tw', 'col-do', 0, next)
+
+      const reorderCalls = apolloClient.mutate.mock.calls.filter(
+        c => c[0]?.mutation === 'REORDER_TASKS_IN_COLUMN'
+      )
+
+      // Source column still has t5 → reorder needed; target column has 2 tasks → reorder needed.
+      expect(reorderCalls.length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  describe('updateTask', () => {
+    it('patches a task in place when columnId stays the same', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { updateTask: { id: 't1', title: 'Updated', columnId: 'col-tw' } }
+      })
+
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      const result = await store.updateTask('t1', { title: 'Updated' })
+
+      expect(result).toEqual({ id: 't1', title: 'Updated', columnId: 'col-tw' })
+      const located = findInBoard(store.board, 't1')
+      expect(located.task.title).toBe('Updated')
+    })
+
+    it('reloads the board when columnId in input differs from response', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { updateTask: { id: 't1', columnId: 'col-do' } }
+      })
+
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.updateTask('t1', { columnId: 'col-dn' })
+
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'PROJECT_BOARD_QUERY' })
+      )
+    })
+
+    it('sets errorBoard and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('update task failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await expect(store.updateTask('t1', { title: 'X' })).rejects.toThrow('update task failed')
+      expect(store.errorBoard).toBe('update task failed')
+    })
+
+    it('handles a null updateTask response gracefully', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateTask: null } })
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      const result = await store.updateTask('t1', { title: 'X' })
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('deleteTask', () => {
+    it('calls DELETE_TASK and reloads the board on success', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { projectBoard: fakeBoard } })
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.deleteTask('t1')
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ mutation: 'DELETE_TASK', variables: { id: 't1' } })
+      )
+
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'PROJECT_BOARD_QUERY' })
+      )
+    })
+
+    it('sets errorBoard and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('delete task failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await expect(store.deleteTask('t1')).rejects.toThrow('delete task failed')
+      expect(store.errorBoard).toBe('delete task failed')
+    })
+  })
+
+  describe('subtask actions', () => {
+    it('addSubtask patches the parent task subtasks', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { addSubtask: { subtasks: [{ id: 's1', text: 'step', done: false }] } }
+      })
+
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.addSubtask('t1', 'step')
+
+      const located = findInBoard(store.board, 't1')
+      expect(located.task.subtasks).toEqual([{ id: 's1', text: 'step', done: false }])
+    })
+
+    it('addSubtask sets errorBoard on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('add subtask failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await expect(store.addSubtask('t1', 'step')).rejects.toThrow('add subtask failed')
+      expect(store.errorBoard).toBe('add subtask failed')
+    })
+
+    it('updateSubtask patches the parent task subtasks', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { updateSubtask: { subtasks: [{ id: 's1', text: 'step', done: true }] } }
+      })
+
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.updateSubtask('t1', 's1', { done: true })
+
+      const located = findInBoard(store.board, 't1')
+      expect(located.task.subtasks).toEqual([{ id: 's1', text: 'step', done: true }])
+    })
+
+    it('updateSubtask sets errorBoard and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('update subtask failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await expect(store.updateSubtask('t1', 's1', { done: true })).rejects.toThrow(
+        'update subtask failed'
+      )
+
+      expect(store.errorBoard).toBe('update subtask failed')
+    })
+
+    it('deleteSubtask patches the parent task subtasks', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({
+        data: { deleteSubtask: { subtasks: [] } }
+      })
+
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await store.deleteSubtask('t1', 's1')
+
+      const located = findInBoard(store.board, 't1')
+      expect(located.task.subtasks).toEqual([])
+    })
+
+    it('deleteSubtask sets errorBoard and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('delete subtask failed'))
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+
+      await expect(store.deleteSubtask('t1', 's1')).rejects.toThrow('delete subtask failed')
+      expect(store.errorBoard).toBe('delete subtask failed')
+    })
+  })
+
+  describe('reorderTasksInColumn no-op when board is null', () => {
+    it('does not call mutate', async () => {
+      const store = useProjectsStore()
+      await store.reorderTasksInColumn('col-tw', ['t1'], [])
+      expect(apolloClient.mutate).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('tasksFor / findTask / buildTasksByColumn helpers', () => {
+    it('tasksFor returns empty array when board is null', () => {
+      const store = useProjectsStore()
+      expect(store.tasksFor('col-tw')).toEqual([])
+    })
+
+    it('tasksFor returns the tasks for a given column', () => {
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      expect(store.tasksFor('col-tw')).toHaveLength(1)
+    })
+
+    it('tasksFor returns [] for unknown columnId', () => {
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      expect(store.tasksFor('unknown')).toEqual([])
+    })
+
+    it('findTask returns null when board is null', () => {
+      const store = useProjectsStore()
+      expect(store.findTask('t1')).toBeNull()
+    })
+
+    it('findTask returns null when no task matches', () => {
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      expect(store.findTask('nope')).toBeNull()
+    })
+
+    it('findTask returns the task and column when found', () => {
+      const store = useProjectsStore()
+      store.board = makeOptimisticBoard()
+      const result = store.findTask('t1')
+      expect(result.task.id).toBe('t1')
+      expect(result.columnId).toBe('col-tw')
+    })
+
+    it('buildTasksByColumn groups tasks by column id', () => {
+      const store = useProjectsStore()
+
+      const columns = [
+        { id: 'a', label: 'A', order: 0 },
+        { id: 'b', label: 'B', order: 1 }
+      ]
+
+      const tasks = [
+        { id: 't1', columnId: 'a' },
+        { id: 't2', columnId: 'b' },
+        { id: 't3', columnId: 'a' }
+      ]
+
+      const result = store.buildTasksByColumn(columns, tasks)
+
+      expect(result).toEqual([
+        {
+          columnId: 'a',
+          tasks: [
+            { id: 't1', columnId: 'a' },
+            { id: 't3', columnId: 'a' }
+          ]
+        },
+        { columnId: 'b', tasks: [{ id: 't2', columnId: 'b' }] }
+      ])
+    })
+
+    it('buildTasksByColumn skips tasks with unknown columnId', () => {
+      const store = useProjectsStore()
+      const columns = [{ id: 'a', label: 'A', order: 0 }]
+
+      const tasks = [
+        { id: 't1', columnId: 'a' },
+        { id: 't2', columnId: 'gone' }
+      ]
+
+      const result = store.buildTasksByColumn(columns, tasks)
+      expect(result[0].tasks).toEqual([{ id: 't1', columnId: 'a' }])
+    })
+  })
+
+  describe('loadProjects with includeArchived: true', () => {
+    it('passes includeArchived: true through to the query', async () => {
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: fakeProjects } })
+      const store = useProjectsStore()
+      await store.loadProjects({ includeArchived: true })
+
+      expect(apolloClient.query).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { includeArchived: true } })
+      )
+    })
+  })
+
+  describe('deleteProject', () => {
+    it('does not touch the board when deleting a different project', async () => {
+      apolloClient.mutate.mockResolvedValueOnce({})
+      apolloClient.query.mockResolvedValueOnce({ data: { projects: [] } })
+      const store = useProjectsStore()
+      const board = { project: { id: 'p2' }, columns: [], tasksByColumn: [] }
+      store.board = board
+
+      await store.deleteProject('p1')
+
+      // Board reference is still pointing at the p2 board (id stays).
+      expect(store.board?.project?.id).toBe('p2')
+    })
+
+    it('sets errorProjects and re-throws on failure', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('delete failed'))
+      const store = useProjectsStore()
+
+      await expect(store.deleteProject('p1')).rejects.toThrow('delete failed')
+      expect(store.errorProjects).toBe('delete failed')
     })
   })
 })

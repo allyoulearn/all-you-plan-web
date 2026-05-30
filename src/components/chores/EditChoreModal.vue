@@ -41,7 +41,11 @@ function fromChore(chore) {
       type: chore.cadence.type,
       daysOfWeek: chore.cadence.daysOfWeek ?? [],
       interval: chore.cadence.interval ?? 1,
-      dayOfMonth: chore.cadence.dayOfMonth ?? null
+      dayOfMonth: chore.cadence.dayOfMonth ?? null,
+      // dueDate is the only field that lands on once cadences. The string
+      // coming back from the API is YYYY-MM-DD; the date input expects the
+      // same shape, so no further normalization is required.
+      dueDate: chore.cadence.dueDate ?? null
     },
     active: chore.active
   }
@@ -85,6 +89,10 @@ export default {
 
       if (c.type === 'monthly') {
         return { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: c.dayOfMonth }
+      }
+
+      if (c.type === 'once') {
+        return { type: 'once', daysOfWeek: [], interval: 1, dueDate: c.dueDate }
       }
 
       return { type: 'daily', daysOfWeek: [], interval: c.interval }

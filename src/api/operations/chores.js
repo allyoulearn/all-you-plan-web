@@ -19,6 +19,7 @@ export const CHORES_QUERY = gql`
         daysOfWeek
         interval
         dayOfMonth
+        dueDate
       }
       streak
       bestStreak
@@ -45,6 +46,22 @@ export const COMPLETE_CHORE = gql`
   }
 `
 
+/**
+ * Undo today's completion: removes the ChoreCompletion row for today and
+ * recomputes streak/lastCompletedOn against the prior completion (if any).
+ * Pairs with COMPLETE_CHORE; the checkbox toggles between the two.
+ */
+export const UNCOMPLETE_CHORE = gql`
+  mutation UncompleteChore($id: ID!) {
+    uncompleteChore(id: $id) {
+      id
+      streak
+      bestStreak
+      lastCompletedOn
+    }
+  }
+`
+
 /** Create a new chore from a title and cadence definition. */
 export const CREATE_CHORE = gql`
   mutation CreateChore($title: String!, $cadence: ChoreCadenceInput!) {
@@ -56,6 +73,7 @@ export const CREATE_CHORE = gql`
         daysOfWeek
         interval
         dayOfMonth
+        dueDate
       }
       streak
       bestStreak
@@ -83,6 +101,7 @@ export const UPDATE_CHORE = gql`
         daysOfWeek
         interval
         dayOfMonth
+        dueDate
       }
       active
       order

@@ -190,6 +190,7 @@ describe('review.store', () => {
       const store = useReviewStore()
       const prev = { tomorrow: ['a'], picked: [], dropped: ['b'], kept: [] }
       const next = { tomorrow: ['a'], picked: [], dropped: ['b'], kept: [] }
+
       expect(store.diffLeftovers(prev, next)).toEqual({
         tomorrow: [],
         picked: [],
@@ -200,12 +201,14 @@ describe('review.store', () => {
     it('returns only newly-added ids for each kind', () => {
       const store = useReviewStore()
       const prev = { tomorrow: ['a'], picked: [], dropped: [], kept: [] }
+
       const next = {
         tomorrow: ['a', 'b'],
         picked: [{ id: 'c', date: '2026-06-01' }],
         dropped: ['d'],
         kept: []
       }
+
       expect(store.diffLeftovers(prev, next)).toEqual({
         tomorrow: ['b'],
         picked: [{ id: 'c', date: '2026-06-01' }],

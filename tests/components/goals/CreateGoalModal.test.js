@@ -27,6 +27,12 @@ const globalStubs = {
     emits: ['click'],
     template:
       '<button type="button" :disabled="disabled" :data-variant="variant" @click="$emit(\'click\')"><slot /></button>'
+  },
+  AppDatePicker: {
+    props: ['modelValue', 'invalid', 'placeholder'],
+    emits: ['update:modelValue'],
+    template:
+      '<input type="date" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
   }
 }
 

@@ -12,7 +12,7 @@ import en from '@/i18n/locales/en.json'
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
-  ScreenHeading: true,
+  AppScreenHeading: true,
   WrenBubble: true,
   RouterLink: true
 }
@@ -34,6 +34,8 @@ const QUICK_PROMPTS_LIST = [
 // fakeStore is an object that mimics the wren store surface exposed by the composable.
 let fakeStore = {
   messages: [],
+  conversations: [],
+  activeConversationId: null,
   loading: false,
   sending: false,
   error: '',
@@ -76,6 +78,8 @@ function mountWren(storeOverrides = {}) {
   // Reset fakeStore to defaults then apply overrides
   fakeStore = {
     messages: [],
+    conversations: [],
+    activeConversationId: null,
     loading: false,
     sending: false,
     error: '',
@@ -83,6 +87,7 @@ function mountWren(storeOverrides = {}) {
     send: vi.fn().mockResolvedValue(undefined),
     ...storeOverrides
   }
+
   draftRef = ref(storeOverrides.draft ?? '')
 
   return mount(WrenView, {
@@ -108,11 +113,24 @@ describe('WrenView', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
-  it('renders the date divider with a date label', () => {
-    const wrapper = mountWren()
-    const dateLabel = wrapper.find('.wren-view__date-label')
-    expect(dateLabel.exists()).toBe(true)
-    expect(dateLabel.text().length).toBeGreaterThan(0)
+  it('renders a sticky date divider for each day group when messages are present', () => {
+    const messages = [
+      buildMessage({ id: 'a', createdAt: '2026-05-26T18:00:00.000Z' }),
+      buildMessage({ id: 'b', createdAt: '2026-05-26T18:05:00.000Z' }),
+      buildMessage({ id: 'c', createdAt: '2026-05-27T09:00:00.000Z' })
+    ]
+
+    const wrapper = mountWren({ messages, loading: false })
+    const dividers = wrapper.findAll('.wren-view__date-divider')
+    const labels = wrapper.findAll('.wren-view__date-label')
+    expect(dividers).toHaveLength(2)
+    expect(labels).toHaveLength(2)
+    expect(labels.every(l => l.text().length > 0)).toBe(true)
+  })
+
+  it('does not render a date divider when there are no messages', () => {
+    const wrapper = mountWren({ messages: [], loading: false })
+    expect(wrapper.find('.wren-view__date-divider').exists()).toBe(false)
   })
 
   // -- Loading state --
@@ -146,6 +164,7 @@ describe('WrenView', () => {
       buildMessage({ id: 'm1', sender: 'user' }),
       buildMessage({ id: 'm2', sender: 'coach' })
     ]
+
     const wrapper = mountWren({ messages, loading: false })
     const bubbles = wrapper.findAll('wren-bubble-stub')
     expect(bubbles).toHaveLength(2)
@@ -168,6 +187,7 @@ describe('WrenView', () => {
   it('chip text matches QUICK_PROMPTS', () => {
     const wrapper = mountWren()
     const text = wrapper.text()
+
     for (const prompt of QUICK_PROMPTS_LIST) {
       expect(text).toContain(prompt)
     }
@@ -255,18 +275,27 @@ describe('WrenView', () => {
     expect(mockHandleKeydown).toHaveBeenCalledTimes(1)
   })
 
-  // -- today computed --
+  // -- messageGroups computed --
 
-  it('today computed returns a non-empty date string', () => {
-    const wrapper = mountWren()
-    expect(typeof wrapper.vm.today).toBe('string')
-    expect(wrapper.vm.today.length).toBeGreaterThan(0)
+  it('messageGroups returns empty array when there are no messages', () => {
+    const wrapper = mountWren({ messages: [] })
+    expect(wrapper.vm.messageGroups).toEqual([])
   })
 
-  it('today computed contains a day of the week', () => {
-    const wrapper = mountWren()
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    expect(days.some(d => wrapper.vm.today.includes(d))).toBe(true)
+  it('messageGroups buckets messages by local day with a rendered label per group', () => {
+    const messages = [
+      buildMessage({ id: 'a', createdAt: '2026-05-26T18:00:00.000Z' }),
+      buildMessage({ id: 'b', createdAt: '2026-05-27T09:00:00.000Z' }),
+      buildMessage({ id: 'c', createdAt: '2026-05-27T09:30:00.000Z' })
+    ]
+
+    const wrapper = mountWren({ messages, loading: false })
+    const groups = wrapper.vm.messageGroups
+    expect(groups).toHaveLength(2)
+    expect(groups[0].messages).toHaveLength(1)
+    expect(groups[1].messages).toHaveLength(2)
+    expect(typeof groups[0].label).toBe('string')
+    expect(groups[0].label.length).toBeGreaterThan(0)
   })
 
   // -- fillFromChip exposed --
@@ -296,8 +325,11 @@ describe('WrenView', () => {
       const undoSpy = vi.fn()
       const confirmSpy = vi.fn()
       const cancelSpy = vi.fn()
+
       fakeStore = {
         messages: [buildMessage({ sender: 'coach', actions: [] })],
+        conversations: [],
+        activeConversationId: null,
         loading: false,
         sending: false,
         error: '',
@@ -307,11 +339,13 @@ describe('WrenView', () => {
         confirm: confirmSpy,
         cancel: cancelSpy
       }
+
       draftRef = ref('')
+
       const wrapper = mount(WrenView, {
         global: {
           stubs: {
-            ScreenHeading: true,
+            AppScreenHeading: true,
             WrenBubble: {
               props: ['message'],
               emits: ['action', 'undo', 'confirm', 'cancel'],
@@ -321,6 +355,7 @@ describe('WrenView', () => {
           plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
         }
       })
+
       return { wrapper, undoSpy, confirmSpy, cancelSpy }
     }
 
@@ -357,10 +392,13 @@ describe('WrenView', () => {
       const undoSpy = vi.fn()
       const confirmSpy = vi.fn()
       const cancelSpy = vi.fn()
+
       // reactive() so that the watcher source `() => store.loading` re-runs
       // when we mutate fakeStore.loading below.
       fakeStore = reactive({
         messages,
+        conversations: [],
+        activeConversationId: null,
         loading,
         sending: false,
         error: '',
@@ -370,13 +408,16 @@ describe('WrenView', () => {
         confirm: confirmSpy,
         cancel: cancelSpy
       })
+
       draftRef = ref('')
+
       const wrapper = mount(WrenView, {
         global: {
           stubs: globalStubs,
           plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
         }
       })
+
       return wrapper
     }
 

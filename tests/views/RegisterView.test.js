@@ -20,7 +20,7 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   RouterLink: { template: '<a><slot /></a>' },
-  Icon: true
+  AppIcon: true
 }
 
 function mountRegister() {
@@ -30,6 +30,7 @@ function mountRegister() {
       plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
     }
   })
+
   const store = useAuthStore()
   return { wrapper, store }
 }
@@ -146,6 +147,7 @@ describe('RegisterView', () => {
 
   it('shows error paragraph when registration fails with GraphQL error', async () => {
     const { wrapper, store } = mountRegister()
+
     store.register.mockRejectedValue({
       graphQLErrors: [{ message: 'Email already in use' }]
     })

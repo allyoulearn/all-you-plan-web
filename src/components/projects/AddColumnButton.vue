@@ -1,18 +1,20 @@
 <template>
   <div class="add-column-button">
+    <!-- Trigger chip -->
     <button
       v-if="!editing"
       type="button"
       class="add-column-button__trigger"
       @click="startEditing"
     >
-      <Icon name="plus" :size="14" />
+      <AppIcon name="plus" :size="14" />
 
       <span>
         {{ t('kanban.addColumn') }}
       </span>
     </button>
 
+    <!-- Inline input -->
     <form v-else class="add-column-button__form" @submit.prevent="commit">
       <input
         ref="inputRef"
@@ -37,11 +39,11 @@
  */
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Icon from '@/components/ui/Icon.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 export default {
   name: 'AddColumnButton',
-  components: { Icon },
+  components: { AppIcon },
   props: {
     /** Disable the input while a creation mutation is in flight. */
     saving: { type: Boolean, default: false }
@@ -53,6 +55,11 @@ export default {
     const label = ref('')
     const inputRef = ref(null)
 
+    return { t, editing, label, inputRef, startEditing, cancel, commit, onBlur }
+
+    // -- Function definitions --
+
+    /** Swap the chip for the inline input and focus it. */
     async function startEditing() {
       editing.value = true
       label.value = ''
@@ -60,17 +67,21 @@ export default {
       inputRef.value?.focus()
     }
 
+    /** Restore the chip without firing a create. */
     function cancel() {
       editing.value = false
       label.value = ''
     }
 
+    /** Emit `create` if a non-empty label is typed; cancel otherwise. */
     function commit() {
       const trimmed = label.value.trim()
+
       if (!trimmed) {
         cancel()
         return
       }
+
       emit('create', trimmed)
       // Optimistic: clear the input but keep editing so a burst of columns
       // can be added without re-clicking.
@@ -78,15 +89,15 @@ export default {
       nextTick(() => inputRef.value?.focus())
     }
 
+    /**
+     * Blur handler: commit-on-blur with content, cancel otherwise. Avoids
+     * accidental discards when the user clicks the field but never types.
+     */
     function onBlur() {
-      // Commit-on-blur with content, cancel otherwise. Avoids accidental
-      // discards when the user clicks the field but never types.
       const trimmed = label.value.trim()
       if (trimmed) commit()
       else cancel()
     }
-
-    return { t, editing, label, inputRef, startEditing, cancel, commit, onBlur }
   }
 }
 </script>

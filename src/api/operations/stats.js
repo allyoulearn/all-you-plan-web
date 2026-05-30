@@ -2,7 +2,7 @@
  * GraphQL operations for the stats feature.
  *
  * Queries: STATS_QUERY (heatmap + ranked-habits envelope). The heatmap is a
- * scalar JSON shape — the view decides how to render it. (WEB-W1-12)
+ * scalar JSON shape — the view decides how to render it.
  */
 import { gql } from '@apollo/client/core'
 

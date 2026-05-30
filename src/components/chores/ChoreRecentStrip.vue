@@ -34,21 +34,24 @@ export default {
 
 <style lang="scss" scoped>
 .chore-recent-strip {
-  @apply inline-flex items-center gap-1;
+  @apply inline-flex items-center gap-[5px];
 
   &__dot {
-    @apply block h-1.5 w-1.5 rounded-pill;
+    @apply block h-2 w-2 rounded-pill;
 
     &--done {
       @apply bg-ok;
     }
 
     &--missed {
-      @apply border border-rule-soft bg-transparent;
+      // Hollow ring so a missed day reads as a deliberate marker, not a faded
+      // placeholder.
+      @apply border border-rule bg-transparent;
     }
 
     &--not-due {
-      @apply bg-rule-soft opacity-60;
+      // Solid but very subdued — present in the rhythm but visually quiet.
+      @apply bg-rule-soft;
     }
   }
 }

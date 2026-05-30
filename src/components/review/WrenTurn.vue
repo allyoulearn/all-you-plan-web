@@ -2,10 +2,15 @@
   <div class="wren-turn">
     <div class="wren-turn__header">
       <AppIcon name="sparkles" :size="16" class="wren-turn__mark" />
-      <p class="wren-turn__prompt">{{ prompt }}</p>
+
+      <p class="wren-turn__prompt">
+        {{ prompt }}
+      </p>
     </div>
 
-    <p v-if="callout" class="wren-turn__callout">{{ callout }}</p>
+    <p v-if="callout" class="wren-turn__callout">
+      {{ callout }}
+    </p>
 
     <div v-if="$slots.default" class="wren-turn__body">
       <slot />

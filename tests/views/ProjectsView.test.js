@@ -9,15 +9,16 @@ import { useProjectsStore } from '@/stores/projects.store'
 import en from '@/i18n/locales/en.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [{ path: '/projects/:id', name: 'project', component: { template: '<div />' } }]
 })
 
 const globalStubs = {
-  ScreenHeading: true,
-  SectionHeader: true,
-  Button: { template: '<button v-bind="$attrs"><slot /></button>' },
+  AppScreenHeading: true,
+  AppSectionHeader: true,
+  AppButton: { template: '<button v-bind="$attrs"><slot /></button>' },
   ProjectCard: true,
   RouterLink: true,
   CreateProjectModal: true
@@ -76,7 +77,7 @@ describe('ProjectsView', () => {
 
   it('renders the "New project" button when loaded', () => {
     const wrapper = mountProjects({ projects: [] })
-    // Button stub renders a real <button> element
+    // AppButton stub renders a real <button> element
     const buttons = wrapper.findAll('button')
     expect(buttons.some(b => b.text().includes('New project'))).toBe(true)
   })
@@ -86,6 +87,7 @@ describe('ProjectsView', () => {
       { id: 'p1', title: 'Alpha', status: 'on_track', progress: null },
       { id: 'p2', title: 'Beta', status: 'stalled', progress: null }
     ]
+
     const wrapper = mountProjects({ projects })
     const cards = wrapper.findAll('project-card-stub')
     expect(cards).toHaveLength(2)
@@ -99,19 +101,20 @@ describe('ProjectsView', () => {
     expect(card.exists()).toBe(true)
   })
 
-  it('renders SectionHeader with label="Active" when loaded', () => {
+  it('renders AppSectionHeader with label="Active" when loaded', () => {
     const wrapper = mountProjects({ projects: [] })
-    const header = wrapper.find('section-header-stub')
+    const header = wrapper.find('app-section-header-stub')
     expect(header.attributes('label')).toBe('Active')
   })
 
-  it('shows SectionHeader count matching the number of projects', () => {
+  it('shows AppSectionHeader count matching the number of projects', () => {
     const projects = [
       { id: 'p1', title: 'A', status: 'on_track', progress: null },
       { id: 'p2', title: 'B', status: 'idle', progress: null }
     ]
+
     const wrapper = mountProjects({ projects })
-    const header = wrapper.find('section-header-stub')
+    const header = wrapper.find('app-section-header-stub')
     expect(header.attributes('count')).toBe('2')
   })
 

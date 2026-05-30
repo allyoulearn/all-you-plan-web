@@ -20,7 +20,7 @@ describe('i18n/index.js', () => {
   })
 
   it('falls back to "en" when the stored value is not a supported locale', async () => {
-    localStorage.setItem('ayp_locale', 'fr')
+    localStorage.setItem('ayp_locale', 'xx-YY')
     const { default: i18n } = await import('@/i18n/index.js')
     expect(i18n.global.locale.value).toBe('en')
   })
@@ -37,6 +37,7 @@ describe('i18n/index.js', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError')
     })
+
     const { default: i18n } = await import('@/i18n/index.js')
     expect(i18n.global.locale.value).toBe('en')
     vi.restoreAllMocks()
@@ -75,7 +76,7 @@ describe('i18n/index.js', () => {
 
   it('resolves common.loading key to English text', async () => {
     const { default: i18n } = await import('@/i18n/index.js')
-    // WEB-W4-12: harmonised to the ellipsis glyph so views can reuse one key.
+    // harmonised to the ellipsis glyph so views can reuse one key.
     expect(i18n.global.t('common.loading')).toBe('Loading…')
   })
 

@@ -12,14 +12,14 @@ import en from '@/i18n/locales/en.json'
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
-  ScreenHeading: true,
-  SectionHeader: true,
-  Button: {
+  AppScreenHeading: true,
+  AppSectionHeader: true,
+  AppButton: {
     template:
       '<button type="button" :disabled="$attrs.disabled" @click="$attrs.onClick"><slot /></button>'
   },
-  Card: { template: '<div class="card"><slot /></div>' },
-  Pill: { template: '<span class="pill"><slot /></span>' }
+  AppCard: { template: '<div class="card"><slot /></div>' },
+  AppPill: { template: '<span class="pill"><slot /></span>' }
 }
 
 const ENTRY_1 = {
@@ -167,7 +167,7 @@ describe('JournalView', () => {
     expect(wrapper.find('.journal-view__pull-quote').exists()).toBe(false)
   })
 
-  it('renders tags as Pill components', () => {
+  it('renders tags as AppPill components', () => {
     const wrapper = mountJournal({ entries: [ENTRY_1] })
     const pills = wrapper.findAll('.pill')
     expect(pills.length).toBe(ENTRY_1.tags.length)

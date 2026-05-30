@@ -21,11 +21,13 @@ export const useStatsStore = defineStore('stats', () => {
   async function load() {
     loading.value = true
     error.value = ''
+
     try {
       const { data } = await apolloClient.query({
         query: STATS_QUERY,
         fetchPolicy: 'network-only'
       })
+
       stats.value = data.stats
     } catch (e) {
       error.value = e.message

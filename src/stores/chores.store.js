@@ -9,6 +9,7 @@ import { apolloClient } from '@/api/apollo.js'
 import {
   CHORES_QUERY,
   COMPLETE_CHORE,
+  UNCOMPLETE_CHORE,
   CREATE_CHORE,
   UPDATE_CHORE,
   DELETE_CHORE,
@@ -68,6 +69,28 @@ export const useChoresStore = defineStore('chores', () => {
       error.value = e.message
       const { toastError } = useErrorToast()
       toastError(e, 'Failed to complete chore')
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Inverse of completeChore — removes today's completion entry and rolls
+   * back the streak. Used when the user unchecks a chore they marked done
+   * in error.
+   */
+  async function uncompleteChore(id) {
+    loading.value = true
+    error.value = ''
+
+    try {
+      await apolloClient.mutate({ mutation: UNCOMPLETE_CHORE, variables: { id } })
+      await load()
+    } catch (e) {
+      error.value = e.message
+      const { toastError } = useErrorToast()
+      toastError(e, 'Failed to undo chore')
       throw e
     } finally {
       loading.value = false
@@ -262,6 +285,7 @@ export const useChoresStore = defineStore('chores', () => {
     error,
     load,
     completeChore,
+    uncompleteChore,
     createChore,
     updateChore,
     deleteChore,

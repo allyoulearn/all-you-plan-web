@@ -48,7 +48,7 @@ describe('ProjectCard', () => {
 
     it('renders done/total fraction', () => {
       const wrapper = mountCard()
-      expect(wrapper.text()).toContain('3/10')
+      expect(wrapper.text()).toContain('3 / 10')
     })
 
     it('renders the blurb when provided', () => {
@@ -96,19 +96,18 @@ describe('ProjectCard', () => {
   })
 
   describe('status pill variant', () => {
-    it('applies accent variant to status pill when status is hot', () => {
+    it('applies warn dot tone to status pill when status is hot', () => {
       const project = { ...baseProject, status: 'hot' }
       const wrapper = mountCard(project)
-      const pills = wrapper.findAll('span.pill--accent')
+      const pills = wrapper.findAll('span.pill--dot-warn')
       expect(pills.length).toBeGreaterThan(0)
     })
 
-    it('uses default variant for non-hot status', () => {
+    it('applies good dot tone to status pill when status is on_track', () => {
       const project = { ...baseProject, status: 'on_track' }
       const wrapper = mountCard(project)
-      const accentPills = wrapper.findAll('span.pill--accent')
-      // tag pill and status pill both default — no accent pills
-      expect(accentPills).toHaveLength(0)
+      const pills = wrapper.findAll('span.pill--dot-good')
+      expect(pills.length).toBeGreaterThan(0)
     })
   })
 
@@ -129,7 +128,7 @@ describe('ProjectCard', () => {
   describe('progress guard (WEB-T07-009: null progress)', () => {
     it('renders progress block when progress is present', () => {
       const wrapper = mountCard()
-      expect(wrapper.find('.project-card__progress-meta').exists()).toBe(true)
+      expect(wrapper.find('.project-card__progress').exists()).toBe(true)
     })
 
     it('does not crash when progress is null', () => {
@@ -141,14 +140,14 @@ describe('ProjectCard', () => {
     it('hides progress block when progress is null', () => {
       const project = { ...baseProject, progress: null }
       const wrapper = mountCard(project)
-      expect(wrapper.find('.project-card__progress-meta').exists()).toBe(false)
+      expect(wrapper.find('.project-card__progress').exists()).toBe(false)
     })
 
     it('hides progress block when progress is undefined', () => {
       const projectWithout = { ...baseProject }
       delete projectWithout.progress
       const wrapper = mountCard(projectWithout)
-      expect(wrapper.find('.project-card__progress-meta').exists()).toBe(false)
+      expect(wrapper.find('.project-card__progress').exists()).toBe(false)
     })
   })
 
@@ -167,6 +166,7 @@ describe('ProjectCard', () => {
           plugins: [i18n]
         }
       })
+
       expect(wrapper.find('a').attributes('href')).toBe('/projects/p1')
     })
   })

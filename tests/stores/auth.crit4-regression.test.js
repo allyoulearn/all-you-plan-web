@@ -1,5 +1,5 @@
 /**
- * CRIT-4 regression — Apollo cache must be cleared on logout / clearAuth.
+ * regression — Apollo cache must be cleared on logout / clearAuth.
  *
  * Before this fix, clearAuth() wiped only the in-memory token, the persisted
  * user object, and the Wren store. The Apollo cache survived, so the next

@@ -5,6 +5,7 @@ import SendoffCard from '@/components/review/SendoffCard.vue'
 import en from '@/i18n/locales/en.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+
 const stubs = {
   WrenTurn: {
     template: '<div class="wren-turn"><p class="prompt">{{ prompt }}</p><slot /></div>',

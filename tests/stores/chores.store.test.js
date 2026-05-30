@@ -424,6 +424,7 @@ describe('chores.store', () => {
       const orderedCalls = apolloClient.mutate.mock.calls.filter(
         call => call[0].mutation === 'UPDATE_CHORE'
       )
+
       expect(orderedCalls).toHaveLength(2)
       expect(orderedCalls[0][0].variables).toEqual({ id: 'c2', order: 0 })
       expect(orderedCalls[1][0].variables).toEqual({ id: 'c1', order: 1 })

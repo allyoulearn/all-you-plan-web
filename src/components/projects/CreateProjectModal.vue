@@ -1,24 +1,28 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('projects.createTitle')"
     :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
+    <!-- Form fields -->
     <form class="create-project-modal__form" @submit.prevent="handleSubmit">
-      <TextField
+      <!-- Name field -->
+      <AppTextField
         v-model="name"
         :label="t('projects.nameLabel')"
         :placeholder="t('projects.namePlaceholder')"
         :invalid="submitted && !name.trim()"
       />
 
-      <TextField
+      <!-- Tag field -->
+      <AppTextField
         v-model="tag"
         :label="t('projects.tagLabel')"
         :placeholder="t('projects.tagPlaceholder')"
       />
 
+      <!-- Blurb field -->
       <label class="create-project-modal__field">
         <span class="create-project-modal__label">
           {{ t('projects.blurbLabel') }}
@@ -34,20 +38,21 @@
       </label>
     </form>
 
+    <!-- Actions -->
     <template #footer>
-      <Button variant="ghost" :disabled="saving" @click="cancel">
+      <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
+      </AppButton>
 
-      <Button
+      <AppButton
         variant="primary"
         :disabled="saving || !name.trim()"
         @click="handleSubmit"
       >
         {{ saving ? t('projects.creating') : t('projects.create') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
@@ -55,13 +60,13 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
-import Modal from '@/components/ui/Modal.vue'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'CreateProjectModal',
-  components: { Modal, TextField, Button },
+  components: { AppModal, AppTextField, AppButton },
   props: {
     modelValue: { type: Boolean, default: false }
   },
@@ -76,6 +81,18 @@ export default {
     const submitted = ref(false)
     const saving = ref(false)
 
+    watch(
+      () => props.modelValue,
+      open => {
+        if (open) reset()
+      }
+    )
+
+    return { t, name, tag, blurb, submitted, saving, cancel, handleSubmit }
+
+    // -- Function definitions --
+
+    /** Reset every form field; called whenever the modal opens. */
     function reset() {
       name.value = ''
       tag.value = ''
@@ -84,27 +101,24 @@ export default {
       saving.value = false
     }
 
-    watch(
-      () => props.modelValue,
-      open => {
-        if (open) reset()
-      }
-    )
-
+    /** Close the modal without saving. */
     function cancel() {
       emit('update:modelValue', false)
     }
 
+    /** Validate, then create the project via the store; closes the modal on success. */
     async function handleSubmit() {
       submitted.value = true
       if (!name.value.trim() || saving.value) return
       saving.value = true
+
       try {
         const created = await store.createProject({
           name: name.value.trim(),
           tag: tag.value.trim() || undefined,
           blurb: blurb.value.trim() || undefined
         })
+
         emit('created', created)
         emit('update:modelValue', false)
       } catch {
@@ -113,8 +127,6 @@ export default {
         saving.value = false
       }
     }
-
-    return { t, name, tag, blurb, submitted, saving, cancel, handleSubmit }
   }
 }
 </script>

@@ -15,13 +15,21 @@
  *   auth forms precise placement of the error message relative to the form.
  */
 import { toast } from 'vue-sonner'
+import i18n from '@/i18n/index.js'
 
+/**
+ * Composable that exposes error/success toast helpers and a resolver for
+ * extracting the displayable message from a GraphQL / JS error. Stateless —
+ * each helper is a thin wrapper over vue-sonner's `toast` API.
+ *
+ * @returns {{ resolveErrorMessage: (err: Error|object, fallbackMsg?: string) => string, toastError: (err: Error|object, fallbackMsg?: string) => void, toastSuccess: (message: string) => void }}
+ */
 export function useErrorToast() {
   /**
    * Resolve the display message from an error object without showing a toast.
    * Useful when the view wants to display the error inline rather than as a toast.
    * Priority: GraphQL error → networkError → err.message → fallbackMsg → generic.
-   * Including `networkError.message` (WEB-W2-20) surfaces the server's
+   * Including `networkError.message` surfaces the server's
    * diagnostic on transport-layer failures (502/503/etc.) rather than the
    * wrapper's generic "Network error" text.
    * @param {Error|object} err - The caught error object
@@ -34,7 +42,7 @@ export function useErrorToast() {
       err?.networkError?.message ||
       err?.message ||
       fallbackMsg ||
-      'An unexpected error occurred'
+      i18n.global.t('common.errorGeneric')
     )
   }
 

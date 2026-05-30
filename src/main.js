@@ -32,6 +32,7 @@ const authStore = useAuthStore()
  */
 async function bootstrap() {
   const hasHint = document.cookie.includes('ayp_refresh_hint')
+
   if (hasHint) {
     await authStore.tryRestoreSession()
   }

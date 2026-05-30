@@ -29,7 +29,7 @@ describe('WinPicker', () => {
 
   it('renders the empty state when tasks list is empty', () => {
     const wrapper = mountPicker({ tasks: [] })
-    expect(wrapper.text()).toContain("Some days nothing on the list moves")
+    expect(wrapper.text()).toContain('Some days nothing on the list moves')
   })
 
   it('toggles a star on row click', async () => {
@@ -44,6 +44,7 @@ describe('WinPicker', () => {
     const wrapper = mountPicker({
       modelValue: { starred: ['t1'], freeText: '' }
     })
+
     await wrapper.findAll('.win-picker__row')[0].trigger('click')
     expect(wrapper.emitted('update:modelValue').at(-1)[0].starred).toEqual([])
   })
@@ -52,6 +53,7 @@ describe('WinPicker', () => {
     const wrapper = mountPicker({
       modelValue: { starred: ['t1', 't2', 't3'], freeText: '' }
     })
+
     await wrapper.findAll('.win-picker__row')[3].trigger('click')
     const out = wrapper.emitted('update:modelValue').at(-1)[0].starred
     expect(out).toHaveLength(3)

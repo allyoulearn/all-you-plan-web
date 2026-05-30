@@ -1,17 +1,14 @@
 <template>
   <div class="chore-row" :class="{ 'chore-row--dragging': dragging }">
-    <span v-if="showHandle" class="chore-row__handle" :aria-hidden="true">
-      <AppIcon name="grip" :size="14" />
-    </span>
-
     <AppCheckbox
+      class="chore-row__check"
       :model-value="completedToday"
       :disabled="snoozed"
-      @update:model-value="$emit('complete', chore.id)"
+      @update:model-value="onCheckboxToggle"
     />
 
-    <span class="chore-row__body">
-      <span class="chore-row__title-row">
+    <div class="chore-row__body">
+      <div class="chore-row__title-row">
         <button
           type="button"
           class="chore-row__title"
@@ -22,26 +19,39 @@
         </button>
 
         <WrenOriginBadge ref-type="chore" :ref-id="chore.id" />
-      </span>
+      </div>
 
-      <span class="chore-row__cadence">
-        {{ cadenceText }}
-      </span>
+      <div class="chore-row__sub">
+        <span class="chore-row__cadence">
+          {{ cadenceText }}
+        </span>
 
-      <span v-if="snoozed" class="chore-row__meta">
-        <AppIcon name="clock" :size="11" />
-        {{ t('chores.snoozedUntil', { date: snoozedUntilDate }) }}
-      </span>
+        <!-- One-off chores skip the dot strip — it's a recurrence visual and
+             reads as broken data when there's no pattern to plot. -->
+        <template v-if="!isOnce">
+          <span class="chore-row__sub-sep" aria-hidden="true">
+            ·
+          </span>
 
-      <span v-else-if="chore.skipNextDate" class="chore-row__meta">
-        <AppIcon name="arrow-right" :size="11" />
-        {{ t('chores.skipNextScheduled', { date: skipNextLabel }) }}
-      </span>
+          <ChoreRecentStrip :strip="strip" />
+        </template>
 
-      <ChoreRecentStrip :strip="strip" class="chore-row__strip" />
-    </span>
+        <!-- Skip-next is a scheduling state, not a chore "status" — keep it
+             as inline meta. Snoozed is now surfaced by the status pill. -->
+        <template v-if="chore.skipNextDate && !snoozed">
+          <span class="chore-row__sub-sep" aria-hidden="true">
+            ·
+          </span>
 
-    <ChoreStreakBadge :streak="chore.streak" :best-streak="chore.bestStreak ?? 0" />
+          <span class="chore-row__meta">
+            <AppIcon name="arrow-right" :size="11" />
+            {{ t('chores.skipNextScheduled', { date: skipNextLabel }) }}
+          </span>
+        </template>
+      </div>
+    </div>
+
+    <ChoreStatusPill :status="status" />
 
     <div class="chore-row__menu">
       <button
@@ -186,10 +196,9 @@
 
 <script>
 /**
- * ChoreRow — single chore entry with cadence text, 7-dot recent strip,
- * flame streak badge, and an overflow menu (Edit, Snooze 1d/3d/7d/until,
- * Skip next, Resume, Move up/down, Delete). Clicking the title triggers
- * the edit flow.
+ * ChoreRow — one habit row. Layout is checkbox · title+cadence+strip ·
+ * status pill · menu. Click the title to edit. Streak/best stats live on
+ * the Stats view; this row is purely "what's the state of this chore."
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -197,9 +206,9 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import WrenOriginBadge from '@/components/wren/WrenOriginBadge.vue'
 import ChoreRecentStrip from './ChoreRecentStrip.vue'
-import ChoreStreakBadge from './ChoreStreakBadge.vue'
+import ChoreStatusPill from './ChoreStatusPill.vue'
 import { formatDayMonth } from '@/utils/date.js'
-import { buildRecentStrip, cadenceLabel, isSnoozedNow } from '@/utils/chores.js'
+import { buildRecentStrip, cadenceLabel, choreStatus, isSnoozedNow } from '@/utils/chores.js'
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -208,20 +217,19 @@ function formatDate(iso) {
 
 export default {
   name: 'ChoreRow',
-  components: { AppCheckbox, AppIcon, WrenOriginBadge, ChoreRecentStrip, ChoreStreakBadge },
+  components: { AppCheckbox, AppIcon, WrenOriginBadge, ChoreRecentStrip, ChoreStatusPill },
   props: {
     chore: { type: Object, required: true },
     /** True when this row is the first in its group — disables Move up. */
     atTop: { type: Boolean, default: false },
     /** True when this row is the last in its group — disables Move down. */
     atBottom: { type: Boolean, default: false },
-    /** True to render the desktop drag handle on the left. */
-    showHandle: { type: Boolean, default: false },
     /** True while the row is being dragged (parent toggles). */
     dragging: { type: Boolean, default: false }
   },
   emits: [
     'complete',
+    'uncomplete',
     'snooze',
     'snooze-until',
     'skip-next',
@@ -251,9 +259,10 @@ export default {
     })
 
     const cadenceText = computed(() => cadenceLabel(props.chore.cadence, t))
-    const snoozedUntilDate = computed(() => formatDate(props.chore.snoozedUntil))
     const skipNextLabel = computed(() => formatDate(props.chore.skipNextDate))
     const strip = computed(() => buildRecentStrip(props.chore))
+    const status = computed(() => choreStatus(props.chore))
+    const isOnce = computed(() => props.chore.cadence?.type === 'once')
 
     onMounted(() => {
       document.addEventListener('click', onDocClick)
@@ -271,13 +280,22 @@ export default {
       completedToday,
       titleClass,
       cadenceText,
-      snoozedUntilDate,
       skipNextLabel,
       strip,
+      status,
+      isOnce,
       menuOpen,
       menuTrigger,
       menuList,
-      trigger
+      trigger,
+      onCheckboxToggle
+    }
+
+    // Emit "complete" or "uncomplete" depending on which direction the
+    // checkbox just moved. AppCheckbox passes the new boolean value.
+    function onCheckboxToggle(next) {
+      if (next) emit('complete', props.chore.id)
+      else emit('uncomplete', props.chore.id)
     }
 
     function trigger(action, days) {
@@ -324,23 +342,29 @@ export default {
 
 <style lang="scss" scoped>
 .chore-row {
-  @apply relative flex items-start gap-3.5 rounded-lg px-2 py-3 transition-colors hover:bg-paper-3;
+  // No row-fill hover — it boxes inside the card's px-5 gutter and looks
+  // worse than not hovering at all. Title underline on hover is enough
+  // affordance to show the row is interactive.
+  @apply relative flex cursor-grab items-center gap-4 border-b border-rule-soft py-4 last:border-0;
 
-  &--dragging {
-    @apply opacity-50;
+  &:active {
+    @apply cursor-grabbing;
   }
 
-  &__handle {
-    @apply absolute left-[-22px] top-1/2 hidden -translate-y-1/2 cursor-grab text-muted;
-    @media (pointer: fine) {
-      .chore-row:hover & {
-        @apply block;
-      }
-    }
+  &--dragging,
+  &--ghost {
+    // SortableJS clones the row into the slot it's hovering. The ghost
+    // class lands on that placeholder; fade it so it reads as "this is
+    // where the row will land" rather than a second instance.
+    @apply opacity-30;
+  }
+
+  &__check {
+    @apply mt-0.5 shrink-0;
   }
 
   &__body {
-    @apply flex min-w-0 flex-1 flex-col gap-1;
+    @apply flex min-w-0 flex-1 flex-col gap-1.5;
   }
 
   &__title-row {
@@ -348,7 +372,7 @@ export default {
   }
 
   &__title {
-    @apply block bg-transparent text-left text-[14px];
+    @apply block bg-transparent text-left text-[15px] leading-tight;
 
     &--muted {
       @apply text-muted line-through;
@@ -359,20 +383,24 @@ export default {
     }
   }
 
-  &__cadence {
-    @apply text-[11px] text-muted;
+  &__sub {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted;
   }
 
-  &__strip {
-    @apply mt-1;
+  &__cadence {
+    @apply text-[12px] text-muted;
+  }
+
+  &__sub-sep {
+    @apply text-[12px] leading-none text-rule;
   }
 
   &__meta {
-    @apply inline-flex items-center gap-1 text-[11px] text-muted;
+    @apply inline-flex items-center gap-1 text-[12px] text-muted;
   }
 
   &__menu {
-    @apply relative;
+    @apply relative shrink-0;
   }
 
   &__menu-trigger {

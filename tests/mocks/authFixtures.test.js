@@ -12,6 +12,7 @@ describe('auth mock fixture — user settings', () => {
 
   it('checkIns is an array of known check-in slots', () => {
     expect(Array.isArray(settings.checkIns)).toBe(true)
+
     for (const slot of settings.checkIns) {
       expect(['morning', 'midday', 'evening', 'stuck']).toContain(slot)
     }

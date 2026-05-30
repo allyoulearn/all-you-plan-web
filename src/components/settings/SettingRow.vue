@@ -1,17 +1,22 @@
 <template>
   <div class="setting-row">
+    <!-- Label + description -->
     <div>
+      <!-- Label -->
       <p class="setting-row__label">
         {{ label }}
       </p>
 
+      <!-- Description -->
       <p v-if="description" class="setting-row__description">
         {{ description }}
       </p>
     </div>
 
+    <!-- Spacer -->
     <div />
 
+    <!-- Control slot -->
     <div class="setting-row__control">
       <slot />
     </div>
@@ -26,7 +31,7 @@ export default {
   props: {
     /**
      * Primary label for the setting. Required and validated non-empty so a
-     * missing localized string can't render an empty `<p>` (WEB-W3-19).
+     * missing localized string can't render an empty `<p>`.
      */
     label: {
       type: String,

@@ -141,6 +141,7 @@ describe('apollo.js', () => {
         kind: 'Document',
         definitions: [{ kind: 'OperationDefinition', operation: 'subscription' }]
       }
+
       expect(captured.splitPredicate({ query })).toBe(true)
     })
 
@@ -149,6 +150,7 @@ describe('apollo.js', () => {
         kind: 'Document',
         definitions: [{ kind: 'OperationDefinition', operation: 'query' }]
       }
+
       expect(captured.splitPredicate({ query })).toBe(false)
     })
 
@@ -157,6 +159,7 @@ describe('apollo.js', () => {
         kind: 'Document',
         definitions: [{ kind: 'OperationDefinition', operation: 'mutation' }]
       }
+
       expect(captured.splitPredicate({ query })).toBe(false)
     })
   })
@@ -186,6 +189,7 @@ describe('apollo.js', () => {
       // Import the real Observable so forward returns a proper Observable
       const { Observable } = await import('@apollo/client/core')
       vi.stubEnv('DEV', false)
+
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
@@ -200,6 +204,7 @@ describe('apollo.js', () => {
         observer.next({ data: {} })
         observer.complete()
       })
+
       const forward = vi.fn().mockReturnValue(forwardObservable)
       const err = { message: 'Not authenticated', extensions: { code: 'UNAUTHENTICATED' } }
       const operation = {}
@@ -230,6 +235,7 @@ describe('apollo.js', () => {
       const { Observable } = await import('@apollo/client/core')
       vi.stubEnv('DEV', false)
       let resolveRefresh
+
       vi.stubGlobal(
         'fetch',
         vi.fn().mockReturnValue(
@@ -243,6 +249,7 @@ describe('apollo.js', () => {
         observer.next({ data: {} })
         observer.complete()
       })
+
       const forward = vi.fn().mockReturnValue(forwardObservable)
       const err = { message: 'Unauth', extensions: { code: 'UNAUTHENTICATED' } }
 
@@ -285,12 +292,14 @@ describe('apollo.js', () => {
 
     it('returns undefined when there are no graphQLErrors', () => {
       const forward = vi.fn()
+
       const result = captured.onErrorHandler({
         graphQLErrors: null,
         networkError: null,
         operation: {},
         forward
       })
+
       expect(result).toBeUndefined()
       expect(forward).not.toHaveBeenCalled()
     })
@@ -302,24 +311,28 @@ describe('apollo.js', () => {
         operation: {},
         forward: vi.fn()
       })
+
       expect(result).toBeUndefined()
     })
 
     it('logs network errors to console', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const networkError = new Error('Connection refused')
+
       captured.onErrorHandler({
         graphQLErrors: null,
         networkError,
         operation: {},
         forward: vi.fn()
       })
+
       expect(consoleSpy).toHaveBeenCalledWith('[Network error]:', networkError)
       consoleSpy.mockRestore()
     })
 
     it('returns an Observable (not a Promise) for UNAUTHENTICATED errors (WEB-T05-001)', async () => {
       vi.stubEnv('DEV', false)
+
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
@@ -422,10 +435,12 @@ describe('apollo.js', () => {
 
     it('sends POST to VITE_GRAPHQL_URL when set', async () => {
       vi.stubEnv('VITE_GRAPHQL_URL', 'https://api.example.com/graphql')
+
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue({ data: { refreshToken: { accessToken: 'tok' } } })
       })
+
       vi.stubGlobal('fetch', mockFetch)
 
       await refreshAccessToken()
@@ -438,10 +453,12 @@ describe('apollo.js', () => {
 
     it('falls back to /graphql when VITE_GRAPHQL_URL is not set', async () => {
       vi.stubEnv('VITE_GRAPHQL_URL', undefined)
+
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue({ data: { refreshToken: { accessToken: 'tok' } } })
       })
+
       vi.stubGlobal('fetch', mockFetch)
 
       await refreshAccessToken()
@@ -476,6 +493,7 @@ describe('apollo.js', () => {
 
     it('logs GraphQL errors to console when json.errors is present (WEB-T05-013)', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
@@ -493,6 +511,7 @@ describe('apollo.js', () => {
         '[refreshAccessToken] server errors:',
         expect.any(Array)
       )
+
       consoleSpy.mockRestore()
     })
 
@@ -525,6 +544,7 @@ describe('apollo.js', () => {
         ok: true,
         json: vi.fn().mockResolvedValue({ data: { refreshToken: { accessToken: 'tok' } } })
       })
+
       vi.stubGlobal('fetch', mockFetch)
 
       await refreshAccessToken()
@@ -540,6 +560,7 @@ describe('apollo.js', () => {
         ok: true,
         json: vi.fn().mockResolvedValue({ data: { refreshToken: { accessToken: 'tok' } } })
       })
+
       vi.stubGlobal('fetch', mockFetch)
 
       await refreshAccessToken()
@@ -567,6 +588,7 @@ describe('apollo.js', () => {
           })
         })
       )
+
       captured.wsClientDispose.mockClear()
 
       await refreshAccessToken()
@@ -609,6 +631,7 @@ describe('apollo.js', () => {
       captured.wsClientDispose.mockImplementationOnce(() => {
         throw new Error('dispose failed')
       })
+
       expect(() => resetWsConnection()).not.toThrow()
     })
   })

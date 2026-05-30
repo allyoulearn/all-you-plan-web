@@ -5,7 +5,7 @@
  * UPDATE_PROFILE, FORGOT_PASSWORD, RESET_PASSWORD. All session-bearing
  * mutations return the auth payload `{ accessToken, user }` and share the
  * `UserFields` fragment so the cached user shape stays consistent across
- * operations (WEB-W1-12).
+ * operations.
  */
 import { gql } from '@apollo/client/core'
 
@@ -16,6 +16,10 @@ const USER_FRAGMENT = gql`
     email
     name
     timezone
+    onboardedAt
+    wrenTone
+    onboardingMode
+    householdId
     streak {
       current
       best
@@ -29,6 +33,11 @@ const USER_FRAGMENT = gql`
       checkIns
       stalledNudgeDays
       journalVisibility
+    }
+    subscription {
+      tier
+      currentPeriodEnd
+      status
     }
   }
 `
@@ -92,8 +101,13 @@ export const LOGOUT = gql`
 /** Update profile fields and/or merged settings; returns the new user. */
 export const UPDATE_PROFILE = gql`
   ${USER_FRAGMENT}
-  mutation UpdateProfile($name: String, $timezone: String, $settings: UpdateSettingsInput) {
-    updateProfile(name: $name, timezone: $timezone, settings: $settings) {
+  mutation UpdateProfile(
+    $name: String
+    $timezone: String
+    $settings: UpdateSettingsInput
+    $wrenTone: WrenTone
+  ) {
+    updateProfile(name: $name, timezone: $timezone, settings: $settings, wrenTone: $wrenTone) {
       ...UserFields
     }
   }

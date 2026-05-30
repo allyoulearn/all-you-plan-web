@@ -18,7 +18,7 @@
  *   The auth store mirrors the value into a Pinia ref for UI bindings, and
  *   calls setAccessToken() here whenever it updates. resetWsConnection() is
  *   called after each refresh so existing subscriptions reconnect with the
- *   fresh token (WEB-W1-03).
+ *   fresh token.
  *
  * Mock toggle:
  *   useMocks() is a function (not a top-level const) so vitest's vi.stubEnv()
@@ -39,13 +39,16 @@ import { REFRESH_TOKEN } from '@/api/operations/index.js'
 import { createMockLink } from '@/mocks/mockLink.js'
 import { mockRegistry } from '@/mocks/index.js'
 
-// Single source of truth for the mock-mode predicate (WEB-W4-23). The DEV
-// guard keeps the mock branch from ever shipping into production builds; the
-// VITE_USE_MOCKS env var must additionally be 'true' to opt in.
-//
-// Evaluated lazily inside both call sites (link composition at module init and
-// refreshAccessToken at call time) so vitest's vi.stubEnv() can flip the
-// branch in tests without re-importing the module.
+/**
+ * Single source of truth for the mock-mode predicate. The DEV
+ * guard keeps the mock branch from ever shipping into production builds; the
+ * VITE_USE_MOCKS env var must additionally be 'true' to opt in.
+ *
+ * Evaluated lazily inside both call sites (link composition at module init and
+ * refreshAccessToken at call time) so vitest's vi.stubEnv() can flip the
+ * branch in tests without re-importing the module.
+ * @returns {boolean}
+ */
 function useMocks() {
   return import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS === 'true'
 }
@@ -68,7 +71,7 @@ export function setAccessToken(token) {
 /**
  * Read the in-memory access token. Intended only for tests and dev tooling —
  * application code should ask the auth store, which is the canonical owner of
- * session state (WEB-W1-15).
+ * session state.
  * @returns {string|null}
  */
 export function getAccessToken() {
@@ -86,6 +89,7 @@ const httpLink = createHttpLink({
 })
 
 const wsUrl = import.meta.env.VITE_WS_URL || `wss://${window.location.host}/graphql`
+
 const wsClient = createClient({
   url: wsUrl,
   connectionParams: () => ({
@@ -94,6 +98,7 @@ const wsClient = createClient({
   retryAttempts: 5,
   shouldRetry: () => true
 })
+
 const wsLink = new GraphQLWsLink(wsClient)
 
 /**
@@ -103,7 +108,7 @@ const wsLink = new GraphQLWsLink(wsClient)
  * subscription, picking up the current access token via `connectionParams`.
  *
  * Called after a successful access-token refresh so existing subscriptions
- * stop sending the stale token (WEB-W1-03).
+ * stop sending the stale token.
  */
 export function resetWsConnection() {
   try {
@@ -138,8 +143,9 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
         return fromPromise(
           refreshing.catch(() => {
             setAccessToken(null)
+
             // Lazy-import router to avoid circular dependency at module init.
-            // WEB-W1-17: chain .catch so a chunk-load failure does not leave
+            // chain .catch so a chunk-load failure does not leave
             // the user stuck on the current screen with no auth and no
             // diagnostic; falls back to a hard navigation to /auth/login.
             import('@/router/index.js')
@@ -148,41 +154,57 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
               })
               .catch(routerErr => {
                 console.error('[apollo] failed to redirect to login:', routerErr)
-                try {
-                  window.location.assign('/auth/login')
-                } catch {
-                  // Last-resort fallback failed too — nothing else to do.
-                }
+                window.location.assign('/auth/login')
               })
+
             return Promise.reject(err)
           })
         ).flatMap(() => forward(operation))
       }
     }
   }
+
   if (networkError) {
     console.error('[Network error]:', networkError)
   }
 })
 
+/**
+ * Refresh the access token via the GraphQL `refreshToken` mutation.
+ *
+ * In mock mode, runs the registered fixture; otherwise performs a credentialed
+ * POST to the GraphQL endpoint so the HTTP-only refresh cookie is sent. On
+ * success, updates the in-memory access token and resets the WS transport
+ * (so existing subscriptions reconnect with the fresh bearer).
+ *
+ * Throws on any failure — the caller (auth store / errorLink) decides whether
+ * to clear local auth and redirect.
+ *
+ * @returns {Promise<{ accessToken: string, user?: object }>}
+ */
 export async function refreshAccessToken() {
   if (useMocks()) {
-    // WEB-W4-22: surface a clear, mockLink-style error if the fixture is
+    // surface a clear, mockLink-style error if the fixture is
     // missing instead of letting a generic `Cannot read properties of
     // undefined` slip through.
     const fn = mockRegistry.refreshToken
+
     if (typeof fn !== 'function') {
       throw new Error('[mock] No fixture registered for root field "refreshToken"')
     }
+
     const result = fn()
     const payload = result?.refreshToken
+
     if (!payload) {
       throw new Error('[mock] Fixture for "refreshToken" returned no payload')
     }
+
     setAccessToken(payload.accessToken)
     resetWsConnection()
     return payload
   }
+
   const res = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -191,26 +213,34 @@ export async function refreshAccessToken() {
       query: REFRESH_TOKEN.loc.source.body
     })
   })
+
   if (!res.ok) {
     throw new Error(`Refresh failed: HTTP ${res.status}`)
   }
+
   const json = await res.json()
+
   if (json.errors?.length) {
     console.error('[refreshAccessToken] server errors:', json.errors)
     throw new Error(json.errors[0].message || 'Refresh failed')
   }
+
   if (json.data?.refreshToken) {
     setAccessToken(json.data.refreshToken.accessToken)
     resetWsConnection()
     return json.data.refreshToken
   }
+
   throw new Error('Refresh failed')
 }
 
-let link = errorLink.concat(splitLink)
-if (useMocks()) {
-  link = createMockLink(mockRegistry).concat(link)
-}
+// errorLink sits at the top so it observes failures from whichever terminating
+// link handles the request. In mock mode the mock link replaces the network
+// terminator entirely — we can't .concat() *after* a terminating link without
+// triggering Apollo's "no effect" warning, and downstream links would never
+// run anyway because the mock link short-circuits with its own Observable.
+const terminatingLink = useMocks() ? createMockLink(mockRegistry) : splitLink
+const link = errorLink.concat(terminatingLink)
 
 export const apolloClient = new ApolloClient({
   link,

@@ -34,6 +34,8 @@ import { apolloClient } from '@/api/apollo.js'
 import {
   WREN_MESSAGES_QUERY,
   WREN_CONVERSATION_QUERY,
+  WREN_CONVERSATIONS_QUERY,
+  WREN_CONVERSATION_MESSAGES_QUERY,
   SEND_WREN_MESSAGE,
   WREN_STREAM_SUBSCRIPTION,
   UNDO_WREN_ACTION,
@@ -67,17 +69,100 @@ export const useWrenStore = defineStore('wren', () => {
   const error = ref('')
   const settings = ref(null)
   const conversationId = ref(null)
+  // Multi-conversation rail state. Conversations live as summaries here; the
+  // active conversation's full message history lives in `messages`. Messages
+  // for inactive conversations are cached in `conversationMessages` so a
+  // switch is instant (no re-fetch) within a single session.
+  const conversations = ref([])
+  const activeConversationId = ref(null)
+  const conversationMessages = ref({})
+  // Set of `${refType}:${refId}` strings for entities Wren has applied an
+  // action to. Read by WrenOriginBadge.vue to render the "by Wren" mark on
+  // rows/cards. Rebuilt on every change so Vue reactivity picks it up.
+  const originRefs = ref(new Set())
+  // Bumps every time an applied action lands. useWrenSync watches this and
+  // refreshes the matching domain store so the affected view picks up the
+  // change without requiring the user to reload.
+  const lastAction = ref(null)
   let activeSubscription = null
 
+  /**
+   * Register an applied action's ref so the matching item is marked as
+   * Wren-originated and the relevant store is refreshed. `refType` and `refId`
+   * are both required — actions without either (purely advisory chips) are
+   * skipped. `kind` is forwarded to the sync layer so it can route by domain
+   * verb (e.g. `task.deleted` vs `task.created`).
+   */
+  function registerActionRef(action) {
+    if (!action || !action.refType || !action.refId) return
+    const key = `${action.refType}:${action.refId}`
+
+    if (!originRefs.value.has(key)) {
+      originRefs.value = new Set([...originRefs.value, key])
+    }
+
+    lastAction.value = {
+      refType: action.refType,
+      refId: action.refId,
+      kind: action.kind ?? null,
+      at: Date.now()
+    }
+  }
+
+  /** Register every applied action carried by a message (used after load). */
+  function registerActionsFromMessage(message) {
+    if (!message?.actions) return
+
+    for (const a of message.actions) {
+      if (a?.__typename === 'WrenAppliedAction' || a?.refType) registerActionRef(a)
+    }
+  }
+
+  /**
+   * True when Wren has applied an action to the given entity this session.
+   * Reads through `originRefs.value.has(...)` so consumers picked up by Vue's
+   * reactivity will re-render whenever the set is replaced.
+   */
+  function isWrenOrigin(refType, refId) {
+    if (!refType || !refId) return false
+    return originRefs.value.has(`${refType}:${refId}`)
+  }
+
+  /**
+   * Load the persisted conversation history and seed the originRefs set from
+   * actions on historical messages so badges survive a page reload.
+   *
+   * Also fetches the conversations list (used by the WrenView left rail) in
+   * parallel — a failure on that secondary query is logged but never blocks
+   * the main message load.
+   */
   async function load() {
     loading.value = true
     error.value = ''
+
     try {
       const { data } = await apolloClient.query({
         query: WREN_MESSAGES_QUERY,
         fetchPolicy: 'network-only'
       })
+
       messages.value = data.wrenMessages
+      // Seed the origin set from historical messages so a fresh page load
+      // still shows the "by Wren" badge on items Wren created in a prior turn.
+      for (const m of messages.value ?? []) registerActionsFromMessage(m)
+
+      // Best-effort load of the conversation rail. Cache the active
+      // conversation's messages so a switch-back-and-forth is instant.
+      loadConversations().catch(err => {
+        console.warn('[wren] conversations list unavailable', err?.message)
+      })
+
+      if (activeConversationId.value) {
+        conversationMessages.value = {
+          ...conversationMessages.value,
+          [activeConversationId.value]: messages.value
+        }
+      }
     } catch (e) {
       error.value = e.message
     } finally {
@@ -85,13 +170,161 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Load the list of conversations for the rail. Best-effort: the API may not
+   * yet implement multi-conversation; on failure we leave the rail empty and
+   * the WrenView falls back to a single-conversation experience.
+   */
+  async function loadConversations() {
+    try {
+      const { data } = await apolloClient.query({
+        query: WREN_CONVERSATIONS_QUERY,
+        fetchPolicy: 'network-only'
+      })
+
+      conversations.value = data.wrenConversations ?? []
+
+      // Pick a default active conversation if none is set yet. The first
+      // entry from the API is the most recent so that's the natural default.
+      if (!activeConversationId.value && conversations.value.length > 0) {
+        activeConversationId.value = conversations.value[0].id
+      }
+
+      // The initial wrenMessages load returns the messages of the currently-
+      // active conversation. Cache them under the now-known active id so a
+      // round-trip switch (active → other → active) does not refetch.
+      if (activeConversationId.value && messages.value.length) {
+        conversationMessages.value = {
+          ...conversationMessages.value,
+          [activeConversationId.value]: messages.value
+        }
+      }
+    } catch (e) {
+      conversations.value = []
+      throw e
+    }
+  }
+
+  /**
+   * Switch the active conversation. Saves the currently-rendered messages
+   * back into the per-conversation cache (so unsent in-flight UI state stays
+   * coherent on switch-back) and then either restores the target's cached
+   * messages or fetches them.
+   */
+  async function switchConversation(id) {
+    if (!id || id === activeConversationId.value) return
+
+    // Cache current conversation's messages before swapping.
+    if (activeConversationId.value) {
+      conversationMessages.value = {
+        ...conversationMessages.value,
+        [activeConversationId.value]: messages.value
+      }
+    }
+
+    activeConversationId.value = id
+
+    if (conversationMessages.value[id]) {
+      messages.value = conversationMessages.value[id]
+      return
+    }
+
+    loading.value = true
+
+    try {
+      const { data } = await apolloClient.query({
+        query: WREN_CONVERSATION_MESSAGES_QUERY,
+        variables: { conversationId: id },
+        fetchPolicy: 'network-only'
+      })
+
+      const list = data.wrenConversationMessages ?? []
+      conversationMessages.value = { ...conversationMessages.value, [id]: list }
+      messages.value = list
+      for (const m of list) registerActionsFromMessage(m)
+    } catch (e) {
+      error.value = e.message
+      messages.value = []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Create a new local conversation. The new entry becomes active and starts
+   * empty — the first send() call will populate it. This is intentionally
+   * client-only for now: the multi-conversation API surface is in design,
+   * and seeding here lets the UI prove out without blocking on the server.
+   *
+   * If an empty conversation already exists (no messages on the server AND
+   * no locally-typed messages cached), activate it instead of spawning a
+   * duplicate. This stops the rail filling up with "New conversation"
+   * entries when the user clicks the + button repeatedly.
+   */
+  function createConversation(title) {
+    const emptyExisting = conversations.value.find(c => {
+      if ((c.messageCount ?? 0) > 0) return false
+      const cached = conversationMessages.value[c.id]
+      return !cached || cached.length === 0
+    })
+
+    if (emptyExisting) {
+      if (emptyExisting.id !== activeConversationId.value) {
+        if (activeConversationId.value) {
+          conversationMessages.value = {
+            ...conversationMessages.value,
+            [activeConversationId.value]: messages.value
+          }
+        }
+
+        activeConversationId.value = emptyExisting.id
+        messages.value = conversationMessages.value[emptyExisting.id] ?? []
+      }
+
+      return emptyExisting.id
+    }
+
+    const id = `local-${Date.now()}`
+
+    const entry = {
+      __typename: 'WrenConversationSummary',
+      id,
+      title: title || 'New conversation',
+      preview: '',
+      updatedAt: new Date().toISOString(),
+      messageCount: 0
+    }
+
+    conversations.value = [entry, ...conversations.value]
+
+    // Cache the active conversation's current messages before clearing.
+    if (activeConversationId.value) {
+      conversationMessages.value = {
+        ...conversationMessages.value,
+        [activeConversationId.value]: messages.value
+      }
+    }
+
+    activeConversationId.value = id
+    conversationMessages.value = { ...conversationMessages.value, [id]: [] }
+    messages.value = []
+    return id
+  }
+
+  /**
+   * Resolve the conversation id, fetching it from the API the first time.
+   * Caches in `conversationId` for subsequent calls within the session.
+   * @returns {Promise<string|null>}
+   */
   async function ensureConversation() {
     if (conversationId.value) return conversationId.value
+
     try {
       const { data } = await apolloClient.query({
         query: WREN_CONVERSATION_QUERY,
         fetchPolicy: 'network-only'
       })
+
       conversationId.value = data.wrenConversation.id
       return conversationId.value
     } catch (e) {
@@ -128,6 +361,7 @@ export const useWrenStore = defineStore('wren', () => {
     error.value = ''
 
     const optimisticId = `optimistic-${Date.now()}`
+
     messages.value = [
       ...messages.value,
       {
@@ -143,6 +377,7 @@ export const useWrenStore = defineStore('wren', () => {
     try {
       // ensure subscription is up before mutation, so first events aren't lost
       const cid = await ensureConversation()
+
       if (cid && !activeSubscription) {
         activeSubscription = apolloClient
           .subscribe({ query: WREN_STREAM_SUBSCRIPTION, variables: { conversationId: cid } })
@@ -158,6 +393,7 @@ export const useWrenStore = defineStore('wren', () => {
         mutation: SEND_WREN_MESSAGE,
         variables: { text: trimmed }
       })
+
       messages.value = [...messages.value, data.sendWrenMessage]
     } catch (e) {
       error.value = e.message
@@ -169,6 +405,10 @@ export const useWrenStore = defineStore('wren', () => {
     }
   }
 
+  /**
+   * Tear down the active streaming subscription and clear all watchdog timers.
+   * Called on component unmount; reset() also delegates here.
+   */
   function teardown() {
     if (activeSubscription) {
       try {
@@ -176,8 +416,10 @@ export const useWrenStore = defineStore('wren', () => {
       } catch {
         /* no-op */
       }
+
       activeSubscription = null
     }
+
     clearAllWatchdogs()
   }
 
@@ -190,6 +432,7 @@ export const useWrenStore = defineStore('wren', () => {
   function clearWatchdog(messageId) {
     if (!messageId) return
     const id = streamWatchdogs.get(messageId)
+
     if (id !== undefined) {
       clearTimeout(id)
       streamWatchdogs.delete(messageId)
@@ -212,27 +455,31 @@ export const useWrenStore = defineStore('wren', () => {
   function armWatchdog(messageId) {
     if (!messageId) return
     clearWatchdog(messageId)
+
     const id = setTimeout(() => {
       streamWatchdogs.delete(messageId)
       const idx = messages.value.findIndex(m => m.id === messageId)
       if (idx < 0) return
       const msg = messages.value[idx]
       if (msg.status !== 'streaming') return
+
       messages.value = messages.value.map((m, i) =>
         i === idx ? { ...m, status: 'interrupted' } : m
       )
+
       const text = 'Wren stream interrupted. Please send your message again.'
       error.value = text
       const { toastError } = useErrorToast()
       toastError(new Error(text), 'Wren stream interrupted')
     }, WREN_STREAM_TIMEOUT_MS)
+
     streamWatchdogs.set(messageId, id)
   }
 
   /**
    * Wipe all per-conversation state. Called from the auth store on logout so
    * a subsequent login does not reuse the previous user's conversation id,
-   * message history, settings, or in-flight subscription (WEB-W4-26).
+   * message history, settings, or in-flight subscription.
    */
   function reset() {
     teardown()
@@ -242,6 +489,11 @@ export const useWrenStore = defineStore('wren', () => {
     error.value = ''
     loading.value = false
     sending.value = false
+    originRefs.value = new Set()
+    lastAction.value = null
+    conversations.value = []
+    activeConversationId.value = null
+    conversationMessages.value = {}
   }
 
   /**
@@ -270,11 +522,14 @@ export const useWrenStore = defineStore('wren', () => {
     if (evt.__typename === 'WrenComplete') {
       const finalMsg = evt.message
       clearWatchdog(finalMsg?.id ?? messageId)
+
       if (idx >= 0) {
         messages.value = messages.value.map(m => (m.id === finalMsg.id ? { ...finalMsg } : m))
       } else {
         messages.value = [...messages.value, { ...finalMsg }]
       }
+
+      registerActionsFromMessage(finalMsg)
       return
     }
 
@@ -313,8 +568,10 @@ export const useWrenStore = defineStore('wren', () => {
             pending: true
           }
         ]
+
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
+
       case 'WrenActionEvent': {
         // Reconcile the optimistic chip (matched by tempId) with the real
         // applied action. Append as a new chip when no tempId matches — covers
@@ -326,8 +583,10 @@ export const useWrenStore = defineStore('wren', () => {
         else actions.push(newAction)
         msg.actions = actions
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
+        registerActionRef(newAction)
         break
       }
+
       case 'WrenPendingConfirmationEvent':
         // Destructive action awaiting user confirmation — render a confirm chip.
         // __typename here is the client-side persistent shape (distinct from
@@ -345,14 +604,17 @@ export const useWrenStore = defineStore('wren', () => {
             expiresAt: evt.expiresAt
           }
         ]
+
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         break
+
       case 'WrenConfirmationResolvedEvent': {
         // User confirmed or cancelled — swap the pending chip in place. On
         // confirm with an action payload, upgrade to a full WrenAppliedAction;
         // otherwise mark the existing chip resolved so it grays out.
         const actions = [...(msg.actions ?? [])]
         const j = actions.findIndex(a => a.confirmToken === evt.confirmToken)
+
         if (j >= 0) {
           if (evt.resolution === 'confirmed' && evt.action) {
             actions[j] = { ...evt.action, __typename: 'WrenAppliedAction' }
@@ -360,20 +622,25 @@ export const useWrenStore = defineStore('wren', () => {
             actions[j] = { ...actions[j], resolution: evt.resolution, pending: false }
           }
         }
+
         msg.actions = actions
         messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
+        if (evt.resolution === 'confirmed' && evt.action) registerActionRef(evt.action)
         break
       }
+
       case 'WrenError': {
         // Surface error message + mark the placeholder failed (when present).
         // Also toast so the user sees it — no view renders store.error.
         // Terminal event: cancel the watchdog so a late-firing timer cannot
         // overwrite the 'failed' status with 'interrupted'.
         clearWatchdog(messageId)
+
         if (msg) {
           msg.status = 'failed'
           messages.value = messages.value.map((m, i) => (i === idx ? msg : m))
         }
+
         // The wire field is `errorMessage` (renamed from `message` to avoid
         // colliding with `WrenComplete.message: WrenMessage!`). Fall back to
         // `message` so older payloads / tests written before the rename
@@ -399,6 +666,7 @@ export const useWrenStore = defineStore('wren', () => {
         mutation: UNDO_WREN_ACTION,
         variables: { undoToken }
       })
+
       return data?.undoWrenAction === true
     } catch (e) {
       const { toastError } = useErrorToast()
@@ -418,6 +686,7 @@ export const useWrenStore = defineStore('wren', () => {
         mutation: CONFIRM_WREN_ACTION,
         variables: { confirmToken }
       })
+
       return data?.confirmWrenAction ?? null
     } catch (e) {
       const { toastError } = useErrorToast()
@@ -437,6 +706,7 @@ export const useWrenStore = defineStore('wren', () => {
         mutation: CANCEL_WREN_ACTION,
         variables: { confirmToken }
       })
+
       return data?.cancelWrenAction === true
     } catch (e) {
       const { toastError } = useErrorToast()
@@ -452,6 +722,7 @@ export const useWrenStore = defineStore('wren', () => {
         query: WREN_SETTINGS_QUERY,
         fetchPolicy: 'network-only'
       })
+
       settings.value = data.wrenSettings
     } catch (e) {
       error.value = e.message
@@ -476,6 +747,7 @@ export const useWrenStore = defineStore('wren', () => {
         mutation: UPDATE_WREN_SETTINGS,
         variables: patch
       })
+
       settings.value = data.updateWrenSettings
       return settings.value
     } catch (e) {
@@ -501,6 +773,7 @@ export const useWrenStore = defineStore('wren', () => {
       variables: { format },
       fetchPolicy: 'network-only'
     })
+
     return data.exportWrenConversation
   }
 
@@ -511,6 +784,10 @@ export const useWrenStore = defineStore('wren', () => {
     error,
     settings,
     conversationId,
+    originRefs,
+    lastAction,
+    conversations,
+    activeConversationId,
     load,
     send,
     applyStreamEvent,
@@ -522,6 +799,10 @@ export const useWrenStore = defineStore('wren', () => {
     exportConversation,
     teardown,
     reset,
-    ensureConversation
+    ensureConversation,
+    isWrenOrigin,
+    loadConversations,
+    switchConversation,
+    createConversation
   }
 })

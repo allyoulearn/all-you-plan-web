@@ -30,6 +30,7 @@ describe('composeSendoff', () => {
       totalCount: 5,
       topWinTitle: 'Mentor call prep'
     })
+
     expect(out.body).toContain('Mentor call prep')
   })
 
@@ -38,6 +39,7 @@ describe('composeSendoff', () => {
       ...base,
       tomorrowIntent: 'blog draft'
     })
+
     expect(out.body).toContain('blog draft')
   })
 
@@ -61,6 +63,7 @@ describe('composeSendoff', () => {
       doneCount: 4,
       totalCount: 4
     })
+
     expect(out.headline.toLowerCase()).not.toContain('some days')
     expect(out.body.toLowerCase()).toMatch(/everything|all of it|the whole list/)
   })
@@ -72,6 +75,7 @@ describe('composeSendoff', () => {
       doneCount: 0,
       totalCount: 4
     })
+
     expect(out.body.toLowerCase()).toMatch(/some days|the day won|tomorrow is a clean page/)
   })
 
@@ -101,6 +105,7 @@ describe('composeSendoff', () => {
       totalCount: 5,
       topWinTitle: 'Mentor call prep.'
     })
+
     expect(out.body).toContain('Mentor call prep mattered.')
   })
 })

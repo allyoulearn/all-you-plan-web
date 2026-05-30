@@ -67,12 +67,15 @@ describe('EditChoreModal', () => {
     const wrapper = mountModal()
     const store = useChoresStore()
     store.updateChore.mockResolvedValue({})
+
     const saveBtn = wrapper
       .findAll('button')
       .filter(b => b.attributes('data-variant') === 'primary')
       .at(-1)
+
     await saveBtn.trigger('click')
     await flushPromises()
+
     expect(store.updateChore).toHaveBeenCalledWith(
       'c1',
       expect.objectContaining({ title: 'Meditate' })

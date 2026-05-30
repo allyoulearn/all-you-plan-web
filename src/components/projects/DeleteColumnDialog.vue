@@ -1,12 +1,14 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('kanban.deleteTitle')"
     role="alertdialog"
     :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
+    <!-- Body -->
     <div class="delete-column-dialog">
+      <!-- Confirmation message -->
       <p v-if="taskCount > 0" class="delete-column-dialog__message">
         {{ t('kanban.deleteWithTasks', taskCount, { named: { count: taskCount } }) }}
       </p>
@@ -15,7 +17,9 @@
         {{ t('kanban.deleteEmpty') }}
       </p>
 
+      <!-- Mode selection -->
       <fieldset v-if="taskCount > 0" class="delete-column-dialog__modes">
+        <!-- Move tasks option -->
         <label class="delete-column-dialog__mode">
           <input
             type="radio"
@@ -31,6 +35,7 @@
           </span>
         </label>
 
+        <!-- Target column select -->
         <div v-if="mode === 'move' && moveTargets.length" class="delete-column-dialog__select-row">
           <label class="delete-column-dialog__select-label">
             {{ t('kanban.deleteMoveTo') }}
@@ -43,6 +48,7 @@
           </select>
         </div>
 
+        <!-- Delete tasks option -->
         <label class="delete-column-dialog__mode">
           <input
             type="radio"
@@ -59,16 +65,17 @@
       </fieldset>
     </div>
 
+    <!-- Actions -->
     <template #footer>
-      <Button variant="ghost" :disabled="saving" @click="cancel">
+      <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
+      </AppButton>
 
-      <Button variant="primary" :disabled="saving || !canConfirm" @click="confirm">
+      <AppButton variant="primary" :disabled="saving || !canConfirm" @click="confirm">
         {{ saving ? t('common.loading') : t('kanban.deleteConfirm') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
@@ -80,12 +87,12 @@
  */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Modal from '@/components/ui/Modal.vue'
-import Button from '@/components/ui/Button.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'DeleteColumnDialog',
-  components: { Modal, Button },
+  components: { AppModal, AppButton },
   props: {
     modelValue: { type: Boolean, default: false },
     /** The column being deleted (object with at least id + label). */
@@ -107,6 +114,7 @@ export default {
       () => props.modelValue,
       open => {
         if (!open) return
+
         if (props.moveTargets.length) {
           mode.value = 'move'
           moveTo.value = props.moveTargets[0]?.id ?? ''
@@ -117,29 +125,36 @@ export default {
       }
     )
 
+    /** True when the Confirm button is allowed (a destination column is picked when needed). */
     const canConfirm = computed(() => {
       if (props.taskCount === 0) return true
       if (mode.value === 'move') return Boolean(moveTo.value)
       return true
     })
 
+    return { t, mode, moveTo, canConfirm, cancel, confirm }
+
+    // -- Function definitions --
+
+    /** Close the dialog without firing a deletion. */
     function cancel() {
       emit('update:modelValue', false)
     }
 
+    /** Emit `confirm` with the selected mode + destination column id (if any). */
     function confirm() {
       if (!canConfirm.value || props.saving) return
+
       if (props.taskCount === 0) {
         emit('confirm', { mode: 'delete', moveToColumnId: null })
         return
       }
+
       emit('confirm', {
         mode: mode.value,
         moveToColumnId: mode.value === 'move' ? moveTo.value : null
       })
     }
-
-    return { t, mode, moveTo, canConfirm, cancel, confirm }
   }
 }
 </script>

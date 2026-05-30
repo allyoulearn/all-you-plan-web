@@ -13,7 +13,8 @@ const globalStubs = {
   AppScreenHeading: true,
   AppSectionHeader: {
     props: ['label', 'count'],
-    template: '<header class="section-header-stub" :data-label="label">{{ label }} ({{ count }})</header>'
+    template:
+      '<header class="section-header-stub" :data-label="label">{{ label }} ({{ count }})</header>'
   },
   AppButton: { template: '<button type="button"><slot /></button>' },
   AppConfirmDialog: true,
@@ -77,6 +78,7 @@ function mountView(initialChores = [], extraState = {}) {
   } catch {
     /* ignore */
   }
+
   return mount(ChoresView, {
     global: {
       stubs: globalStubs,
@@ -144,7 +146,11 @@ describe('ChoresView', () => {
     it('renders the all-done card when due is empty but at least one chore was due today', async () => {
       // Daily chore completed today — present in dueToday calc but groups.due is empty
       const today = new Date().toLocaleDateString('en-CA')
-      const wrapper = mountView([dailyChore({ lastCompletedOn: today, recentCompletions: [today] })])
+
+      const wrapper = mountView([
+        dailyChore({ lastCompletedOn: today, recentCompletions: [today] })
+      ])
+
       const store = useChoresStore()
       store.load.mockResolvedValue()
       await flushPromises()
@@ -172,16 +178,16 @@ describe('ChoresView', () => {
     })
   })
 
-  describe('KPI tiles', () => {
-    it('passes 3 tiles to KpiRow', async () => {
+  describe('stat lede', () => {
+    it('renders the three-part stat lede (today / streak / best)', async () => {
       const wrapper = mountView([dailyChore()])
       const store = useChoresStore()
       store.load.mockResolvedValue()
       await flushPromises()
       await wrapper.vm.$nextTick()
-      const row = wrapper.find('.kpi-row-stub')
-      expect(row.exists()).toBe(true)
-      expect(row.attributes('data-tiles')).toBe('3')
+      const lede = wrapper.find('.chores-view__lede')
+      expect(lede.exists()).toBe(true)
+      expect(lede.findAll('.chores-view__lede-part')).toHaveLength(3)
     })
   })
 

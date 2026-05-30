@@ -3,7 +3,7 @@
  *
  * Queries: JOURNAL_ENTRIES_QUERY (full history).
  * Mutations: CREATE_JOURNAL_ENTRY, UPDATE_JOURNAL_ENTRY, DELETE_JOURNAL_ENTRY.
- * (WEB-W1-12)
+ *
  */
 import { gql } from '@apollo/client/core'
 

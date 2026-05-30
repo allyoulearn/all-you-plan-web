@@ -22,7 +22,7 @@
     <!-- Reset form -->
     <form v-else class="reset-password-view__form" @submit.prevent="handleSubmit">
       <!-- New password field -->
-      <TextField
+      <AppTextField
         v-model="newPassword"
         type="password"
         :label="t('auth.newPassword')"
@@ -30,7 +30,7 @@
       />
 
       <!-- Confirm password field -->
-      <TextField
+      <AppTextField
         v-model="confirmPassword"
         type="password"
         :label="t('auth.confirmPassword')"
@@ -63,7 +63,7 @@
       </p>
 
       <!-- Submit button -->
-      <Button
+      <AppButton
         variant="accent"
         type="submit"
         :disabled="loading || !isPasswordValid || !passwordsMatch"
@@ -71,7 +71,7 @@
         class="reset-password-view__submit"
       >
         {{ loading ? t('common.loading') : t('auth.resetPasswordCta') }}
-      </Button>
+      </AppButton>
 
       <!-- Back to login link -->
       <p class="reset-password-view__footer">
@@ -90,12 +90,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'ResetPasswordView',
-  components: { TextField, Button },
+  components: { AppTextField, AppButton },
   setup() {
     // -- State --
     const { t } = useI18n()
@@ -170,11 +170,12 @@ export default {
       }
 
       loading.value = true
+
       try {
         await authStore.resetPassword(token.value, newPassword.value)
         router.push('/')
       } catch (err) {
-        // WEB-W4-16: use the shared resolver so the fallback-message logic
+        // use the shared resolver so the fallback-message logic
         // lives in one place (LoginView/RegisterView already do this).
         error.value = resolveErrorMessage(err, t('auth.resetTokenInvalid'))
       } finally {

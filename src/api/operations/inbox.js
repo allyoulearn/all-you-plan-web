@@ -2,7 +2,7 @@
  * GraphQL operations for the inbox (capture + triage flow).
  *
  * Queries: INBOX_ITEMS_QUERY (optionally filtered by triaged flag).
- * Mutations: CREATE_INBOX_ITEM, TRIAGE_INBOX_ITEM. (WEB-W1-12)
+ * Mutations: CREATE_INBOX_ITEM, TRIAGE_INBOX_ITEM.
  */
 import { gql } from '@apollo/client/core'
 

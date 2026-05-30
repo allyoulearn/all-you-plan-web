@@ -74,6 +74,7 @@ describe('journal.store', () => {
       apolloClient.query.mockResolvedValueOnce({ data: { journalEntries: fakeEntries } })
       const store = useJournalStore()
       await store.load()
+
       expect(apolloClient.query).toHaveBeenCalledWith(
         expect.objectContaining({ fetchPolicy: 'network-only' })
       )
@@ -92,6 +93,7 @@ describe('journal.store', () => {
       apolloClient.query
         .mockRejectedValueOnce(new Error('old error'))
         .mockResolvedValueOnce({ data: { journalEntries: fakeEntries } })
+
       const store = useJournalStore()
       await store.load()
       expect(store.error).toBe('old error')
@@ -103,6 +105,7 @@ describe('journal.store', () => {
       apolloClient.query
         .mockResolvedValueOnce({ data: { journalEntries: fakeEntries } })
         .mockResolvedValueOnce({ data: { journalEntries: [fakeEntries[0]] } })
+
       const store = useJournalStore()
       await store.load()
       expect(store.entries).toHaveLength(2)
@@ -114,6 +117,7 @@ describe('journal.store', () => {
       apolloClient.query
         .mockResolvedValueOnce({ data: { journalEntries: fakeEntries } })
         .mockRejectedValueOnce(new Error('network error'))
+
       const store = useJournalStore()
       await store.load()
       await store.load()
@@ -131,15 +135,18 @@ describe('journal.store', () => {
       expect(apolloClient.mutate).toHaveBeenCalledWith(
         expect.objectContaining({ variables: newEntryInput })
       )
+
       expect(apolloClient.query).toHaveBeenCalledTimes(1)
     })
 
     it('updates entries list after successful creation', async () => {
       const newEntry = { id: 'e3', date: '2026-05-21', body: 'It was great', tags: ['personal'] }
       apolloClient.mutate.mockResolvedValueOnce({})
+
       apolloClient.query.mockResolvedValueOnce({
         data: { journalEntries: [...fakeEntries, newEntry] }
       })
+
       const store = useJournalStore()
       await store.createEntry(newEntryInput)
 

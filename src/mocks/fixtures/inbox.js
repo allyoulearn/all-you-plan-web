@@ -1,6 +1,6 @@
 /** Mock fixtures for the Inbox screen. */
 
-const inboxItems = [
+let inboxItems = [
   {
     id: 'i1',
     text: 'Look into standing desk options',
@@ -39,9 +39,36 @@ const inboxItems = [
 ]
 
 export const registry = {
-  inboxItems: () => ({ inboxItems }),
+  inboxItems: () => ({ inboxItems: [...inboxItems] }),
   createInboxItem: () => ({ createInboxItem: { id: 'new-inbox-item' } }),
   triageInboxItem: variables => ({
     triageInboxItem: { id: variables.id, triaged: true }
-  })
+  }),
+  deleteInboxItem: (variables = {}) => {
+    const before = inboxItems.length
+    inboxItems = inboxItems.filter(i => i.id !== variables.id)
+    return { deleteInboxItem: inboxItems.length < before }
+  },
+  triageInboxItemsBulk: (variables = {}) => {
+    const ids = Array.isArray(variables.ids) ? variables.ids : []
+    return {
+      triageInboxItemsBulk: ids.map(id => ({ id, triaged: true }))
+    }
+  },
+  deleteInboxItemsBulk: (variables = {}) => {
+    const ids = Array.isArray(variables.ids) ? variables.ids : []
+    const before = inboxItems.length
+    inboxItems = inboxItems.filter(i => !ids.includes(i.id))
+    return { deleteInboxItemsBulk: before - inboxItems.length }
+  },
+  convertInboxItemsToTasks: (variables = {}) => {
+    const ids = Array.isArray(variables.ids) ? variables.ids : []
+    // Convert removes the items from the inbox.
+    inboxItems = inboxItems.filter(i => !ids.includes(i.id))
+    return {
+      convertInboxItemsToTasks: ids.map((_, idx) => ({
+        id: `task-from-inbox-${Date.now()}-${idx}`
+      }))
+    }
+  }
 }

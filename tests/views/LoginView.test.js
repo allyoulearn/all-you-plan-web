@@ -20,12 +20,13 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
   RouterLink: { template: '<a><slot /></a>' },
-  Icon: true
+  AppIcon: true
 }
 
 function mountLogin(routeQuery = {}) {
   // Re-mock useRoute per test
   const mockPush = vi.fn()
+
   vi.doMock('vue-router', () => ({
     useRouter: () => ({ push: mockPush }),
     useRoute: () => ({ query: routeQuery })
@@ -37,6 +38,7 @@ function mountLogin(routeQuery = {}) {
       plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
     }
   })
+
   const store = useAuthStore()
   return { wrapper, store, mockPush }
 }
@@ -134,6 +136,7 @@ describe('LoginView', () => {
 
   it('shows error message when login throws', async () => {
     const { wrapper, store } = mountLogin()
+
     store.login.mockRejectedValue({
       graphQLErrors: [{ message: 'Invalid credentials' }]
     })
@@ -179,16 +182,19 @@ describe('LoginView', () => {
 
   it('redirects to "/" by default after successful login', async () => {
     const mockPush = vi.fn()
+
     vi.doMock('vue-router', () => ({
       useRouter: () => ({ push: mockPush }),
       useRoute: () => ({ query: {} })
     }))
+
     const wrapper = mount(LoginView, {
       global: {
         stubs: globalStubs,
         plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
       }
     })
+
     const store = useAuthStore()
     store.login.mockResolvedValue({})
 
@@ -208,6 +214,7 @@ describe('LoginView', () => {
         plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
       }
     })
+
     expect(wrapper.exists()).toBe(true)
   })
 
@@ -215,6 +222,7 @@ describe('LoginView', () => {
     // Test the sanitisation logic matching the source implementation
     const sanitize = raw =>
       typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+
     expect(sanitize('https://evil.com')).toBe('/')
     expect(sanitize('//evil.com')).toBe('/')
     expect(sanitize('/calendar')).toBe('/calendar')
@@ -254,16 +262,19 @@ describe('LoginView', () => {
   it('calls authStore.devLogin and pushes "/" when dev button is clicked', async () => {
     // Render with isDev=true by mounting with devLogin available
     const mockPush = vi.fn()
+
     vi.doMock('vue-router', () => ({
       useRouter: () => ({ push: mockPush }),
       useRoute: () => ({ query: {} })
     }))
+
     const wrapper = mount(LoginView, {
       global: {
         stubs: globalStubs,
         plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
       }
     })
+
     const store = useAuthStore()
 
     // Call handleDevLogin directly (the button may not render in test env if isDev=false)

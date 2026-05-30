@@ -5,7 +5,7 @@
  * (board with backlog/thisWeek/doing/done columns).
  * Mutations: UPDATE_TASK (column move), CREATE_PROJECT, UPDATE_PROJECT,
  * DELETE_PROJECT. COMPLETE_PROJECT_TASK is re-exported from today.js so both
- * stores share one document node (WEB-W1-12, WEB-T05-015).
+ * stores share one document node (, WEB-T05-015).
  */
 import { gql } from '@apollo/client/core'
 

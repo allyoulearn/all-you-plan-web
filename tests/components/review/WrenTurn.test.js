@@ -10,6 +10,7 @@ describe('WrenTurn', () => {
       props: { prompt: 'How did today feel?' },
       global: { stubs }
     })
+
     expect(wrapper.text()).toContain('How did today feel?')
   })
 
@@ -18,6 +19,7 @@ describe('WrenTurn', () => {
       props: { prompt: 'p', callout: '5 of 8 · 3-day streak' },
       global: { stubs }
     })
+
     expect(wrapper.text()).toContain('5 of 8 · 3-day streak')
   })
 
@@ -26,6 +28,7 @@ describe('WrenTurn', () => {
       props: { prompt: 'p' },
       global: { stubs }
     })
+
     expect(wrapper.find('.wren-turn__callout').exists()).toBe(false)
   })
 
@@ -34,6 +37,7 @@ describe('WrenTurn', () => {
       props: { prompt: 'p' },
       global: { stubs }
     })
+
     expect(wrapper.find('.icon').exists()).toBe(true)
   })
 
@@ -43,6 +47,7 @@ describe('WrenTurn', () => {
       slots: { default: '<p class="custom-child">child</p>' },
       global: { stubs }
     })
+
     expect(wrapper.find('.custom-child').exists()).toBe(true)
   })
 })

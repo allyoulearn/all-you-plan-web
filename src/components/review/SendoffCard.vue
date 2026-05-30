@@ -1,7 +1,9 @@
 <template>
   <div class="sendoff-card">
     <WrenTurn :prompt="prose.headline">
-      <p class="sendoff-card__body">{{ prose.body }}</p>
+      <p class="sendoff-card__body">
+        {{ prose.body }}
+      </p>
 
       <div class="sendoff-card__action">
         <AppButton
@@ -14,7 +16,10 @@
         </AppButton>
 
         <template v-else>
-          <p class="sendoff-card__saved">{{ t('review.reviewSaved') }}</p>
+          <p class="sendoff-card__saved">
+            {{ t('review.reviewSaved') }}
+          </p>
+
           <AppButton variant="ghost" size="sm" @click="$emit('edit')">
             {{ t('review.edit') }}
           </AppButton>

@@ -107,11 +107,74 @@ let chores = [
     order: 4,
     recentCompletions: [],
     createdAt: new Date('2026-01-01T00:00:00.000Z').toISOString()
+  },
+  {
+    id: 'c6',
+    title: 'Renew passport',
+    cadence: {
+      type: 'once',
+      daysOfWeek: [],
+      interval: 1,
+      dayOfMonth: null,
+      // Due two days from "now" so this chore lands in the Upcoming
+      // section by default and demonstrates the one-off render.
+      dueDate: daysAgo(-2)
+    },
+    streak: 0,
+    bestStreak: 0,
+    lastCompletedOn: null,
+    active: true,
+    snoozedUntil: null,
+    skipNextDate: null,
+    order: 5,
+    recentCompletions: [],
+    createdAt: new Date('2026-05-25T00:00:00.000Z').toISOString()
+  },
+  {
+    id: 'c7',
+    title: 'Call dentist',
+    cadence: {
+      type: 'once',
+      daysOfWeek: [],
+      interval: 1,
+      dayOfMonth: null,
+      // Past-due one-off so the row shows "X DAYS LATE" and stays in Due.
+      dueDate: daysAgo(3)
+    },
+    streak: 0,
+    bestStreak: 0,
+    lastCompletedOn: null,
+    active: true,
+    snoozedUntil: null,
+    skipNextDate: null,
+    order: 6,
+    recentCompletions: [],
+    createdAt: new Date('2026-05-20T00:00:00.000Z').toISOString()
   }
 ]
 
 export const registry = {
-  chores: () => ({ chores: [...chores] }),
+  // Mirror the API behaviour of returning chores sorted by their `order`
+  // field — without this, drag-reorder writes the new orders to the mock
+  // store but the next read returns them in insertion order, which makes
+  // the UI look like the reorder didn't take.
+  //
+  // Return fresh copies of each chore on every read. The store wraps
+  // whatever the query returns in a Vue reactive proxy keyed on the raw
+  // object. If we hand back the same plain refs the mock mutates in
+  // place, Vue caches the original proxy and never sees the mutations —
+  // the row stays "Due" after a complete/uncomplete because the computed
+  // never invalidates. Cloning forces new proxies on each load, which
+  // matches how the real API would return brand-new documents each query.
+  chores: () => ({
+    chores: [...chores]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map(c => ({
+        ...c,
+        cadence: { ...c.cadence },
+        recentCompletions: [...(c.recentCompletions ?? [])]
+      }))
+  }),
   completeChore: variables => {
     // Reflect the actual day the mock action ran so the UI sees a sensible
     // value across shifted mock dates.
@@ -135,6 +198,33 @@ export const registry = {
         streak: 7,
         bestStreak: 21,
         lastCompletedOn: isoDay
+      }
+    }
+  },
+  uncompleteChore: variables => {
+    // Inverse of completeChore for the mock: remove today's completion and
+    // roll lastCompletedOn back to the next-most-recent completion (if any).
+    // Streak isn't recomputed from cadence here; we just shave one off,
+    // which is enough for the UI to flip the row back to "Due."
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    const isoDay = `${yyyy}-${mm}-${dd}`
+    const chore = chores.find(c => c.id === variables.id)
+
+    if (chore) {
+      const remaining = (chore.recentCompletions ?? []).filter(d => d !== isoDay)
+      chore.recentCompletions = remaining
+      chore.lastCompletedOn = remaining.length ? remaining[remaining.length - 1] : null
+    }
+
+    return {
+      uncompleteChore: {
+        id: variables.id,
+        streak: chore?.lastCompletedOn ? Math.max((chore.streak ?? 1) - 1, 0) : 0,
+        bestStreak: chore?.bestStreak ?? 0,
+        lastCompletedOn: chore?.lastCompletedOn ?? null
       }
     }
   },

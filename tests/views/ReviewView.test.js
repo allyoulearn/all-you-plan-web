@@ -126,6 +126,7 @@ describe('ReviewView', () => {
       { id: 't1', title: 'Done', done: true },
       { id: 't2', title: 'Pending', done: false }
     ]
+
     const { wrapper } = mountReview({ view: buildView(tasks) })
     wrapper.vm.mood = 'steady'
     wrapper.vm.goToStep(4)
@@ -179,36 +180,44 @@ describe('ReviewView', () => {
   // -- Finale on existing saved review --
 
   it('lands directly on the finale when a saved review exists', async () => {
-    const { wrapper } = mountReview({}, {
-      review: {
-        id: 'r1',
-        mood: 'good',
-        responses: {
-          wins: { starred: [], freeText: '' },
-          friction: { text: '', tags: [] },
-          leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
-          tomorrowIntent: ''
+    const { wrapper } = mountReview(
+      {},
+      {
+        review: {
+          id: 'r1',
+          mood: 'good',
+          responses: {
+            wins: { starred: [], freeText: '' },
+            friction: { text: '', tags: [] },
+            leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
+            tomorrowIntent: ''
+          }
         }
       }
-    })
+    )
+
     await flushPromises()
     expect(wrapper.vm.currentStep).toBe(6)
     expect(wrapper.find('.sendoff-card').exists()).toBe(true)
   })
 
   it('hydrates mood from the saved review', async () => {
-    const { wrapper } = mountReview({}, {
-      review: {
-        id: 'r1',
-        mood: 'good',
-        responses: {
-          wins: { starred: [], freeText: '' },
-          friction: { text: '', tags: [] },
-          leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
-          tomorrowIntent: ''
+    const { wrapper } = mountReview(
+      {},
+      {
+        review: {
+          id: 'r1',
+          mood: 'good',
+          responses: {
+            wins: { starred: [], freeText: '' },
+            friction: { text: '', tags: [] },
+            leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
+            tomorrowIntent: ''
+          }
         }
       }
-    })
+    )
+
     await flushPromises()
     expect(wrapper.vm.mood).toBe('good')
   })
@@ -216,18 +225,22 @@ describe('ReviewView', () => {
   // -- Edit affordance from the finale --
 
   it('returns to step 1 in editing mode when SendoffCard emits edit', async () => {
-    const { wrapper } = mountReview({}, {
-      review: {
-        id: 'r1',
-        mood: 'good',
-        responses: {
-          wins: { starred: [], freeText: '' },
-          friction: { text: '', tags: [] },
-          leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
-          tomorrowIntent: ''
+    const { wrapper } = mountReview(
+      {},
+      {
+        review: {
+          id: 'r1',
+          mood: 'good',
+          responses: {
+            wins: { starred: [], freeText: '' },
+            friction: { text: '', tags: [] },
+            leftovers: { tomorrow: [], picked: [], dropped: [], kept: [] },
+            tomorrowIntent: ''
+          }
         }
       }
-    })
+    )
+
     await flushPromises()
     wrapper.vm.onEdit()
     await flushPromises()
@@ -258,6 +271,7 @@ describe('ReviewView', () => {
     const [date, mood, responses] = reviewStore.save.mock.calls[0]
     expect(typeof date).toBe('string')
     expect(mood).toBe('steady')
+
     expect(responses).toMatchObject({
       wins: { starred: expect.any(Array), freeText: expect.any(String) },
       friction: { text: expect.any(String), tags: expect.any(Array) },
@@ -289,6 +303,7 @@ describe('ReviewView', () => {
       { review: { id: 'r1', mood: 'steady', responses: savedResponses } },
       { rescheduleTask: vi.fn().mockResolvedValue(undefined) }
     )
+
     await flushPromises()
 
     await wrapper.vm.finishReview()

@@ -7,38 +7,48 @@
     @keydown.enter.prevent="$emit('open', task)"
     @keydown.space.prevent="$emit('open', task)"
   >
+    <!-- Title row -->
     <div class="kanban-card__head">
-      <PriorityDot
+      <!-- Priority indicator -->
+      <AppPriorityDot
         v-if="task.priority"
         :value="task.priority"
         :aria-label="task.priority"
       />
 
+      <!-- Task title -->
       <p
         class="kanban-card__title"
         :class="task.done ? 'kanban-card__title--done' : 'kanban-card__title--pending'"
       >
         {{ task.title }}
       </p>
+
+      <!-- Wren origin badge -->
+      <WrenOriginBadge ref-type="task" :ref-id="task.id" />
     </div>
 
+    <!-- Footer meta -->
     <div class="kanban-card__footer" @click.stop>
-      <Checkbox
+      <!-- Complete checkbox -->
+      <AppCheckbox
         :model-value="task.done"
         :size="18"
         @update:model-value="$emit('complete', task.id)"
       />
 
-      <Pill v-if="task.tag" variant="default">
+      <!-- Tag pill -->
+      <AppPill v-if="task.tag" variant="default">
         {{ task.tag }}
-      </Pill>
+      </AppPill>
 
+      <!-- Subtask progress -->
       <span
         v-if="task.subtasks?.length"
         class="kanban-card__subtask-count"
         :aria-label="subtaskAriaLabel"
       >
-        <Icon name="check" :size="12" />
+        <AppIcon name="check" :size="12" />
 
         {{ subtaskProgress }}
       </span>
@@ -55,30 +65,38 @@
  * inside a button (invalid HTML).
  */
 import { computed } from 'vue'
-import Pill from '@/components/ui/Pill.vue'
-import Checkbox from '@/components/ui/Checkbox.vue'
-import Icon from '@/components/ui/Icon.vue'
-import PriorityDot from '@/components/ui/PriorityDot.vue'
+import { useI18n } from 'vue-i18n'
+import AppPill from '@/components/ui/AppPill.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
+import AppPriorityDot from '@/components/ui/AppPriorityDot.vue'
+import WrenOriginBadge from '@/components/wren/WrenOriginBadge.vue'
 
 export default {
   name: 'KanbanCard',
-  components: { Pill, Checkbox, Icon, PriorityDot },
+  components: { AppPill, AppCheckbox, AppIcon, AppPriorityDot, WrenOriginBadge },
   props: {
     /** The task object to display */
     task: { type: Object, required: true }
   },
   emits: ['complete', 'open'],
   setup(props) {
+    // -- State --
+    const { t } = useI18n()
+
+    // -- Computed --
+    /** Subtask progress as a "done/total" fraction shown in the card footer. */
     const subtaskProgress = computed(() => {
       const list = props.task.subtasks ?? []
       const done = list.filter(s => s.done).length
       return `${done}/${list.length}`
     })
 
+    /** Verbose aria-label for the subtask counter (e.g. "2 of 5 subtasks complete"). */
     const subtaskAriaLabel = computed(() => {
       const list = props.task.subtasks ?? []
       const done = list.filter(s => s.done).length
-      return `${done} of ${list.length} subtasks done`
+      return t('kanban.subtaskAriaLabel', { done, total: list.length })
     })
 
     return { subtaskProgress, subtaskAriaLabel }

@@ -6,49 +6,58 @@
       'wren-confirm-chip--expired': isExpired && !resolved
     }"
   >
+    <!-- Warning icon -->
     <ExclamationTriangleIcon class="wren-confirm-chip__icon" aria-hidden="true" />
 
+    <!-- Summary -->
     <span class="wren-confirm-chip__summary">
       {{ pending.summary }}
     </span>
 
+    <!-- Resolved label -->
     <template v-if="resolved">
       <span class="wren-confirm-chip__resolution">
         {{ resolved }}
       </span>
     </template>
 
+    <!-- Expired label -->
     <template v-else-if="isExpired">
       <span class="wren-confirm-chip__resolution">
-        Expired
+        {{ t('wren.confirmExpired') }}
       </span>
     </template>
 
+    <!-- Action buttons -->
     <template v-else>
-      <Button
+      <!-- Cancel button -->
+      <AppButton
         variant="ghost"
         size="sm"
         class="wren-confirm-chip__btn"
         @click="onCancel"
       >
-        Cancel
-      </Button>
+        {{ t('common.cancel') }}
+      </AppButton>
 
-      <Button
+      <!-- Confirm button -->
+      <AppButton
         variant="primary"
         size="sm"
         class="wren-confirm-chip__btn"
         @click="onConfirm"
       >
-        Confirm
-      </Button>
+        {{ t('wren.confirmAccept') }}
+      </AppButton>
     </template>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
-import Button from '@/components/ui/Button.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 /**
  * WrenConfirmChip — renders a pending destructive action awaiting user
@@ -78,7 +87,7 @@ import Button from '@/components/ui/Button.vue'
  */
 export default {
   name: 'WrenConfirmChip',
-  components: { Button, ExclamationTriangleIcon },
+  components: { AppButton, ExclamationTriangleIcon },
   props: {
     pending: {
       type: Object,
@@ -87,43 +96,66 @@ export default {
     }
   },
   emits: ['confirm', 'cancel'],
-  data() {
-    return { resolved: null, expired: false, expiryTimer: null }
-  },
-  computed: {
-    alreadyExpired() {
-      if (!this.pending.expiresAt) return false
-      return new Date(this.pending.expiresAt).getTime() <= Date.now()
-    },
-    isExpired() {
-      return this.expired || this.alreadyExpired
-    }
-  },
-  mounted() {
-    if (this.pending.expiresAt) {
-      const ms = new Date(this.pending.expiresAt).getTime() - Date.now()
-      if (ms > 0) {
-        this.expiryTimer = setTimeout(() => {
-          this.expired = true
-        }, ms)
-      } else {
-        this.expired = true
+  setup(props, { emit }) {
+    const { t } = useI18n()
+    // -- State --
+    const resolved = ref(null)
+    const expired = ref(false)
+    let expiryTimer = null
+
+    // -- Computed --
+    /** True when the confirmation window was already past at mount time. */
+    const alreadyExpired = computed(() => {
+      if (!props.pending.expiresAt) return false
+      return new Date(props.pending.expiresAt).getTime() <= Date.now()
+    })
+
+    /** True when the confirmation window has elapsed (either at mount or while mounted). */
+    const isExpired = computed(() => expired.value || alreadyExpired.value)
+
+    // -- Lifecycle --
+    onMounted(() => {
+      if (props.pending.expiresAt) {
+        const ms = new Date(props.pending.expiresAt).getTime() - Date.now()
+
+        if (ms > 0) {
+          expiryTimer = setTimeout(() => {
+            expired.value = true
+          }, ms)
+        } else {
+          expired.value = true
+        }
       }
+    })
+
+    onBeforeUnmount(() => {
+      if (expiryTimer) clearTimeout(expiryTimer)
+    })
+
+    return {
+      t,
+      resolved,
+      expired,
+      alreadyExpired,
+      isExpired,
+      onConfirm,
+      onCancel,
     }
-  },
-  beforeUnmount() {
-    if (this.expiryTimer) clearTimeout(this.expiryTimer)
-  },
-  methods: {
-    onConfirm() {
-      if (this.isExpired) return
-      this.resolved = 'Confirmed'
-      this.$emit('confirm', this.pending.confirmToken)
-    },
-    onCancel() {
-      if (this.isExpired) return
-      this.resolved = 'Cancelled'
-      this.$emit('cancel', this.pending.confirmToken)
+
+    // -- Function definitions --
+
+    /** Flip the chip to Confirmed and emit the confirm token (once, non-expired). */
+    function onConfirm() {
+      if (isExpired.value) return
+      resolved.value = t('wren.confirmResolved')
+      emit('confirm', props.pending.confirmToken)
+    }
+
+    /** Flip the chip to Cancelled and emit the cancel token (once, non-expired). */
+    function onCancel() {
+      if (isExpired.value) return
+      resolved.value = t('wren.cancelResolved')
+      emit('cancel', props.pending.confirmToken)
     }
   }
 }

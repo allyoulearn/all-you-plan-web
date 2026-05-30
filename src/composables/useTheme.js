@@ -34,12 +34,13 @@ const mode = ref('light')
  * theme even when storage is unavailable (private browsing, quota exceeded).
  * The localStorage write is wrapped in try/catch so a storage failure does
  * not throw into the caller (`setTheme` / `setMode` / `toggleMode`) and turn
- * a theme toggle into a silent crash (WEB-W2-17).
+ * a theme toggle into a silent crash.
  */
 function apply() {
   const el = document.documentElement
   el.setAttribute('data-theme', themeName.value)
   el.setAttribute('data-mode', mode.value)
+
   try {
     localStorage.setItem(
       STORAGE_KEY,
@@ -66,6 +67,7 @@ export function initTheme() {
   } catch {
     // ignore malformed storage
   }
+
   apply()
 }
 

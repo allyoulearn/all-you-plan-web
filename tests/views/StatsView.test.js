@@ -10,9 +10,9 @@ import en from '@/i18n/locales/en.json'
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalStubs = {
-  ScreenHeading: true,
-  SectionHeader: true,
-  Card: { template: '<div><slot /></div>' },
+  AppScreenHeading: true,
+  AppSectionHeader: true,
+  AppCard: { template: '<div><slot /></div>' },
   KpiTile: true,
   Heatmap: true,
   RouterLink: true
@@ -130,6 +130,7 @@ describe('StatsView', () => {
       { choreId: 'h1', name: 'Reading', streak: 5, bestStreak: 10 },
       { choreId: 'h2', name: 'Running', streak: 12, bestStreak: 20 }
     ]
+
     const wrapper = mountStats({ stats: buildStats({ rankedHabits: habits }) })
     expect(wrapper.vm.topStreak).toBe(12)
   })
@@ -146,6 +147,7 @@ describe('StatsView', () => {
       { choreId: 'h1', name: 'Reading', streak: 5, bestStreak: 10 },
       { choreId: 'h2', name: 'Running', streak: 12, bestStreak: 20 }
     ]
+
     const wrapper = mountStats({ stats: buildStats({ rankedHabits: habits }) })
     expect(wrapper.vm.topBest).toBe(20)
   })
@@ -162,6 +164,7 @@ describe('StatsView', () => {
     const heatmap = Array(182)
       .fill(0)
       .map((_, i) => i % 5)
+
     const wrapper = mountStats({ stats: buildStats({ heatmap }) })
     expect(wrapper.vm.heatmapValues).toEqual(heatmap)
   })
@@ -183,6 +186,7 @@ describe('StatsView', () => {
       { choreId: 'h1', name: 'Reading', streak: 5, bestStreak: 10 },
       { choreId: 'h2', name: 'Running', streak: 12, bestStreak: 20 }
     ]
+
     const wrapper = mountStats({ stats: buildStats({ rankedHabits: habits }) })
     expect(wrapper.text()).toContain('Reading')
     expect(wrapper.text()).toContain('Running')
@@ -207,8 +211,9 @@ describe('StatsView', () => {
       { choreId: 'h1', name: 'A', streak: 1, bestStreak: 2 },
       { choreId: 'h2', name: 'B', streak: 3, bestStreak: 5 }
     ]
+
     const wrapper = mountStats({ stats: buildStats({ rankedHabits: habits }) })
-    const headers = wrapper.findAll('section-header-stub')
+    const headers = wrapper.findAll('app-section-header-stub')
     const habitsHeader = headers.find(h => h.attributes('label') === 'Habits ranked')
     expect(habitsHeader).toBeDefined()
     expect(habitsHeader.attributes('count')).toBe('2')
@@ -265,6 +270,7 @@ describe('StatsView', () => {
       { choreId: 'h1', name: 'A', streak: 1, bestStreak: 2 },
       { choreId: 'h2', name: 'B', streak: 3, bestStreak: 4 }
     ]
+
     const wrapper = mountStats({ stats: buildStats({ rankedHabits: habits }) })
     expect(wrapper.text()).toContain('01')
     expect(wrapper.text()).toContain('02')

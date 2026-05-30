@@ -1,23 +1,25 @@
 <template>
   <div>
-    <ScreenHeading :eyebrow="eyebrow" :title="title" :emphasis="emphasis" />
+    <!-- Screen heading -->
+    <AppScreenHeading :eyebrow="eyebrow" :title="title" :emphasis="emphasis" />
 
-    <Card>
+    <!-- Note card -->
+    <AppCard>
       <p class="placeholder-screen__note">
         {{ note }}
       </p>
-    </Card>
+    </AppCard>
   </div>
 </template>
 
 <script>
 /** PlaceholderScreen — stub screen layout used while a full view is not yet implemented. */
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import Card from '@/components/ui/Card.vue'
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppCard from '@/components/ui/AppCard.vue'
 
 export default {
   name: 'PlaceholderScreen',
-  components: { ScreenHeading, Card },
+  components: { AppScreenHeading, AppCard },
   props: {
     /** Optional eyebrow label shown above the title */
     eyebrow: { type: String, default: '' },

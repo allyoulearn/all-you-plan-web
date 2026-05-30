@@ -1,15 +1,18 @@
 <template>
   <div class="kpi-tile">
+    <!-- Label -->
     <span class="kpi-tile__label">
       {{ label }}
     </span>
 
+    <!-- Value with optional emphasis -->
     <span class="kpi-tile__value">
       {{ value }}<em v-if="emphasis" class="kpi-tile__emphasis">
         {{ emphasis }}
       </em>
     </span>
 
+    <!-- Unit -->
     <span v-if="unit" class="kpi-tile__unit">
       {{ unit }}
     </span>

@@ -56,10 +56,12 @@ export const useProjectsStore = defineStore('projects', () => {
   /** Build a fresh `tasksByColumn` array preserving column order. */
   function buildTasksByColumn(columns, tasks) {
     const byColumn = new Map(columns.map(col => [col.id, []]))
+
     for (const task of tasks) {
       const colId = task.columnId
       if (colId && byColumn.has(colId)) byColumn.get(colId).push(task)
     }
+
     return columns.map(col => ({ columnId: col.id, tasks: byColumn.get(col.id) ?? [] }))
   }
 
@@ -76,10 +78,12 @@ export const useProjectsStore = defineStore('projects', () => {
   /** Find a task by id across every column. Returns { task, columnId } or null. */
   function findTask(id) {
     if (!board.value) return null
+
     for (const { columnId, tasks } of board.value.tasksByColumn ?? []) {
       const task = tasks.find(t => t.id === id)
       if (task) return { task, columnId }
     }
+
     return null
   }
 
@@ -93,12 +97,14 @@ export const useProjectsStore = defineStore('projects', () => {
   async function loadProjects({ includeArchived = false } = {}) {
     loadingProjects.value = true
     errorProjects.value = ''
+
     try {
       const { data } = await apolloClient.query({
         query: PROJECTS_QUERY,
         variables: { includeArchived },
         fetchPolicy: 'network-only'
       })
+
       projects.value = data.projects
     } catch (e) {
       errorProjects.value = e.message
@@ -113,15 +119,21 @@ export const useProjectsStore = defineStore('projects', () => {
     return updateProject(id, { archived: false })
   }
 
+  /**
+   * Fetch the full kanban board (project, columns, tasks) for a project.
+   * @param {string} id - Project id.
+   */
   async function loadBoard(id) {
     loadingBoard.value = true
     errorBoard.value = ''
+
     try {
       const { data } = await apolloClient.query({
         query: PROJECT_BOARD_QUERY,
         variables: { id },
         fetchPolicy: 'network-only'
       })
+
       board.value = data.projectBoard
     } catch (e) {
       errorBoard.value = e.message
@@ -153,10 +165,13 @@ export const useProjectsStore = defineStore('projects', () => {
       columnId: entry.columnId,
       tasks: entry.tasks.map(t => (t.id === id ? { ...t, done: true } : t))
     }))
+
     const next = { ...board.value, tasksByColumn: nextTasksByColumn }
+
     if (board.value.project?.progress) {
       const total = board.value.project.progress.total ?? 0
       const done = (board.value.project.progress.done ?? 0) + 1
+
       next.project = {
         ...board.value.project,
         progress: {
@@ -166,10 +181,12 @@ export const useProjectsStore = defineStore('projects', () => {
         }
       }
     }
+
     board.value = next
 
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({ mutation: COMPLETE_PROJECT_TASK, variables: { id } })
     } catch (e) {
@@ -182,15 +199,22 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Create a new project then refresh the projects list.
+   * @param {{ name: string, tag?: string, blurb?: string }} input
+   * @returns {Promise<object>} The created project.
+   */
   async function createProject(input) {
     const { toastError } = useErrorToast()
     errorProjects.value = ''
     saving.value = true
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_PROJECT,
         variables: { name: input.name, tag: input.tag ?? null, blurb: input.blurb ?? null }
       })
+
       await loadProjects()
       return data.createProject
     } catch (e) {
@@ -204,6 +228,14 @@ export const useProjectsStore = defineStore('projects', () => {
 
   const LIST_VISIBLE_FIELDS = ['name', 'tag', 'status', 'archived', 'blurb']
 
+  /**
+   * Patch a project and refresh whichever views surface the changed fields.
+   * Reloads the board when this project's board is currently open, and the
+   * projects list when any list-visible field is touched.
+   * @param {string} id
+   * @param {object} input - Partial project fields to patch.
+   * @returns {Promise<object>} The updated project.
+   */
   async function updateProject(id, input) {
     const { toastError } = useErrorToast()
     errorBoard.value = ''
@@ -211,17 +243,21 @@ export const useProjectsStore = defineStore('projects', () => {
     saving.value = true
     const boardLoadedForThisProject = board.value?.project?.id === id
     const touchedListField = Object.keys(input ?? {}).some(k => LIST_VISIBLE_FIELDS.includes(k))
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_PROJECT,
         variables: { id, ...input }
       })
+
       if (boardLoadedForThisProject) {
         await loadBoard(id)
       }
+
       if (touchedListField) {
         await loadProjects()
       }
+
       return data.updateProject
     } catch (e) {
       if (boardLoadedForThisProject) {
@@ -229,6 +265,7 @@ export const useProjectsStore = defineStore('projects', () => {
       } else {
         errorProjects.value = e.message
       }
+
       toastError(e, 'Failed to update project')
       throw e
     } finally {
@@ -236,21 +273,33 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Set `archived: true` on a project, hiding it from the active list.
+   * @param {string} id
+   */
   async function archiveProject(id) {
     return updateProject(id, { archived: true })
   }
 
+  /**
+   * Delete a project permanently. Clears the open board when it belongs to
+   * the deleted project so the view doesn't render against stale state.
+   * @param {string} id
+   */
   async function deleteProject(id) {
     const { toastError } = useErrorToast()
     errorProjects.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({ mutation: DELETE_PROJECT, variables: { id } })
+
       if (board.value?.project?.id === id) {
         board.value = null
         errorBoard.value = ''
         loadingBoard.value = false
       }
+
       await loadProjects()
     } catch (e) {
       errorProjects.value = e.message
@@ -261,28 +310,40 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Create a task in a project, optionally pinned to a column or schedule
+   * date. Reloads the board only when this project's board is currently open
+   * so cross-project creates do not pay a refetch cost.
+   * @param {{ title: string, projectId: string, note?: string, tag?: string, scheduledDate?: string, columnId?: string }} input
+   * @returns {Promise<object>} The created task.
+   */
   async function createTask(input) {
     const { toastError } = useErrorToast()
     errorBoard.value = ''
     errorProjects.value = ''
     saving.value = true
     const boardLoadedForThisProject = board.value?.project?.id === input.projectId
+
     const taskInput = {
       title: input.title,
       projectId: input.projectId
     }
+
     if (input.note) taskInput.note = input.note
     if (input.tag) taskInput.tag = input.tag
     if (input.scheduledDate) taskInput.scheduledDate = input.scheduledDate
     if (input.columnId) taskInput.columnId = input.columnId
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_TASK,
         variables: { input: taskInput }
       })
+
       if (boardLoadedForThisProject) {
         await loadBoard(input.projectId)
       }
+
       return data.createTask
     } catch (e) {
       if (boardLoadedForThisProject) {
@@ -290,6 +351,7 @@ export const useProjectsStore = defineStore('projects', () => {
       } else {
         errorProjects.value = e.message
       }
+
       toastError(e, 'Failed to create task')
       throw e
     } finally {
@@ -306,17 +368,21 @@ export const useProjectsStore = defineStore('projects', () => {
     errorBoard.value = ''
     saving.value = true
     const snapshot = board.value
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_COLUMN,
         variables: { projectId, label }
       })
+
       const col = data.createColumn
+
       board.value = {
         ...board.value,
         columns: [...board.value.columns, col],
         tasksByColumn: [...board.value.tasksByColumn, { columnId: col.id, tasks: [] }]
       }
+
       return col
     } catch (e) {
       board.value = snapshot
@@ -333,12 +399,15 @@ export const useProjectsStore = defineStore('projects', () => {
     const { toastError } = useErrorToast()
     if (!board.value) return
     const snapshot = board.value
+
     board.value = {
       ...board.value,
       columns: board.value.columns.map(c => (c.id === id ? { ...c, label } : c))
     }
+
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({ mutation: UPDATE_COLUMN, variables: { id, label } })
     } catch (e) {
@@ -362,12 +431,15 @@ export const useProjectsStore = defineStore('projects', () => {
     const byId = new Map(board.value.columns.map(c => [c.id, c]))
     const nextColumns = columnIds.map(id => byId.get(id)).filter(Boolean)
     const tasksMap = new Map(board.value.tasksByColumn.map(t => [t.columnId, t]))
+
     const nextTasksByColumn = columnIds
       .map(id => tasksMap.get(id) ?? { columnId: id, tasks: [] })
       .filter(Boolean)
+
     board.value = { ...board.value, columns: nextColumns, tasksByColumn: nextTasksByColumn }
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({
         mutation: REORDER_COLUMNS,
@@ -393,11 +465,13 @@ export const useProjectsStore = defineStore('projects', () => {
     if (!board.value) return
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({
         mutation: DELETE_COLUMN,
         variables: { id, mode, moveToColumnId: moveToColumnId ?? null }
       })
+
       if (board.value?.project?.id) {
         await loadBoard(board.value.project.id)
       }
@@ -423,13 +497,16 @@ export const useProjectsStore = defineStore('projects', () => {
     board.value = { ...board.value, tasksByColumn: nextTasksByColumn }
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({
         mutation: MOVE_TASK,
         variables: { id: taskId, columnId: toColumnId, order: toIndex }
       })
+
       if (fromColumnId !== toColumnId) {
         const srcEntry = nextTasksByColumn.find(t => t.columnId === fromColumnId)
+
         if (srcEntry && srcEntry.tasks.length > 0) {
           await apolloClient.mutate({
             mutation: REORDER_TASKS_IN_COLUMN,
@@ -440,7 +517,9 @@ export const useProjectsStore = defineStore('projects', () => {
           })
         }
       }
+
       const tgtEntry = nextTasksByColumn.find(t => t.columnId === toColumnId)
+
       if (tgtEntry && tgtEntry.tasks.length > 1) {
         await apolloClient.mutate({
           mutation: REORDER_TASKS_IN_COLUMN,
@@ -468,12 +547,15 @@ export const useProjectsStore = defineStore('projects', () => {
     const { toastError } = useErrorToast()
     errorBoard.value = ''
     saving.value = true
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_TASK,
         variables: { id, input }
       })
+
       const updated = data?.updateTask
+
       if (updated && board.value) {
         // Reload from server when a column-changing edit may have moved the
         // task off the current view; otherwise patch the existing entry to
@@ -490,6 +572,7 @@ export const useProjectsStore = defineStore('projects', () => {
           }
         }
       }
+
       return updated
     } catch (e) {
       errorBoard.value = e.message
@@ -506,8 +589,10 @@ export const useProjectsStore = defineStore('projects', () => {
     const { toastError } = useErrorToast()
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({ mutation: DELETE_TASK, variables: { id } })
+
       if (board.value?.project?.id) {
         await loadBoard(board.value.project.id)
       }
@@ -523,9 +608,12 @@ export const useProjectsStore = defineStore('projects', () => {
   /**
    * Subtask helpers — all return the parent task's updated subtasks array
    * so callers can patch local state without refetching the whole board.
+   * @param {string} taskId
+   * @param {Array<object>} subtasks - New subtasks array from the server.
    */
   function patchTaskSubtasks(taskId, subtasks) {
     if (!board.value) return
+
     board.value = {
       ...board.value,
       tasksByColumn: board.value.tasksByColumn.map(entry => ({
@@ -535,14 +623,21 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Add a subtask to a task and patch the parent's subtasks in-place.
+   * @param {string} taskId
+   * @param {string} text
+   */
   async function addSubtask(taskId, text) {
     const { toastError } = useErrorToast()
     saving.value = true
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: ADD_SUBTASK,
         variables: { taskId, text }
       })
+
       patchTaskSubtasks(taskId, data?.addSubtask?.subtasks ?? [])
     } catch (e) {
       errorBoard.value = e.message
@@ -553,14 +648,22 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Patch a subtask (e.g. toggle done, rename) and refresh the parent.
+   * @param {string} taskId
+   * @param {string} subtaskId
+   * @param {object} patch - Partial subtask fields to update.
+   */
   async function updateSubtask(taskId, subtaskId, patch) {
     const { toastError } = useErrorToast()
     saving.value = true
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_SUBTASK,
         variables: { taskId, subtaskId, ...patch }
       })
+
       patchTaskSubtasks(taskId, data?.updateSubtask?.subtasks ?? [])
     } catch (e) {
       errorBoard.value = e.message
@@ -571,14 +674,21 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  /**
+   * Delete a subtask from a task and refresh the parent.
+   * @param {string} taskId
+   * @param {string} subtaskId
+   */
   async function deleteSubtask(taskId, subtaskId) {
     const { toastError } = useErrorToast()
     saving.value = true
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: DELETE_SUBTASK,
         variables: { taskId, subtaskId }
       })
+
       patchTaskSubtasks(taskId, data?.deleteSubtask?.subtasks ?? [])
     } catch (e) {
       errorBoard.value = e.message
@@ -597,6 +707,7 @@ export const useProjectsStore = defineStore('projects', () => {
     board.value = { ...board.value, tasksByColumn: nextTasksByColumn }
     errorBoard.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({
         mutation: REORDER_TASKS_IN_COLUMN,

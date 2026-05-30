@@ -52,15 +52,15 @@ describe('TaskRow', () => {
     expect(wrapper.find('.task-row__note').exists()).toBe(false)
   })
 
-  it('renders a Pill with tag text when tag is provided', () => {
+  it('renders a AppPill with tag text when tag is provided', () => {
     const task = { id: 't8', title: 'Tagged task', done: false, tag: 'Work' }
     const wrapper = mount(TaskRow, { props: { task } })
-    // Pill is rendered via the .pill class
+    // AppPill is rendered via the .pill class
     expect(wrapper.find('.pill').exists()).toBe(true)
     expect(wrapper.find('.pill').text()).toBe('Work')
   })
 
-  it('does not render Pill when tag is absent', () => {
+  it('does not render AppPill when tag is absent', () => {
     const task = { id: 't9', title: 'No tag task', done: false }
     const wrapper = mount(TaskRow, { props: { task } })
     expect(wrapper.find('.pill').exists()).toBe(false)
@@ -89,7 +89,7 @@ describe('TaskRow', () => {
   it('checkbox reflects done=true', () => {
     const task = { id: 't12', title: 'Done task', done: true }
     const wrapper = mount(TaskRow, { props: { task } })
-    // Checkbox renders with checkbox--checked class when modelValue is true
+    // AppCheckbox renders with checkbox--checked class when modelValue is true
     expect(wrapper.find('.checkbox--checked').exists()).toBe(true)
   })
 

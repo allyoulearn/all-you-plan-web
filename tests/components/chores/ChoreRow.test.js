@@ -29,15 +29,17 @@ describe('ChoreRow', () => {
       expect(wrapper.text()).toContain('Morning walk')
     })
 
-    it('renders the streak number via ChoreStreakBadge', () => {
+    it('renders a status pill instead of a streak number', () => {
       const wrapper = mount(ChoreRow, { props: { chore: baseChore }, global: globalConfig })
-      expect(wrapper.find('.chore-streak-badge').exists()).toBe(true)
-      expect(wrapper.text()).toContain('7')
+      expect(wrapper.find('.chore-status-pill').exists()).toBe(true)
+      // Streak number must not be the visual focus of the row anymore — it
+      // lives on the Stats view, not here.
+      expect(wrapper.find('.chore-streak-badge').exists()).toBe(false)
     })
 
-    it('renders daily cadence as "Daily" (WEB-T07-017: no raw enum)', () => {
+    it('renders daily cadence as "Every day" (no raw enum)', () => {
       const wrapper = mount(ChoreRow, { props: { chore: baseChore }, global: globalConfig })
-      expect(wrapper.text()).toContain('Daily')
+      expect(wrapper.text()).toContain('Every day')
       expect(wrapper.text()).not.toMatch(/\bdaily\b/)
     })
 
@@ -46,6 +48,7 @@ describe('ChoreRow', () => {
         ...baseChore,
         cadence: { type: 'weekly', daysOfWeek: [], interval: 1, dayOfMonth: null }
       }
+
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
       expect(wrapper.text()).toContain('Weekly')
     })
@@ -55,6 +58,7 @@ describe('ChoreRow', () => {
         ...baseChore,
         cadence: { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: null }
       }
+
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
       expect(wrapper.text()).toContain('Monthly')
     })
@@ -64,28 +68,31 @@ describe('ChoreRow', () => {
         ...baseChore,
         cadence: { type: 'custom', daysOfWeek: [], interval: 1, dayOfMonth: null }
       }
+
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
       expect(wrapper.text()).toContain('custom')
     })
   })
 
   describe('cadence labels (new)', () => {
-    it('renders dot-separated short days for weekly with daysOfWeek', () => {
+    it('renders dot-separated 3-letter days for weekly with daysOfWeek', () => {
       const chore = {
         ...baseChore,
         cadence: { type: 'weekly', daysOfWeek: [1, 3, 5], interval: 1, dayOfMonth: null }
       }
+
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
-      expect(wrapper.text()).toMatch(/M.*W.*F/)
+      expect(wrapper.text()).toMatch(/Mon.*Wed.*Fri/)
     })
 
-    it('renders "Day 15" for monthly with dayOfMonth=15', () => {
+    it('renders "Day 15 of each month" for monthly with dayOfMonth=15', () => {
       const chore = {
         ...baseChore,
         cadence: { type: 'monthly', daysOfWeek: [], interval: 1, dayOfMonth: 15 }
       }
+
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
-      expect(wrapper.text()).toContain('Day 15')
+      expect(wrapper.text()).toContain('Day 15 of each month')
     })
 
     it('renders "Every 3 days" for daily interval=3', () => {
@@ -93,6 +100,7 @@ describe('ChoreRow', () => {
         ...baseChore,
         cadence: { type: 'daily', daysOfWeek: [], interval: 3, dayOfMonth: null }
       }
+
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
       expect(wrapper.text()).toContain('Every 3 days')
     })
@@ -113,17 +121,31 @@ describe('ChoreRow', () => {
     })
   })
 
-  describe('streak badge', () => {
-    it('shows the best subline when current < best', () => {
-      const chore = { ...baseChore, streak: 3, bestStreak: 10 }
+  describe('status pill', () => {
+    it('shows "Done today" when lastCompletedOn is today', () => {
+      const today = new Date().toLocaleDateString('en-CA')
+      const chore = { ...baseChore, lastCompletedOn: today }
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
-      expect(wrapper.text()).toContain('best 10')
+      expect(wrapper.text()).toContain('Done today')
     })
 
-    it('omits the best subline when current >= best', () => {
-      const chore = { ...baseChore, streak: 14, bestStreak: 14 }
+    it('shows "Snoozed until …" when snoozedUntil is in the future', () => {
+      const future = new Date(Date.now() + 7 * 86_400_000).toISOString()
+      const chore = { ...baseChore, snoozedUntil: future }
       const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
-      expect(wrapper.text()).not.toContain('best 14')
+      expect(wrapper.text()).toMatch(/Snoozed until/)
+    })
+
+    it('shows "Due" as the default state', () => {
+      // Created today + no missed completions yet → status is "due", not
+      // "1 day late". baseChore's createdAt is in May, which means by today
+      // it would have a stack of missed due-days and read as overdue.
+      const today = new Date().toISOString()
+      const chore = { ...baseChore, createdAt: today }
+      const wrapper = mount(ChoreRow, { props: { chore }, global: globalConfig })
+      const pill = wrapper.find('.chore-status-pill')
+      expect(pill.exists()).toBe(true)
+      expect(pill.text()).toBe('Due')
     })
   })
 
@@ -164,6 +186,7 @@ describe('ChoreRow', () => {
         props: { chore: baseChore, atTop: true },
         global: globalConfig
       })
+
       await wrapper.find('.chore-row__menu-trigger').trigger('click')
       const up = wrapper.findAll('.chore-row__menu-item').find(i => i.text() === 'Move up')
       expect(up.attributes('disabled')).toBeDefined()
@@ -174,6 +197,7 @@ describe('ChoreRow', () => {
         props: { chore: baseChore, atBottom: true },
         global: globalConfig
       })
+
       await wrapper.find('.chore-row__menu-trigger').trigger('click')
       const down = wrapper.findAll('.chore-row__menu-item').find(i => i.text() === 'Move down')
       expect(down.attributes('disabled')).toBeDefined()
@@ -184,7 +208,11 @@ describe('ChoreRow', () => {
     it('emits "snooze" with end-of-day timestamp on snooze 1 day', async () => {
       const wrapper = mount(ChoreRow, { props: { chore: baseChore }, global: globalConfig })
       await wrapper.find('.chore-row__menu-trigger').trigger('click')
-      const item = wrapper.findAll('.chore-row__menu-item').find(i => i.text().includes('Snooze 1 day'))
+
+      const item = wrapper
+        .findAll('.chore-row__menu-item')
+        .find(i => i.text().includes('Snooze 1 day'))
+
       await item.trigger('click')
       const events = wrapper.emitted('snooze')
       expect(events).toBeTruthy()
@@ -210,7 +238,11 @@ describe('ChoreRow', () => {
     it('emits "snooze-until" when Snooze until… is clicked', async () => {
       const wrapper = mount(ChoreRow, { props: { chore: baseChore }, global: globalConfig })
       await wrapper.find('.chore-row__menu-trigger').trigger('click')
-      const item = wrapper.findAll('.chore-row__menu-item').find(i => i.text().includes('Snooze until'))
+
+      const item = wrapper
+        .findAll('.chore-row__menu-item')
+        .find(i => i.text().includes('Snooze until'))
+
       await item.trigger('click')
       expect(wrapper.emitted('snooze-until')).toEqual([['c1']])
     })

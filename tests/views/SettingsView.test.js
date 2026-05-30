@@ -10,6 +10,7 @@ import { createI18n } from 'vue-i18n'
 // on /settings?connection=success.
 let routeQueryMock = {}
 const routerReplaceMock = vi.fn()
+
 vi.mock('vue-router', async () => {
   const actual = await vi.importActual('vue-router')
   return {
@@ -27,6 +28,7 @@ const billingStartUpgrade = vi.fn()
 const billingOpenPortal = vi.fn()
 const billingConnectGoogleCalendar = vi.fn(async () => ({ ok: true }))
 let billingTier = 'free'
+
 vi.mock('@/composables/useBilling.js', () => ({
   useBilling: () => ({
     startUpgrade: billingStartUpgrade,
@@ -46,14 +48,14 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 // ── Stubs ─────────────────────────────────────────────────────────────────────
 
 const globalStubs = {
-  ScreenHeading: true,
-  SectionHeader: true,
-  // Button and SegmentedControl need to emit events for interaction tests
-  Button: {
+  AppScreenHeading: true,
+  AppSectionHeader: true,
+  // AppButton and AppSegmentedControl need to emit events for interaction tests
+  AppButton: {
     template: '<button @click="$emit(\'click\')"><slot /></button>',
     emits: ['click']
   },
-  SegmentedControl: {
+  AppSegmentedControl: {
     props: ['modelValue', 'options'],
     template:
       '<div><button v-for="o in options" :key="o.value" @click="$emit(\'update:modelValue\', o.value)">{{ o.label }}</button></div>',
@@ -93,6 +95,7 @@ vi.mock('@/composables/useTheme.js', () => ({
 
 // Mock useErrorToast composable
 const mockToastError = vi.fn()
+
 vi.mock('@/composables/useErrorToast.js', () => ({
   useErrorToast: () => ({
     toastError: mockToastError
@@ -143,19 +146,19 @@ describe('SettingsView', () => {
 
   it('renders the Coach section header', () => {
     const wrapper = mountSettings()
-    const headers = wrapper.findAll('section-header-stub')
+    const headers = wrapper.findAll('app-section-header-stub')
     expect(headers.some(h => h.attributes('label') === 'Coach')).toBe(true)
   })
 
   it('renders the Look section header', () => {
     const wrapper = mountSettings()
-    const headers = wrapper.findAll('section-header-stub')
+    const headers = wrapper.findAll('app-section-header-stub')
     expect(headers.some(h => h.attributes('label') === 'Look')).toBe(true)
   })
 
   it('renders the Privacy section header', () => {
     const wrapper = mountSettings()
-    const headers = wrapper.findAll('section-header-stub')
+    const headers = wrapper.findAll('app-section-header-stub')
     expect(headers.some(h => h.attributes('label') === 'Privacy')).toBe(true)
   })
 
@@ -183,6 +186,7 @@ describe('SettingsView', () => {
         ]
       }
     })
+
     expect(wrapper.vm.settings).toEqual({})
   })
 
@@ -206,6 +210,7 @@ describe('SettingsView', () => {
         ]
       }
     })
+
     expect(wrapper.vm.stalledNudge).toBeNull()
   })
 
@@ -386,7 +391,7 @@ describe('SettingsView', () => {
 
   it('renders a Billing section header', () => {
     const wrapper = mountSettings()
-    const headers = wrapper.findAll('section-header-stub')
+    const headers = wrapper.findAll('app-section-header-stub')
     expect(headers.some(h => h.attributes('label') === 'Billing')).toBe(true)
   })
 
@@ -436,10 +441,12 @@ describe('SettingsView', () => {
     expect(wrapper.text()).not.toContain('Open Stripe portal')
   })
 
-  it('onUpgradeClick calls billing.startUpgrade with the wren-pro planId', () => {
+  it('onUpgradeClick opens the upgrade modal so the user can pick a cadence', () => {
     const wrapper = mountSettings()
+    expect(wrapper.vm.upgradeModalOpen).toBe(false)
     wrapper.vm.onUpgradeClick()
-    expect(billingStartUpgrade).toHaveBeenCalledWith('wren-pro')
+    expect(wrapper.vm.upgradeModalOpen).toBe(true)
+    expect(billingStartUpgrade).not.toHaveBeenCalled()
   })
 
   it('onManageClick calls billing.openPortal', () => {
@@ -451,20 +458,24 @@ describe('SettingsView', () => {
 
   it('nextBillingLabel formats currentPeriodEnd as "Renews <date>" for active subscriptions', () => {
     billingTier = 'pro'
+
     const wrapper = mountSettings(
       {},
       { tier: 'pro', status: 'active', currentPeriodEnd: '2026-06-30T00:00:00Z' }
     )
+
     expect(wrapper.vm.nextBillingLabel).toMatch(/^Renews /)
     expect(wrapper.vm.nextBillingLabel).toContain('2026')
   })
 
   it('nextBillingLabel formats currentPeriodEnd as "Ends <date>" for canceled subscriptions', () => {
     billingTier = 'pro'
+
     const wrapper = mountSettings(
       {},
       { tier: 'pro', status: 'canceled', currentPeriodEnd: '2026-06-30T00:00:00Z' }
     )
+
     expect(wrapper.vm.nextBillingLabel).toMatch(/^Ends /)
   })
 
@@ -521,22 +532,24 @@ describe('SettingsView', () => {
     expect(billingStartUpgrade).not.toHaveBeenCalled()
   })
 
-  it('routes Free users through startUpgrade instead of connectGoogleCalendar', async () => {
+  it('routes Free users through the upgrade modal instead of connectGoogleCalendar', async () => {
     billingTier = 'free'
     const wrapper = mountSettings()
     await wrapper.vm.onConnectCalendarClick()
-    expect(billingStartUpgrade).toHaveBeenCalledWith('wren-pro')
+    expect(wrapper.vm.upgradeModalOpen).toBe(true)
     expect(billingConnectGoogleCalendar).not.toHaveBeenCalled()
   })
 
   it('does not double-fire while a connect call is in flight', async () => {
     billingTier = 'pro'
     let resolveConnect
+
     billingConnectGoogleCalendar.mockReturnValue(
       new Promise(res => {
         resolveConnect = () => res({ ok: true })
       })
     )
+
     const wrapper = mountSettings({}, { tier: 'pro' })
     const first = wrapper.vm.onConnectCalendarClick()
     // Second click while the first is mid-flight should be a no-op.
@@ -554,5 +567,77 @@ describe('SettingsView', () => {
     billingTier = 'free'
     const wrapperFree = mountSettings()
     expect(wrapperFree.vm.calendarConnectDescription.toLowerCase()).toContain('available on pro')
+  })
+
+  // -- Change password section --
+
+  it('renders the change-password section heading and three labelled inputs', () => {
+    const wrapper = mountSettings()
+    expect(wrapper.text()).toContain('Change your password')
+    expect(wrapper.text()).toContain('Current password')
+    expect(wrapper.text()).toContain('New password')
+    expect(wrapper.text()).toContain('Confirm new password')
+  })
+
+  it('submits the change-password form and calls the store on a happy path', async () => {
+    const wrapper = mountSettings()
+    const store = useAuthStore()
+    store.changePassword.mockResolvedValue(true)
+
+    wrapper.vm.passwordCurrent = 'oldpw'
+    wrapper.vm.passwordNew = 'newPassw0rd!'
+    wrapper.vm.passwordConfirm = 'newPassw0rd!'
+
+    await wrapper.vm.onChangePassword()
+
+    expect(store.changePassword).toHaveBeenCalledWith('oldpw', 'newPassw0rd!')
+    expect(wrapper.vm.passwordSuccess).toBe(true)
+    // Inputs cleared on success.
+    expect(wrapper.vm.passwordCurrent).toBe('')
+    expect(wrapper.vm.passwordNew).toBe('')
+    expect(wrapper.vm.passwordConfirm).toBe('')
+  })
+
+  it('shows a length validation error and does NOT call the store when new password is < 8 chars', async () => {
+    const wrapper = mountSettings()
+    const store = useAuthStore()
+
+    wrapper.vm.passwordCurrent = 'oldpw'
+    wrapper.vm.passwordNew = 'short'
+    wrapper.vm.passwordConfirm = 'short'
+
+    await wrapper.vm.onChangePassword()
+
+    expect(wrapper.vm.passwordError).toContain('at least 8')
+    expect(store.changePassword).not.toHaveBeenCalled()
+  })
+
+  it('shows a mismatch validation error when confirm does not match new', async () => {
+    const wrapper = mountSettings()
+    const store = useAuthStore()
+
+    wrapper.vm.passwordCurrent = 'oldpw'
+    wrapper.vm.passwordNew = 'newPassw0rd!'
+    wrapper.vm.passwordConfirm = 'different!'
+
+    await wrapper.vm.onChangePassword()
+
+    expect(wrapper.vm.passwordError).toContain('do not match')
+    expect(store.changePassword).not.toHaveBeenCalled()
+  })
+
+  it('surfaces the server error message inline when the store throws', async () => {
+    const wrapper = mountSettings()
+    const store = useAuthStore()
+    store.changePassword.mockRejectedValue(new Error('current password incorrect'))
+
+    wrapper.vm.passwordCurrent = 'oldpw'
+    wrapper.vm.passwordNew = 'newPassw0rd!'
+    wrapper.vm.passwordConfirm = 'newPassw0rd!'
+
+    await wrapper.vm.onChangePassword()
+
+    expect(wrapper.vm.passwordError).toBe('current password incorrect')
+    expect(wrapper.vm.passwordSuccess).toBe(false)
   })
 })

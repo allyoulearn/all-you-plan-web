@@ -1,51 +1,56 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('projects.addTask')"
     :close-on-backdrop="!saving"
     @update:model-value="$emit('update:modelValue', $event)"
   >
+    <!-- Form fields -->
     <form class="create-project-task-modal__form" @submit.prevent="handleSubmit">
-      <TextField
+      <!-- Title field -->
+      <AppTextField
         v-model="title"
         :label="t('tasks.title')"
         :placeholder="t('tasks.titlePlaceholder')"
         :invalid="submitted && !title.trim()"
       />
 
+      <!-- Initial column -->
       <label class="create-project-task-modal__field">
         <span class="create-project-task-modal__label">
           {{ t('projects.columnLabel') }}
         </span>
 
-        <SegmentedControl
+        <AppSegmentedControl
           v-model="column"
           :options="columnOptions"
           :group-label="t('projects.initialColumnGroupLabel')"
         />
       </label>
 
-      <TextField
+      <!-- Tag field -->
+      <AppTextField
         v-model="tag"
         :label="t('tasks.tagLabel')"
         :placeholder="t('tasks.tagPlaceholder')"
       />
     </form>
 
+    <!-- Actions -->
     <template #footer>
-      <Button variant="ghost" :disabled="saving" @click="cancel">
+      <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
+      </AppButton>
 
-      <Button
+      <AppButton
         variant="primary"
         :disabled="saving || !title.trim() || !projectId"
         @click="handleSubmit"
       >
         {{ saving ? t('tasks.creating') : t('tasks.create') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
@@ -53,14 +58,14 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
-import Modal from '@/components/ui/Modal.vue'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
-import SegmentedControl from '@/components/ui/SegmentedControl.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppSegmentedControl from '@/components/ui/AppSegmentedControl.vue'
 
 export default {
   name: 'CreateProjectTaskModal',
-  components: { Modal, TextField, Button, SegmentedControl },
+  components: { AppModal, AppTextField, AppButton, AppSegmentedControl },
   props: {
     modelValue: { type: Boolean, default: false },
     /** Required: the project id to create the task under. Must be a non-empty string. */
@@ -81,19 +86,12 @@ export default {
     const submitted = ref(false)
     const saving = ref(false)
 
+    /** Localised options for the initial-column segmented control. */
     const columnOptions = computed(() => [
       { value: 'backlog', label: t('projects.columnBacklog') },
       { value: 'this_week', label: t('projects.columnThisWeek') },
       { value: 'doing', label: t('projects.columnDoing') }
     ])
-
-    function reset() {
-      title.value = ''
-      column.value = 'backlog'
-      tag.value = ''
-      submitted.value = false
-      saving.value = false
-    }
 
     watch(
       () => props.modelValue,
@@ -102,14 +100,30 @@ export default {
       }
     )
 
+    return { t, title, column, columnOptions, tag, submitted, saving, cancel, handleSubmit }
+
+    // -- Function definitions --
+
+    /** Reset every form field; called whenever the modal opens. */
+    function reset() {
+      title.value = ''
+      column.value = 'backlog'
+      tag.value = ''
+      submitted.value = false
+      saving.value = false
+    }
+
+    /** Close the modal without saving. */
     function cancel() {
       emit('update:modelValue', false)
     }
 
+    /** Validate, then create the project task via the store; closes on success. */
     async function handleSubmit() {
       submitted.value = true
       if (!title.value.trim() || !props.projectId || saving.value) return
       saving.value = true
+
       try {
         await store.createTask({
           title: title.value.trim(),
@@ -117,6 +131,7 @@ export default {
           column: column.value,
           tag: tag.value.trim() || undefined
         })
+
         emit('update:modelValue', false)
       } catch {
         // Error already toasted by the store
@@ -124,8 +139,6 @@ export default {
         saving.value = false
       }
     }
-
-    return { t, title, column, columnOptions, tag, submitted, saving, cancel, handleSubmit }
   }
 }
 </script>

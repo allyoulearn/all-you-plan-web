@@ -1,7 +1,7 @@
 <template>
   <div>
     <RouterLink to="/projects" class="project-detail-view__back-link">
-      <Icon name="arrow-left" :size="14" />
+      <AppIcon name="arrow-left" :size="14" />
       {{ t('projects.backToProjectsText') }}
     </RouterLink>
 
@@ -14,11 +14,11 @@
     </div>
 
     <template v-else-if="project">
-      <ScreenHeading :title="project.name" :emphasis="project.tag" />
+      <AppScreenHeading :title="project.name" :emphasis="project.tag" />
 
       <div class="project-detail-view__stats-grid">
         <!-- Progress card -->
-        <Card>
+        <AppCard>
           <p class="project-detail-view__card-label">
             {{ t('projects.progressLabel') }}
           </p>
@@ -27,11 +27,11 @@
             {{ percent }}%
           </p>
 
-          <ProgressBar :value="percent / 100" />
-        </Card>
+          <AppProgressBar :value="percent / 100" />
+        </AppCard>
 
         <!-- Done / open card -->
-        <Card>
+        <AppCard>
           <p class="project-detail-view__card-label">
             {{ t('projects.doneOpenLabel') }}
           </p>
@@ -39,10 +39,10 @@
           <p class="project-detail-view__card-value">
             {{ done }} · {{ open }}
           </p>
-        </Card>
+        </AppCard>
 
         <!-- Wren's read card -->
-        <Card variant="accent">
+        <AppCard variant="accent">
           <p class="project-detail-view__card-label project-detail-view__card-label--accent">
             {{ t('projects.wrenReadLabel') }}
           </p>
@@ -50,7 +50,7 @@
           <p class="project-detail-view__wren-text">
             {{ project.nudge || project.blurb || t('projects.noNotesYet') }}
           </p>
-        </Card>
+        </AppCard>
       </div>
 
       <p v-if="project.blurb" class="project-detail-view__blurb">
@@ -58,7 +58,7 @@
       </p>
 
       <template v-for="section in sections" :key="section.key">
-        <SectionHeader :label="section.label" :count="section.tasks.length" />
+        <AppSectionHeader :label="section.label" :count="section.tasks.length" />
 
         <TransitionGroup
           v-if="section.tasks.length"
@@ -71,7 +71,7 @@
             :key="task.id"
             class="project-detail-view__task-item"
           >
-            <Checkbox
+            <AppCheckbox
               :model-value="task.done"
               @update:model-value="store.completeTask(task.id)"
             />
@@ -83,9 +83,9 @@
               {{ task.title }}
             </span>
 
-            <Pill v-if="task.tag" variant="default">
+            <AppPill v-if="task.tag" variant="default">
               {{ task.tag }}
-            </Pill>
+            </AppPill>
           </div>
         </TransitionGroup>
 
@@ -95,9 +95,9 @@
       </template>
 
       <div class="project-detail-view__actions">
-        <Button variant="primary" icon="plus" @click="showCreateTask = true">
+        <AppButton variant="primary" icon="plus" @click="showCreateTask = true">
           {{ t('projects.addTask') }}
-        </Button>
+        </AppButton>
 
         <RouterLink
           :to="`/projects/${route.params.id}/board`"
@@ -106,14 +106,14 @@
           {{ t('projects.switchToBoard') }}
         </RouterLink>
 
-        <Button
+        <AppButton
           variant="ghost"
           icon="archive"
           :disabled="archiving"
           @click="showArchive = true"
         >
           {{ archiving ? t('projects.archiving') : t('projects.archive') }}
-        </Button>
+        </AppButton>
       </div>
     </template>
 
@@ -130,7 +130,7 @@
       :project-id="project.id"
     />
 
-    <ConfirmDialog
+    <AppConfirmDialog
       v-model="showArchive"
       :title="t('projects.archive')"
       :message="t('projects.archiveConfirm')"
@@ -150,30 +150,30 @@ import { onMounted, computed, ref } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import SectionHeader from '@/components/ui/SectionHeader.vue'
-import Button from '@/components/ui/Button.vue'
-import Card from '@/components/ui/Card.vue'
-import Pill from '@/components/ui/Pill.vue'
-import Checkbox from '@/components/ui/Checkbox.vue'
-import ProgressBar from '@/components/ui/ProgressBar.vue'
-import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
-import Icon from '@/components/ui/Icon.vue'
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppCard from '@/components/ui/AppCard.vue'
+import AppPill from '@/components/ui/AppPill.vue'
+import AppCheckbox from '@/components/ui/AppCheckbox.vue'
+import AppProgressBar from '@/components/ui/AppProgressBar.vue'
+import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 import CreateProjectTaskModal from '@/components/projects/CreateProjectTaskModal.vue'
 
 export default {
   name: 'ProjectDetailView',
   components: {
     RouterLink,
-    ScreenHeading,
-    SectionHeader,
-    Button,
-    Card,
-    Pill,
-    Checkbox,
-    ProgressBar,
-    ConfirmDialog,
-    Icon,
+    AppScreenHeading,
+    AppSectionHeader,
+    AppButton,
+    AppCard,
+    AppPill,
+    AppCheckbox,
+    AppProgressBar,
+    AppConfirmDialog,
+    AppIcon,
     CreateProjectTaskModal
   },
   setup() {
@@ -185,20 +185,6 @@ export default {
     const showCreateTask = ref(false)
     const showArchive = ref(false)
     const archiving = ref(false)
-
-    async function handleArchive() {
-      if (archiving.value) return
-      archiving.value = true
-      try {
-        await store.archiveProject(route.params.id)
-        showArchive.value = false
-        router.push('/projects')
-      } catch {
-        // Error already toasted by the store
-      } finally {
-        archiving.value = false
-      }
-    }
 
     // -- Computed --
 
@@ -249,6 +235,23 @@ export default {
       archiving,
       handleArchive
     }
+
+    // -- Function definitions --
+
+    async function handleArchive() {
+      if (archiving.value) return
+      archiving.value = true
+
+      try {
+        await store.archiveProject(route.params.id)
+        showArchive.value = false
+        router.push('/projects')
+      } catch {
+        // Error already toasted by the store
+      } finally {
+        archiving.value = false
+      }
+    }
   }
 }
 </script>
@@ -256,7 +259,7 @@ export default {
 <style lang="scss" scoped>
 .project-detail-view {
   &__back-link {
-    @apply font-mono text-[12px] text-muted hover:text-ink;
+    @apply inline-flex items-center gap-1.5 font-mono text-[12px] text-muted hover:text-ink;
   }
 
   &__status {
@@ -272,7 +275,8 @@ export default {
   }
 
   &__stats-grid {
-    @apply grid grid-cols-3 gap-4;
+    // 1-up on phones, 3-up from sm+.
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-3;
   }
 
   &__card-label {

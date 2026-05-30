@@ -11,7 +11,7 @@
     <!-- Login form -->
     <form class="login-view__form" @submit.prevent="handleLogin">
       <!-- Email field -->
-      <TextField
+      <AppTextField
         v-model="email"
         type="email"
         :label="t('auth.email')"
@@ -30,7 +30,7 @@
           </router-link>
         </div>
 
-        <TextField
+        <AppTextField
           v-model="password"
           type="password"
           :label="t('auth.password')"
@@ -44,7 +44,7 @@
       </p>
 
       <!-- Submit button -->
-      <Button
+      <AppButton
         variant="accent"
         type="submit"
         :disabled="loading"
@@ -52,7 +52,7 @@
         class="login-view__submit"
       >
         {{ loading ? t('common.loading') : t('auth.loginCta') }}
-      </Button>
+      </AppButton>
 
       <!-- Register link -->
       <p class="login-view__footer">
@@ -64,14 +64,14 @@
     </form>
 
     <!-- Dev-only quick login: skips the backend, dev builds only -->
-    <Button
+    <AppButton
       v-if="isDev"
       variant="ghost"
       class="login-view__dev"
       @click="handleDevLogin"
     >
       Dev sign-in (skip backend)
-    </Button>
+    </AppButton>
   </div>
 </template>
 
@@ -82,12 +82,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'LoginView',
-  components: { TextField, Button },
+  components: { AppTextField, AppButton },
   setup() {
     // -- State --
     const { t } = useI18n()
@@ -123,13 +123,16 @@ export default {
     async function handleLogin() {
       error.value = ''
       loading.value = true
+
       try {
         await authStore.login(email.value, password.value)
         const raw = route.query.redirect || '/'
+
         const redirect =
           typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')
             ? raw
             : '/'
+
         router.push(redirect)
       } catch (err) {
         error.value = resolveErrorMessage(err, 'Login failed')

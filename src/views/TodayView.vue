@@ -1,30 +1,69 @@
 <template>
   <div>
-    <ScreenHeading eyebrow="Workspaces · Today" title="A quiet" emphasis="full day.">
+    <!-- Screen heading -->
+    <AppScreenHeading
+      :eyebrow="`${t('nav.workspaces')} · ${t('nav.itemToday')}`"
+      :title="t('today.headingPrefix')"
+      :emphasis="t('today.headingEmphasis')"
+    >
       <template v-if="store.view" #meta>
-        Sunrise {{ store.view.sunrise }}<br />Sunset {{ store.view.sunset }}
-      </template>
-    </ScreenHeading>
+        <span v-if="store.view.sunrise" class="today-view__meta-line">
+          <AppIcon name="sun" :size="14" class="today-view__meta-icon" />
+          {{ t('today.sunriseLabel') }} {{ store.view.sunrise }}
+        </span>
 
+        <span v-if="store.view.sunset" class="today-view__meta-line">
+          <AppIcon name="moon" :size="14" class="today-view__meta-icon" />
+          {{ t('today.sunsetLabel') }} {{ store.view.sunset }}
+        </span>
+      </template>
+    </AppScreenHeading>
+
+    <!-- Daily briefing -->
+    <BriefingCard
+      v-if="briefingStore.briefing"
+      :state="briefingStore.briefing.state"
+      :greeting="briefingStore.briefing.greeting"
+      :tone="briefingStore.briefing.tone"
+      :actions="briefingStore.briefing.actions"
+      @talk="planWithWren"
+      @regenerate="briefingStore.regenerate"
+      @action="onBriefingAction"
+    />
+
+    <!-- Briefing loading placeholder -->
+    <BriefingCard
+      v-else
+      state="loading"
+      greeting=""
+      tone="warm"
+      :actions="[]"
+    />
+
+    <!-- Loading state -->
     <div v-if="store.loading" class="today-view__status">
       {{ t('common.loading') }}
     </div>
 
+    <!-- Error state -->
     <div v-else-if="store.error" class="today-view__status today-view__status--error">
       <span>
         {{ store.error }}
       </span>
 
-      <Button size="sm" variant="ghost" @click="store.load()">
+      <AppButton size="sm" variant="ghost" @click="store.load()">
         {{ t('common.retry') }}
-      </Button>
+      </AppButton>
     </div>
 
+    <!-- Today content -->
     <template v-else-if="store.view">
+      <!-- KPI row -->
       <KpiRow :kpis="store.view.kpis" />
 
+      <!-- Task lanes by time of day -->
       <template v-for="group in groups" :key="group.key">
-        <SectionHeader :label="group.label" :count="group.items.length" />
+        <AppSectionHeader :label="group.label" :count="group.items.length" />
 
         <div
           class="today-view__task-group"
@@ -55,6 +94,7 @@
         </div>
       </template>
 
+      <!-- Empty state -->
       <div
         v-if="showEmpty"
         class="today-view__empty"
@@ -62,22 +102,36 @@
         {{ t('today.emptyState') }}
       </div>
 
+      <!-- Action bar -->
       <div class="today-view__actions">
-        <Button variant="primary" @click="showCreateTask = true">
+        <AppButton variant="primary" @click="showCreateTask = true">
           {{ t('today.addTask') }}
-        </Button>
+        </AppButton>
 
-        <Button variant="ghost" icon="bolt" @click="planWithWren">
+        <AppButton variant="ghost" icon="bolt" @click="planWithWren">
           {{ t('today.planWithWren') }}
-        </Button>
+        </AppButton>
 
-        <Button variant="ghost" @click="store.moveUnfinished">
+        <AppButton variant="ghost" @click="showMoveUnfinishedConfirm = true">
           {{ t('today.moveUnfinished') }}
-        </Button>
+        </AppButton>
       </div>
     </template>
 
+    <!-- Create task modal -->
     <CreateTaskModal v-model="showCreateTask" />
+
+    <!-- Move unfinished confirmation -->
+    <AppConfirmDialog
+      v-model="showMoveUnfinishedConfirm"
+      :title="t('today.moveUnfinishedConfirmTitle')"
+      :message="t('today.moveUnfinishedConfirmMessage')"
+      :confirm-label="t('today.moveUnfinishedConfirmCta')"
+      :cancel-label="t('common.cancel')"
+      :busy="store.saving"
+      :busy-label="t('today.movingUnfinished')"
+      @confirm="confirmMoveUnfinished"
+    />
   </div>
 </template>
 
@@ -87,22 +141,40 @@ import { onMounted, computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTodayStore } from '@/stores/today.store.js'
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import SectionHeader from '@/components/ui/SectionHeader.vue'
-import Button from '@/components/ui/Button.vue'
+import { useBriefingStore } from '@/stores/briefing.store.js'
+import { useOverlaysStore } from '@/stores/overlays.store.js'
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
+import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
 import KpiRow from '@/components/today/KpiRow.vue'
 import TaskRow from '@/components/today/TaskRow.vue'
 import CreateTaskModal from '@/components/today/CreateTaskModal.vue'
+import BriefingCard from '@/components/briefing/BriefingCard.vue'
 
 export default {
   name: 'TodayView',
-  components: { ScreenHeading, SectionHeader, Button, KpiRow, TaskRow, CreateTaskModal },
+  components: {
+    AppScreenHeading,
+    AppSectionHeader,
+    AppButton,
+    AppIcon,
+    AppConfirmDialog,
+    KpiRow,
+    TaskRow,
+    CreateTaskModal,
+    BriefingCard
+  },
   setup() {
     // -- State --
     const store = useTodayStore()
+    const briefingStore = useBriefingStore()
+    const overlays = useOverlaysStore()
     const router = useRouter()
     const { t } = useI18n()
     const showCreateTask = ref(false)
+    const showMoveUnfinishedConfirm = ref(false)
     /** id of the task currently being dragged; null when no drag in flight. */
     const draggingId = ref(null)
     /** Lane key currently under the pointer; null otherwise. */
@@ -117,8 +189,9 @@ export default {
     }
 
     // Prevents the empty-state flash on first mount and between mutation
-    // reload cycles (WEB-W4-20). Mirrors the ChoresView pattern.
+    // reload cycles. Mirrors the ChoresView pattern.
     const loaded = ref(!store.loading)
+
     watch(
       () => store.loading,
       isLoading => {
@@ -127,21 +200,12 @@ export default {
       }
     )
 
-    /**
-     * Open the Wren chat. Today this is a plain navigation — a future
-     * iteration may pre-fill a planning prompt or pass context (e.g.
-     * remaining tasks) via query params or a shared composable (WEB-W4-28).
-     */
-    function planWithWren() {
-      router.push({ name: 'wren' })
-    }
-
     // -- Computed --
 
     /**
      * Tasks grouped into Morning, Afternoon, and Evening based on scheduled hour.
      * Tasks with no scheduledTime default to hour 12 (Afternoon).
-     * Labels are sourced from i18n so they react to locale changes (WEB-W4-01).
+     * Labels are sourced from i18n so they react to locale changes.
      */
     const groups = computed(() => {
       const tasks = store.view?.tasks ?? []
@@ -168,13 +232,69 @@ export default {
     const showEmpty = computed(() => loaded.value && !groups.value.some(g => g.items.length))
 
     // -- Lifecycle --
-    onMounted(() => store.load())
+    onMounted(() => {
+      store.load()
+      briefingStore.load()
+    })
+
+    return {
+      store,
+      briefingStore,
+      groups,
+      t,
+      showCreateTask,
+      showMoveUnfinishedConfirm,
+      confirmMoveUnfinished,
+      planWithWren,
+      showEmpty,
+      draggingId,
+      dropLane,
+      onTaskDragStart,
+      onTaskDragEnd,
+      onLaneDragOver,
+      onLaneDragLeave,
+      onLaneDrop,
+      onBriefingAction
+    }
 
     // -- Function definitions --
 
     /**
+     * Open the Wren chat. Today this is a plain navigation — a future
+     * iteration may pre-fill a planning prompt or pass context (e.g.
+     * remaining tasks) via query params or a shared composable.
+     */
+    function planWithWren() {
+      router.push({ name: 'wren' })
+    }
+
+    /**
+     * Confirm handler for the move-unfinished dialog. Runs the bulk
+     * reschedule, then closes the dialog on success. On failure the dialog
+     * stays open so the user can retry — the store surfaces the error toast.
+     */
+    async function confirmMoveUnfinished() {
+      try {
+        await store.moveUnfinished()
+        showMoveUnfinishedConfirm.value = false
+      } catch {
+        // Toast surfaced by the store; keep the dialog open for retry.
+      }
+    }
+
+    function onBriefingAction(action) {
+      if (action.kind === 'capture') overlays.openCapture()
+      else if (action.kind === 'schedule') router.push({ name: 'calendar' })
+      else if (action.kind === 'snooze') {
+        // For now route to chat where Wren can confirm. Wiring real snooze
+        // requires resolving which task/chore the action targets.
+        router.push({ name: 'wren' })
+      }
+    }
+
+    /**
      * Extracts the hour from a task's scheduledTime string.
-     * Defaults to 12 when scheduledTime is absent or malformed (WEB-W4-25).
+     * Defaults to 12 when scheduledTime is absent or malformed.
      * @param {{ scheduledTime?: string|null }} task
      * @returns {number}
      */
@@ -221,27 +341,12 @@ export default {
       // returns without firing the mutation.
       const currentLane = groups.value.find(g => g.items.some(t => t.id === id))?.key
       if (currentLane === group.key) return
+
       try {
         await store.rescheduleTask(id, { scheduledTime: nextTime })
       } catch {
         // Toast surfaced by the store.
       }
-    }
-
-    return {
-      store,
-      groups,
-      t,
-      showCreateTask,
-      planWithWren,
-      showEmpty,
-      draggingId,
-      dropLane,
-      onTaskDragStart,
-      onTaskDragEnd,
-      onLaneDragOver,
-      onLaneDragLeave,
-      onLaneDrop
     }
   }
 }
@@ -255,6 +360,14 @@ export default {
     &--error {
       @apply text-bad;
     }
+  }
+
+  &__meta-line {
+    @apply flex items-center justify-end gap-1.5 leading-relaxed;
+  }
+
+  &__meta-icon {
+    @apply text-muted;
   }
 
   &__task-group {
@@ -290,7 +403,7 @@ export default {
   }
 
   &__actions {
-    @apply mt-7 flex gap-2.5;
+    @apply mt-7 flex flex-wrap gap-2.5;
   }
 }
 </style>

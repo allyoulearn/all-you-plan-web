@@ -5,6 +5,7 @@ import { mount } from '@vue/test-utils'
 // app context. The chip's default behaviour is to call startUpgrade — we
 // verify both the emitted event AND the composable invocation.
 const startUpgradeMock = vi.fn()
+
 vi.mock('@/composables/useBilling.js', () => ({
   useBilling: () => ({
     startUpgrade: startUpgradeMock,
@@ -27,6 +28,7 @@ describe('WrenUpgradeChip', () => {
         action: { kind: 'upgrade', summary: 'Upgrade for 200 turns/day', planId: 'wren-pro' }
       }
     })
+
     expect(w.text()).toContain('Upgrade for 200 turns/day')
   })
 
@@ -34,6 +36,7 @@ describe('WrenUpgradeChip', () => {
     const w = mount(WrenUpgradeChip, {
       props: { action: { kind: 'upgrade', planId: 'wren-pro' } }
     })
+
     expect(w.text()).toContain('Upgrade to Pro')
   })
 
@@ -41,6 +44,7 @@ describe('WrenUpgradeChip', () => {
     const w = mount(WrenUpgradeChip, {
       props: { action: { kind: 'upgrade', summary: 'X', planId: 'wren-pro' } }
     })
+
     const button = w.find('button')
     expect(button.exists()).toBe(true)
     expect(button.text()).toContain('Upgrade to Pro')
@@ -50,6 +54,7 @@ describe('WrenUpgradeChip', () => {
     const w = mount(WrenUpgradeChip, {
       props: { action: { kind: 'upgrade', summary: 'X', planId: 'wren-pro' } }
     })
+
     await w.find('button').trigger('click')
     expect(w.emitted('upgrade')).toEqual([['wren-pro']])
   })
@@ -58,6 +63,7 @@ describe('WrenUpgradeChip', () => {
     const w = mount(WrenUpgradeChip, {
       props: { action: { kind: 'upgrade', summary: 'X', planId: 'wren-pro' } }
     })
+
     await w.find('button').trigger('click')
     expect(startUpgradeMock).toHaveBeenCalledWith('wren-pro')
   })
@@ -66,6 +72,7 @@ describe('WrenUpgradeChip', () => {
     const w = mount(WrenUpgradeChip, {
       props: { action: { kind: 'upgrade', summary: 'X' } }
     })
+
     await w.find('button').trigger('click')
     expect(w.emitted('upgrade')).toEqual([['wren-pro']])
     expect(startUpgradeMock).toHaveBeenCalledWith('wren-pro')

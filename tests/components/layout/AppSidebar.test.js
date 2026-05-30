@@ -24,10 +24,30 @@ vi.mock('@/composables/useErrorToast', () => ({
   useErrorToast: () => ({ toastError: vi.fn() })
 }))
 
+// AppSidebar now reads the current route to compute its active-nav state.
+// The component tests don't install a router; mock `useRoute` to return a
+// minimal route shape so the sidebar mounts without exercising the router.
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual('vue-router')
+  return {
+    ...actual,
+    useRoute: () => ({ path: '/' })
+  }
+})
+
+// AppSidebar also reads the layout drawer state; provide a static stub so
+// the sidebar mounts without needing to install the layout composable.
+vi.mock('@/composables/useLayout.js', () => ({
+  useLayout: () => ({
+    sidebarOpen: { value: false },
+    toggleSidebar: vi.fn()
+  })
+}))
+
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 const globalConfig = {
-  stubs: { RouterLink: { template: '<a><slot /></a>' }, Icon: true },
+  stubs: { RouterLink: { template: '<a><slot /></a>' }, AppIcon: true },
   plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
 }
 
@@ -100,12 +120,14 @@ describe('AppSidebar', () => {
       createSpy: vi.fn,
       initialState: { auth: { user: { name: 'Ada' }, accessToken: 'tok' } }
     })
+
     const wrapper = mount(AppSidebar, {
       global: {
-        stubs: { RouterLink: { template: '<a><slot /></a>' }, Icon: true },
+        stubs: { RouterLink: { template: '<a><slot /></a>' }, AppIcon: true },
         plugins: [pinia, i18n]
       }
     })
+
     expect(wrapper.text()).toContain('Ada')
   })
 
@@ -114,12 +136,14 @@ describe('AppSidebar', () => {
       createSpy: vi.fn,
       initialState: { auth: { user: { name: 'Ada' }, accessToken: 'tok' } }
     })
+
     const wrapper = mount(AppSidebar, {
       global: {
-        stubs: { RouterLink: { template: '<a><slot /></a>' }, Icon: true },
+        stubs: { RouterLink: { template: '<a><slot /></a>' }, AppIcon: true },
         plugins: [pinia, i18n]
       }
     })
+
     expect(wrapper.find('.app-sidebar__avatar').text()).toBe('A')
   })
 

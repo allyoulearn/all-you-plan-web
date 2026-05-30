@@ -18,13 +18,14 @@ import {
   RESCHEDULE_TASK
 } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
+import { localISOToday } from '@/utils/date.js'
 
 export const useTodayStore = defineStore('today', () => {
   // -- State --
   const view = ref(null)
   const loading = ref(false)
   // Toggled while a mutation is in flight so views can disable submit buttons
-  // independently of `loading` (which is owned by `load()`). See WEB-W1-11.
+  // independently of `loading` (which is owned by `load()`).
   const saving = ref(false)
   const error = ref('')
 
@@ -37,12 +38,14 @@ export const useTodayStore = defineStore('today', () => {
   async function load(date) {
     loading.value = true
     error.value = ''
+
     try {
       const { data } = await apolloClient.query({
         query: TODAY_QUERY,
         variables: { date: date ?? null },
         fetchPolicy: 'network-only'
       })
+
       view.value = data.today
     } catch (e) {
       error.value = e.message
@@ -56,7 +59,7 @@ export const useTodayStore = defineStore('today', () => {
    * Captures the current date before awaiting so the reload uses the correct
    * date even if view is cleared during the async operation.
    * Resets `error.value` at the start so stale failures do not persist past a
-   * successful mutation (WEB-W1-05 / WEB-W1-13).
+   * successful mutation.
    * @param {string} id - The task ID to complete
    * @throws Re-throws the API error after surfacing it via error + toast.
    */
@@ -66,6 +69,7 @@ export const useTodayStore = defineStore('today', () => {
     if (!currentDate) return
     error.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({ mutation: COMPLETE_TASK, variables: { id } })
       await load(currentDate)
@@ -83,7 +87,7 @@ export const useTodayStore = defineStore('today', () => {
    * then refresh the daily view.
    * Captures the current date before awaiting so the reload uses the correct
    * date even if view is cleared during the async operation.
-   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
+   * Resets `error.value` at the start.
    * @throws Re-throws the API error after surfacing it via error + toast.
    */
   async function moveUnfinished() {
@@ -92,11 +96,13 @@ export const useTodayStore = defineStore('today', () => {
     const currentDate = view.value.date
     error.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({
         mutation: MOVE_UNFINISHED,
         variables: { fromDate: currentDate }
       })
+
       await load(currentDate)
     } catch (e) {
       error.value = e.message
@@ -110,7 +116,7 @@ export const useTodayStore = defineStore('today', () => {
   /**
    * Create a new task scheduled for the requested date.
    *
-   * Date resolution (WEB-W1-20): prefers an explicit `input.scheduledDate`,
+   * Date resolution: prefers an explicit `input.scheduledDate`,
    * then the currently-viewed date, then today's local date — so a
    * "schedule for tomorrow" affordance can use this store action.
    *
@@ -120,15 +126,13 @@ export const useTodayStore = defineStore('today', () => {
    *
    * Only fields with real values are sent — the server's zod schema rejects
    * `null` for optional fields, so omitting them is the safe shape.
-   * Resets `error.value` at the start (WEB-W1-05 / WEB-W1-13).
+   * Resets `error.value` at the start.
    * @param {{ title: string, scheduledDate?: string, scheduledTime?: string, note?: string, effortMinutes?: number, tag?: string }} input
    * @returns {Promise<object>} Created task
    */
   async function createTask(input) {
     const { toastError } = useErrorToast()
-    const today = new Date()
-    const localDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const date = input.scheduledDate ?? view.value?.date ?? localDateString
+    const date = input.scheduledDate ?? view.value?.date ?? localISOToday()
     const taskInput = { title: input.title, scheduledDate: date }
     if (input.scheduledTime) taskInput.scheduledTime = input.scheduledTime
     if (input.note) taskInput.note = input.note
@@ -136,15 +140,18 @@ export const useTodayStore = defineStore('today', () => {
     if (input.tag) taskInput.tag = input.tag
     error.value = ''
     saving.value = true
+
     try {
       const { data } = await apolloClient.mutate({
         mutation: CREATE_TASK,
         variables: { input: taskInput }
       })
+
       // Only reload when the new task lands on the currently-viewed date.
       if (view.value?.date === date) {
         await load(date)
       }
+
       return data.createTask
     } catch (e) {
       error.value = e.message
@@ -170,19 +177,23 @@ export const useTodayStore = defineStore('today', () => {
     if (!view.value) return
     const targetDate = scheduledDate ?? view.value.date
     const snapshot = view.value
+
     view.value = {
       ...view.value,
       tasks: view.value.tasks.map(t =>
         t.id === id ? { ...t, scheduledTime: scheduledTime ?? null } : t
       )
     }
+
     error.value = ''
     saving.value = true
+
     try {
       await apolloClient.mutate({
         mutation: RESCHEDULE_TASK,
         variables: { id, scheduledDate: targetDate, scheduledTime: scheduledTime ?? null }
       })
+
       // If we moved the task to a different day, reload so the row leaves
       // the current view; otherwise the optimistic patch already shows the
       // new lane.

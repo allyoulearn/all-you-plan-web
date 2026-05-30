@@ -24,7 +24,10 @@
           class="win-picker__icon"
           :aria-label="t(isStarred(task.id) ? 'review.win.unstar' : 'review.win.star')"
         />
-        <span class="win-picker__title">{{ task.title }}</span>
+
+        <span class="win-picker__title">
+          {{ task.title }}
+        </span>
       </li>
     </ul>
 

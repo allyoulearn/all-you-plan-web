@@ -7,12 +7,12 @@ function mountScreen(props = {}) {
     props,
     global: {
       stubs: {
-        ScreenHeading: {
+        AppScreenHeading: {
           template:
-            '<div class="screen-heading-stub" :data-eyebrow="eyebrow" :data-title="title" :data-emphasis="emphasis"><slot /></div>',
+            '<div class="app-screen-heading-stub" :data-eyebrow="eyebrow" :data-title="title" :data-emphasis="emphasis"><slot /></div>',
           props: ['eyebrow', 'title', 'emphasis']
         },
-        Card: { template: '<div class="card-stub"><slot /></div>' }
+        AppCard: { template: '<div class="app-card-stub"><slot /></div>' }
       }
     }
   })
@@ -25,29 +25,29 @@ describe('PlaceholderScreen', () => {
       expect(wrapper.exists()).toBe(true)
     })
 
-    it('passes eyebrow prop to ScreenHeading', () => {
+    it('passes eyebrow prop to AppScreenHeading', () => {
       const wrapper = mountScreen({ eyebrow: 'System', title: 'Stats' })
-      expect(wrapper.find('.screen-heading-stub').attributes('data-eyebrow')).toBe('System')
+      expect(wrapper.find('.app-screen-heading-stub').attributes('data-eyebrow')).toBe('System')
     })
 
-    it('passes title prop to ScreenHeading', () => {
+    it('passes title prop to AppScreenHeading', () => {
       const wrapper = mountScreen({ title: 'Calendar' })
-      expect(wrapper.find('.screen-heading-stub').attributes('data-title')).toBe('Calendar')
+      expect(wrapper.find('.app-screen-heading-stub').attributes('data-title')).toBe('Calendar')
     })
 
-    it('passes emphasis prop to ScreenHeading', () => {
+    it('passes emphasis prop to AppScreenHeading', () => {
       const wrapper = mountScreen({ title: 'Today', emphasis: 'plan' })
-      expect(wrapper.find('.screen-heading-stub').attributes('data-emphasis')).toBe('plan')
+      expect(wrapper.find('.app-screen-heading-stub').attributes('data-emphasis')).toBe('plan')
     })
 
     it('renders the note text inside the card', () => {
       const wrapper = mountScreen({ note: 'This feature is coming soon.' })
-      expect(wrapper.find('.card-stub').text()).toBe('This feature is coming soon.')
+      expect(wrapper.find('.app-card-stub').text()).toBe('This feature is coming soon.')
     })
 
     it('renders empty note when note prop is not provided', () => {
       const wrapper = mountScreen()
-      expect(wrapper.find('.card-stub').text()).toBe('')
+      expect(wrapper.find('.app-card-stub').text()).toBe('')
     })
 
     it('renders the note with correct class', () => {
@@ -64,17 +64,17 @@ describe('PlaceholderScreen', () => {
   describe('prop defaults', () => {
     it('eyebrow defaults to empty string', () => {
       const wrapper = mountScreen()
-      expect(wrapper.find('.screen-heading-stub').attributes('data-eyebrow')).toBe('')
+      expect(wrapper.find('.app-screen-heading-stub').attributes('data-eyebrow')).toBe('')
     })
 
     it('title defaults to empty string', () => {
       const wrapper = mountScreen()
-      expect(wrapper.find('.screen-heading-stub').attributes('data-title')).toBe('')
+      expect(wrapper.find('.app-screen-heading-stub').attributes('data-title')).toBe('')
     })
 
     it('emphasis defaults to empty string', () => {
       const wrapper = mountScreen()
-      expect(wrapper.find('.screen-heading-stub').attributes('data-emphasis')).toBe('')
+      expect(wrapper.find('.app-screen-heading-stub').attributes('data-emphasis')).toBe('')
     })
 
     it('note defaults to empty string', () => {
@@ -84,27 +84,27 @@ describe('PlaceholderScreen', () => {
   })
 
   describe('structure', () => {
-    it('renders ScreenHeading', () => {
+    it('renders AppScreenHeading', () => {
       const wrapper = mountScreen({ title: 'Test' })
-      expect(wrapper.find('.screen-heading-stub').exists()).toBe(true)
+      expect(wrapper.find('.app-screen-heading-stub').exists()).toBe(true)
     })
 
-    it('renders a Card wrapping the note', () => {
+    it('renders a AppCard wrapping the note', () => {
       const wrapper = mountScreen({ note: 'placeholder note' })
-      expect(wrapper.find('.card-stub').exists()).toBe(true)
+      expect(wrapper.find('.app-card-stub').exists()).toBe(true)
     })
 
-    it('renders note inside the Card', () => {
+    it('renders note inside the AppCard', () => {
       const wrapper = mountScreen({ note: 'inside card' })
-      const card = wrapper.find('.card-stub')
+      const card = wrapper.find('.app-card-stub')
       expect(card.find('.placeholder-screen__note').exists()).toBe(true)
     })
 
-    it('has ScreenHeading before Card in DOM order', () => {
+    it('has AppScreenHeading before AppCard in DOM order', () => {
       const wrapper = mountScreen({ title: 'Test', note: 'note' })
       const children = wrapper.element.children
-      expect(children[0].classList.contains('screen-heading-stub')).toBe(true)
-      expect(children[1].classList.contains('card-stub')).toBe(true)
+      expect(children[0].classList.contains('app-screen-heading-stub')).toBe(true)
+      expect(children[1].classList.contains('app-card-stub')).toBe(true)
     })
   })
 
@@ -116,7 +116,8 @@ describe('PlaceholderScreen', () => {
         emphasis: 'stats',
         note: 'Stats coming soon.'
       })
-      const heading = wrapper.find('.screen-heading-stub')
+
+      const heading = wrapper.find('.app-screen-heading-stub')
       expect(heading.attributes('data-eyebrow')).toBe('Looking back')
       expect(heading.attributes('data-title')).toBe('Your')
       expect(heading.attributes('data-emphasis')).toBe('stats')

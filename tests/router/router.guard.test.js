@@ -71,6 +71,7 @@ describe('router guard', () => {
 
   it('every protected route has a title in meta', () => {
     const protectedRoutes = router.getRoutes().filter(r => !r.meta.public && r.name)
+
     for (const route of protectedRoutes) {
       expect(route.meta.title, `route "${String(route.name)}" missing meta.title`).toBeDefined()
     }
@@ -78,6 +79,7 @@ describe('router guard', () => {
 
   it('every public route has a title in meta', () => {
     const publicRoutes = router.getRoutes().filter(r => r.meta.public && r.name)
+
     for (const route of publicRoutes) {
       expect(route.meta.title, `route "${String(route.name)}" missing meta.title`).toBeDefined()
     }
@@ -93,13 +95,16 @@ describe('router guard', () => {
     const namedRoutes = router
       .getRoutes()
       .filter(r => r.name && typeof r.components?.default === 'function')
+
     const promises = []
+
     for (const route of namedRoutes) {
       const factory = route.components.default
       const result = factory()
       expect(result).toBeInstanceOf(Promise)
       promises.push(result)
     }
+
     await Promise.allSettled(promises)
   })
 
@@ -109,6 +114,7 @@ describe('router guard', () => {
     const applyTitle = meta => {
       document.title = meta.title ? `${meta.title} — all you plan` : 'all you plan'
     }
+
     applyTitle({ title: 'Today' })
     expect(document.title).toBe('Today — all you plan')
   })
@@ -117,6 +123,7 @@ describe('router guard', () => {
     const applyTitle = meta => {
       document.title = meta.title ? `${meta.title} — all you plan` : 'all you plan'
     }
+
     applyTitle({})
     expect(document.title).toBe('all you plan')
   })
@@ -177,12 +184,14 @@ describe('router guard', () => {
     auth.accessToken = 'test-token'
     // Push to a path that matches the wildcard (no named route, no meta.title)
     await router.push('/non-existent-path-xyz')
+
     // The wildcard redirects to / (today), which has a title — but the afterEach
     // fires for the intermediate wildcard route with no title
     // We verify by directly exercising the afterEach formula:
     const applyTitle = meta => {
       document.title = meta.title ? `${meta.title} — all you plan` : 'all you plan'
     }
+
     applyTitle({ title: undefined })
     expect(document.title).toBe('all you plan')
   })
@@ -239,20 +248,24 @@ describe('router guard', () => {
     it('allows authenticated user access to reset-password (WEB-T06-002 fix)', () => {
       const auth = useAuthStore()
       auth.accessToken = 'some-token'
+
       const result = runGuard(
         { meta: { public: true, allowAuthenticated: true }, name: 'reset-password' },
         auth
       )
+
       expect(result).toBe(true)
     })
 
     it('allows authenticated user access to forgot-password (WEB-T06-002 fix)', () => {
       const auth = useAuthStore()
       auth.accessToken = 'some-token'
+
       const result = runGuard(
         { meta: { public: true, allowAuthenticated: true }, name: 'forgot-password' },
         auth
       )
+
       expect(result).toBe(true)
     })
   })

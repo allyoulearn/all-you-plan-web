@@ -37,5 +37,23 @@ const journalEntries = [
 
 export const registry = {
   journalEntries: () => ({ journalEntries }),
-  createJournalEntry: () => ({ createJournalEntry: { id: 'new-journal-entry' } })
+  createJournalEntry: (variables = {}) => ({
+    createJournalEntry: {
+      id: `j-new-${Date.now()}`,
+      date: variables.date ?? new Date().toISOString().slice(0, 10),
+      prompt: variables.prompt ?? null,
+      pullQuote: variables.pullQuote ?? null,
+      body: variables.body ?? '',
+      tags: variables.tags ?? []
+    }
+  }),
+  updateJournalEntry: (variables = {}) => ({
+    updateJournalEntry: {
+      id: variables.id,
+      pullQuote: variables.pullQuote ?? null,
+      body: variables.body ?? '',
+      tags: variables.tags ?? []
+    }
+  }),
+  deleteJournalEntry: () => ({ deleteJournalEntry: true })
 }

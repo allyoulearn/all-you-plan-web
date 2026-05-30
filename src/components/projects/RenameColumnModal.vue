@@ -1,42 +1,45 @@
 <template>
-  <Modal
+  <AppModal
     :model-value="modelValue"
     :title="t('kanban.renameTitle')"
     :close-on-backdrop="!saving"
     initial-focus-selector="input"
     @update:model-value="$emit('update:modelValue', $event)"
   >
+    <!-- Form fields -->
     <form class="rename-column-modal__form" @submit.prevent="handleSubmit">
-      <TextField
+      <!-- Label field -->
+      <AppTextField
         v-model="label"
         :label="t('kanban.renameLabel')"
         :invalid="submitted && !label.trim()"
       />
     </form>
 
+    <!-- Actions -->
     <template #footer>
-      <Button variant="ghost" :disabled="saving" @click="cancel">
+      <AppButton variant="ghost" :disabled="saving" @click="cancel">
         {{ t('common.cancel') }}
-      </Button>
+      </AppButton>
 
-      <Button variant="primary" :disabled="saving || !label.trim()" @click="handleSubmit">
+      <AppButton variant="primary" :disabled="saving || !label.trim()" @click="handleSubmit">
         {{ saving ? t('common.loading') : t('common.save') }}
-      </Button>
+      </AppButton>
     </template>
-  </Modal>
+  </AppModal>
 </template>
 
 <script>
 /** RenameColumnModal — single-field modal to rename a kanban column. */
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Modal from '@/components/ui/Modal.vue'
-import TextField from '@/components/ui/TextField.vue'
-import Button from '@/components/ui/Button.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppTextField from '@/components/ui/AppTextField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 export default {
   name: 'RenameColumnModal',
-  components: { Modal, TextField, Button },
+  components: { AppModal, AppTextField, AppButton },
   props: {
     modelValue: { type: Boolean, default: false },
     /** Current column label; prefilled in the input when the modal opens. */
@@ -60,18 +63,22 @@ export default {
       }
     )
 
+    return { t, label, submitted, cancel, handleSubmit }
+
+    // -- Function definitions --
+
+    /** Close the modal without firing a rename. */
     function cancel() {
       emit('update:modelValue', false)
     }
 
+    /** Validate the input and emit `submit` with the trimmed label. */
     function handleSubmit() {
       submitted.value = true
       const trimmed = label.value.trim()
       if (!trimmed || props.saving) return
       emit('submit', trimmed)
     }
-
-    return { t, label, submitted, cancel, handleSubmit }
   }
 }
 </script>

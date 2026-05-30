@@ -11,6 +11,7 @@ function run(link, query, variables) {
 function collect(link, query, variables) {
   return new Promise((resolve, reject) => {
     const events = []
+
     execute(link, { query, variables }).subscribe({
       next: v => events.push(v),
       error: reject,
@@ -25,6 +26,7 @@ describe('createMockLink', () => {
   it('resolves an operation from the registry by root field name', async () => {
     const registry = { today: vars => ({ today: { date: vars.date } }) }
     const link = createMockLink(registry)
+
     const result = await run(
       link,
       gql`
@@ -36,12 +38,14 @@ describe('createMockLink', () => {
       `,
       { date: '2026-05-22' }
     )
+
     expect(result.data).toEqual({ today: { date: '2026-05-22' } })
   })
 
   it('resolves anonymous operations by root field name', async () => {
     const registry = { chores: () => ({ chores: [] }) }
     const link = createMockLink(registry)
+
     const result = await run(
       link,
       gql`
@@ -53,6 +57,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(result.data).toEqual({ chores: [] })
   })
 
@@ -60,6 +65,7 @@ describe('createMockLink', () => {
     const fixtureFn = vi.fn().mockReturnValue({ widget: { id: '42' } })
     const registry = { widget: fixtureFn }
     const link = createMockLink(registry)
+
     await run(
       link,
       gql`
@@ -71,6 +77,7 @@ describe('createMockLink', () => {
       `,
       { id: '42' }
     )
+
     expect(fixtureFn).toHaveBeenCalledWith({ id: '42' })
   })
 
@@ -78,6 +85,7 @@ describe('createMockLink', () => {
     const fixtureFn = vi.fn().mockReturnValue({ things: [] })
     const registry = { things: fixtureFn }
     const link = createMockLink(registry)
+
     await run(
       link,
       gql`
@@ -89,6 +97,7 @@ describe('createMockLink', () => {
       `,
       undefined
     )
+
     expect(fixtureFn).toHaveBeenCalledWith({})
   })
 
@@ -96,6 +105,7 @@ describe('createMockLink', () => {
     const fixtureFn = vi.fn().mockReturnValue({ things: [] })
     const registry = { things: fixtureFn }
     const link = createMockLink(registry)
+
     await run(
       link,
       gql`
@@ -107,12 +117,14 @@ describe('createMockLink', () => {
       `,
       null
     )
+
     expect(fixtureFn).toHaveBeenCalledWith({})
   })
 
   it('resolves a mutation by root field name', async () => {
     const registry = { sendMessage: vars => ({ sendMessage: { id: '1', text: vars.text } }) }
     const link = createMockLink(registry)
+
     const result = await run(
       link,
       gql`
@@ -125,6 +137,7 @@ describe('createMockLink', () => {
       `,
       { text: 'hello' }
     )
+
     expect(result.data).toEqual({ sendMessage: { id: '1', text: 'hello' } })
   })
 
@@ -133,6 +146,7 @@ describe('createMockLink', () => {
   it('returns a graphQL errors array (not empty data) for an unmapped operation', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const link = createMockLink({})
+
     const result = await run(
       link,
       gql`
@@ -144,6 +158,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(result.errors).toBeDefined()
     expect(result.errors[0].message).toContain('unknownThing')
     expect(result.data).toBeUndefined()
@@ -153,6 +168,7 @@ describe('createMockLink', () => {
   it('includes the missing field name in the error message', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const link = createMockLink({})
+
     const result = await run(
       link,
       gql`
@@ -164,6 +180,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(result.errors[0].message).toMatch(/missingField/)
     warn.mockRestore()
   })
@@ -171,6 +188,7 @@ describe('createMockLink', () => {
   it('warns to the console for an unmapped operation', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const link = createMockLink({})
+
     await run(
       link,
       gql`
@@ -182,6 +200,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(warn).toHaveBeenCalled()
     warn.mockRestore()
   })
@@ -197,7 +216,9 @@ describe('createMockLink', () => {
           observer.complete()
         })
     }
+
     const link = createMockLink(registry)
+
     const events = await collect(
       link,
       gql`
@@ -209,6 +230,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(events).toHaveLength(2)
     expect(events[0].data).toEqual({ ticker: { t: 1 } })
     expect(events[1].data).toEqual({ ticker: { t: 2 } })
@@ -217,6 +239,7 @@ describe('createMockLink', () => {
   it('emits an error response for a subscription with no fixture', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const link = createMockLink({})
+
     const result = await run(
       link,
       gql`
@@ -228,6 +251,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(result.errors).toBeDefined()
     expect(result.errors[0].message).toContain('missingThing')
     warn.mockRestore()
@@ -237,6 +261,7 @@ describe('createMockLink', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const registry = { bad: () => ({ not: 'observable' }) }
     const link = createMockLink(registry)
+
     const result = await run(
       link,
       gql`
@@ -248,6 +273,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(result.errors).toBeDefined()
     expect(result.errors[0].message).toContain('Observable')
     warn.mockRestore()
@@ -270,6 +296,7 @@ describe('createMockLink', () => {
       `,
       {}
     )
+
     expect(result.errors).toBeDefined()
     warn.mockRestore()
   })

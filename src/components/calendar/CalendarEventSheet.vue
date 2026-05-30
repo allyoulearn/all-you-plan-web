@@ -242,6 +242,7 @@ export default {
      *  defaults so the time inputs aren't blank on first open. */
     function toggleAllDay() {
       form.value.allDay = !form.value.allDay
+
       if (!form.value.allDay) {
         if (!form.value.startTime) form.value.startTime = '09:00'
         if (!form.value.endTime) form.value.endTime = '10:00'

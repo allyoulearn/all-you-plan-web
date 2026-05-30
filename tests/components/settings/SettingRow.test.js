@@ -12,6 +12,7 @@ describe('SettingRow', () => {
     const wrapper = mount(SettingRow, {
       props: { label: 'Theme', description: 'Choose your color theme' }
     })
+
     expect(wrapper.text()).toContain('Choose your color theme')
   })
 
@@ -27,6 +28,7 @@ describe('SettingRow', () => {
       props: { label: 'Dark mode' },
       slots: { default: '<input type="checkbox" class="test-toggle" />' }
     })
+
     expect(wrapper.find('.test-toggle').exists()).toBe(true)
   })
 
@@ -49,6 +51,7 @@ describe('SettingRow', () => {
     const wrapper = mount(SettingRow, {
       props: { label: 'Theme', description: 'Pick a color' }
     })
+
     const desc = wrapper.find('.setting-row__description')
     expect(desc.text()).toBe('Pick a color')
   })
@@ -58,6 +61,7 @@ describe('SettingRow', () => {
       props: { label: 'Mode' },
       slots: { default: '<span class="slot-child">value</span>' }
     })
+
     const control = wrapper.find('.setting-row__control')
     expect(control.find('.slot-child').exists()).toBe(true)
   })

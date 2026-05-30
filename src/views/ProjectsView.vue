@@ -1,15 +1,18 @@
 <template>
   <div>
-    <ScreenHeading
-      eyebrow="Workspaces · Projects"
-      title="Six things you're"
-      emphasis="becoming."
+    <!-- Screen heading -->
+    <AppScreenHeading
+      :eyebrow="`${t('nav.workspaces')} · ${t('nav.itemProjects')}`"
+      :title="t('projects.headingPrefix')"
+      :emphasis="t('projects.headingEmphasis')"
     />
 
+    <!-- Loading state -->
     <div v-if="store.loadingProjects" class="projects-view__status">
       {{ t('common.loading') }}
     </div>
 
+    <!-- Error state -->
     <div
       v-else-if="store.errorProjects"
       class="projects-view__status projects-view__status--error"
@@ -18,35 +21,40 @@
         {{ store.errorProjects }}
       </span>
 
-      <Button size="sm" variant="ghost" @click="reload">
+      <AppButton size="sm" variant="ghost" @click="reload">
         {{ t('common.retry') }}
-      </Button>
+      </AppButton>
     </div>
 
+    <!-- Projects content -->
     <template v-else>
+      <!-- Action bar -->
       <div class="projects-view__actions">
-        <Button
+        <AppButton
           v-if="segment === 'active'"
           variant="primary"
           icon="plus"
           @click="showCreate = true"
         >
           {{ t('projects.newProject') }}
-        </Button>
+        </AppButton>
 
-        <SegmentedControl
+        <AppSegmentedControl
           v-model="segment"
           :group-label="t('projects.segmentLabel')"
           :options="segmentOptions"
         />
       </div>
 
-      <SectionHeader :label="activeLabel" :count="visibleProjects.length" />
+      <!-- Section header -->
+      <AppSectionHeader :label="activeLabel" :count="visibleProjects.length" />
 
+      <!-- Empty state -->
       <div v-if="!visibleProjects.length" class="projects-view__empty">
         {{ emptyLabel }}
       </div>
 
+      <!-- Project grid -->
       <div v-else class="projects-view__grid">
         <ProjectCard
           v-for="project in visibleProjects"
@@ -58,6 +66,7 @@
       </div>
     </template>
 
+    <!-- Create project modal -->
     <CreateProjectModal v-model="showCreate" @created="handleCreated" />
   </div>
 </template>
@@ -72,20 +81,20 @@ import { computed, onMounted, ref, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/projects.store.js'
-import ScreenHeading from '@/components/ui/ScreenHeading.vue'
-import SectionHeader from '@/components/ui/SectionHeader.vue'
-import SegmentedControl from '@/components/ui/SegmentedControl.vue'
-import Button from '@/components/ui/Button.vue'
+import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
+import AppSegmentedControl from '@/components/ui/AppSegmentedControl.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import ProjectCard from '@/components/projects/ProjectCard.vue'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
 
 export default {
   name: 'ProjectsView',
   components: {
-    ScreenHeading,
-    SectionHeader,
-    SegmentedControl,
-    Button,
+    AppScreenHeading,
+    AppSectionHeader,
+    AppSegmentedControl,
+    AppButton,
     ProjectCard,
     CreateProjectModal
   },
@@ -120,31 +129,10 @@ export default {
         : t('projects.activeEmpty')
     )
 
-    function reload() {
-      store.loadProjects({ includeArchived: segment.value === 'archived' })
-    }
-
     // Re-fetch whenever the segment flips so we have fresh data for that view.
     watch(segment, () => reload())
 
     onMounted(() => reload())
-
-    async function handleCreated(project) {
-      if (!project?.id) return
-      await nextTick()
-      router.push(`/projects/${project.id}`)
-    }
-
-    async function onRestore(projectId) {
-      try {
-        await store.restoreProject(projectId)
-        // Refresh the current segment so the restored project disappears
-        // from the archived list and re-appears in active on next view.
-        reload()
-      } catch {
-        // Toast surfaced by the store.
-      }
-    }
 
     return {
       store,
@@ -158,6 +146,39 @@ export default {
       reload,
       handleCreated,
       onRestore
+    }
+
+    // -- Function definitions --
+
+    /** Refetch projects for the current segment (Active vs Archived). */
+    function reload() {
+      store.loadProjects({ includeArchived: segment.value === 'archived' })
+    }
+
+    /**
+     * Navigate to a freshly created project's detail screen.
+     * @param {{ id: string }|null|undefined} project
+     */
+    async function handleCreated(project) {
+      if (!project?.id) return
+      await nextTick()
+      router.push(`/projects/${project.id}`)
+    }
+
+    /**
+     * Restore an archived project and refresh the current segment so the
+     * card moves out of the archived list.
+     * @param {string} projectId
+     */
+    async function onRestore(projectId) {
+      try {
+        await store.restoreProject(projectId)
+        // Refresh the current segment so the restored project disappears
+        // from the archived list and re-appears in active on next view.
+        reload()
+      } catch {
+        // Toast surfaced by the store.
+      }
     }
   }
 }
@@ -182,7 +203,9 @@ export default {
   }
 
   &__grid {
-    @apply grid grid-cols-2 gap-4;
+    // Phones: single column so cards keep their breathing room. Two columns
+    // from sm+ where there's space for both cards side by side.
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2;
   }
 }
 </style>
