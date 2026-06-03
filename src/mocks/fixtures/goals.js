@@ -108,24 +108,32 @@ let GOALS = [
   {
     __typename: 'Goal',
     id: 'g4',
-    title: 'Stay strong & flexible',
-    why: 'I want to be 80 and still hike.',
-    targetDate: '2026-12-31',
-    status: 'ok',
+    title: 'Run a half-marathon',
+    why: 'I signed up. The training plan is the goal.',
+    targetDate: '2026-04-19',
+    status: 'done',
     archived: false,
-    progress: 0.48,
-    linkedProjects: [],
+    progress: 1,
+    linkedProjects: [
+      {
+        __typename: 'GoalLink',
+        id: 'p5',
+        name: 'Half-marathon training block',
+        progress: 1,
+        kind: 'project'
+      }
+    ],
     linkedChores: [
       {
         __typename: 'GoalLink',
         id: 'c4',
-        name: '10 min stretch (daily)',
-        progress: 0.21,
+        name: 'Long run (weekly)',
+        progress: 1,
         kind: 'chore'
       }
     ],
     createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-05-20T09:00:00Z'
+    updatedAt: '2026-04-19T09:00:00Z'
   }
 ]
 

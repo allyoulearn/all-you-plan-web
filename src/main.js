@@ -11,6 +11,7 @@ import router from './router'
 import i18n from './i18n'
 import { useAuthStore } from './stores/auth.store.js'
 import { initTheme } from './composables/useTheme.js'
+import { initSentry } from './utils/sentry.js'
 import './assets/tokens.css'
 import './assets/main.css'
 
@@ -38,6 +39,10 @@ async function bootstrap() {
   }
 
   initTheme()
+  // Sentry init is consent-gated (see src/utils/sentry.js + cookieConsent.js).
+  // No-op when VITE_SENTRY_DSN is unset or the user has not accepted the
+  // analytics bucket; keeps dev / undecided users free of network calls.
+  initSentry(app)
   app.use(router)
   app.mount('#app')
 }

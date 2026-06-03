@@ -169,7 +169,7 @@ export default {
   padding: 0.25rem 0.625rem;
   border-radius: 0.375rem;
   background: var(--paper-3, #fff8e0);
-  border: 1px solid var(--amber-3, #ddc070);
+  border: 1px solid var(--warn, #ddc070);
   font-size: 0.875rem;
 }
 .wren-confirm-chip--resolved {
@@ -183,10 +183,10 @@ export default {
 .wren-confirm-chip__icon {
   width: 1rem;
   height: 1rem;
-  color: var(--amber-6, #b87f00);
+  color: var(--warn, #b87f00);
 }
 .wren-confirm-chip__resolution {
   font-size: 0.75rem;
-  color: var(--ink-3, #888);
+  color: var(--muted, #888);
 }
 </style>

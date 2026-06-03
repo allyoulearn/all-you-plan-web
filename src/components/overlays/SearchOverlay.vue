@@ -342,10 +342,9 @@ export default {
     color: var(--muted);
   }
   &__input {
-    @apply flex-1 bg-transparent py-2 outline-none;
+    @apply flex-1 bg-transparent py-2 font-sans outline-none;
     color: var(--ink);
     font-size: 17px;
-    font-family: var(--sans);
 
     &::placeholder { color: var(--muted); }
   }

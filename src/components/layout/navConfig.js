@@ -17,6 +17,7 @@ export const navGroups = [
     labelKey: 'nav.workspaces',
     items: [
       { to: '/', icon: 'today', label: 'Today', labelKey: 'nav.itemToday', key: 'T' },
+      { to: '/tasks', icon: 'tasks', label: 'Tasks', labelKey: 'nav.itemTasks', key: 'A' },
       { to: '/goals', icon: 'flag', label: 'Goals', labelKey: 'nav.itemGoals', key: 'G' },
       { to: '/chores', icon: 'chores', label: 'Chores', labelKey: 'nav.itemChores', key: 'C' },
       {

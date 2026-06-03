@@ -59,6 +59,12 @@ const routes = [
         meta: { title: 'Today', crumbs: ['Workspaces', 'Today'] }
       },
       {
+        path: 'tasks',
+        name: 'tasks',
+        component: () => import('@/views/TasksView.vue'),
+        meta: { title: 'Tasks', crumbs: ['Workspaces', 'Tasks'] }
+      },
+      {
         path: 'goals',
         name: 'goals',
         component: () => import('@/views/GoalsView.vue'),
@@ -146,6 +152,12 @@ const routes = [
         meta: { title: 'Notifications', crumbs: ['System', 'Settings', 'Notifications'] }
       },
       {
+        path: 'settings/household',
+        name: 'household',
+        component: () => import('@/views/HouseholdView.vue'),
+        meta: { title: 'Household', crumbs: ['System', 'Settings', 'Household'] }
+      },
+      {
         path: 'billing/success',
         name: 'billing-success',
         component: () => import('@/views/BillingSuccessView.vue'),
@@ -156,6 +168,23 @@ const routes = [
         name: 'billing-cancel',
         component: () => import('@/views/BillingCancelView.vue'),
         meta: { title: 'Checkout canceled', crumbs: ['System', 'Billing'] }
+      },
+      // Phase 4 Item B — GDPR data export, soft-delete, and the cancel-
+      // deletion banner. Kept off the main nav (linked from Settings) so
+      // the surface stays low-key.
+      {
+        path: 'privacy',
+        name: 'privacy',
+        component: () => import('@/views/PrivacyView.vue'),
+        meta: { title: 'Privacy', crumbs: ['System', 'Privacy'] }
+      },
+      // Phase 4 Item F — bulk import from Todoist / Things / Apple
+      // Reminders / a previous Plan backup. Linked from PrivacyView.
+      {
+        path: 'import',
+        name: 'import',
+        component: () => import('@/views/ImportView.vue'),
+        meta: { title: 'Import', crumbs: ['System', 'Import'] }
       }
     ]
   },

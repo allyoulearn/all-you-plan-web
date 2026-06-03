@@ -68,48 +68,48 @@
       <AppSectionHeader :label="t('goals.mostActive')" />
 
       <!-- Hero goal card -->
-      <div class="goals__hero">
+      <div v-if="featured" class="goals__hero">
         <div class="goals__hero-top">
           <span class="goals__pill">
             {{ t('goals.pillWriting') }}
           </span>
 
-          <span :class="['goals__status', `goals__status--${goals[0].status}`]">
-            {{ statusLabel(goals[0].status) }}
+          <span :class="['goals__status', `goals__status--${featured.status}`]">
+            {{ statusLabel(featured.status) }}
           </span>
 
           <span class="goals__spacer" />
 
           <span class="goals__mono">
-            {{ t('goals.targetPrefix', { date: goals[0].targetDate }) }}
+            {{ t('goals.targetPrefix', { date: featured.targetDate }) }}
           </span>
 
           <GoalCardMenu
-            @edit="openEdit(goals[0])"
-            @remove="openRemove(goals[0])"
+            @edit="openEdit(featured)"
+            @remove="openRemove(featured)"
           />
         </div>
 
         <h3 class="goals__hero-title">
-          {{ goals[0].title }}
+          {{ featured.title }}
         </h3>
 
         <p class="goals__hero-why">
-          "{{ goals[0].why }}"
+          "{{ featured.why }}"
         </p>
 
         <div class="goals__hero-bar">
           <div class="goals__bar">
-            <i :style="{ width: `${goals[0].progress * 100}%` }" />
+            <i :style="{ width: `${featured.progress * 100}%` }" />
           </div>
 
           <span class="goals__pct">
-            {{ Math.round(goals[0].progress * 100) }}%
+            {{ Math.round(featured.progress * 100) }}%
           </span>
         </div>
 
         <div class="goals__linked">
-          <div v-for="l in [...goals[0].linkedProjects, ...goals[0].linkedChores]" :key="l.id" class="goals__link">
+          <div v-for="l in [...featured.linkedProjects, ...featured.linkedChores]" :key="l.id" class="goals__link">
             <AppIcon :name="l.kind === 'chore' ? 'chores' : 'projects'" :size="13" />
 
             <span class="goals__link-name">
@@ -132,7 +132,7 @@
 
       <!-- Goal grid -->
       <div class="goals__grid">
-        <div v-for="g in goals.slice(1)" :key="g.id" class="goals__card">
+        <div v-for="g in rest" :key="g.id" class="goals__card">
           <div class="goals__hero-top">
             <span :class="['goals__status', `goals__status--${g.status}`]">
               {{ statusLabel(g.status) }}
@@ -180,6 +180,53 @@
                 {{ Math.round(l.progress * 100) }}%
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wren's pattern read -->
+      <AppSectionHeader :label="t('goals.patternRead')" />
+
+      <div class="goals__grid">
+        <!-- Risk card -->
+        <div class="goals__pattern goals__pattern--accent">
+          <div class="goals__pattern-eyebrow goals__pattern-eyebrow--accent">
+            {{ riskGoal ? t('goals.riskEyebrow', { title: riskGoal.title }) : t('goals.riskEyebrowNone') }}
+          </div>
+
+          <h3 class="goals__pattern-h">
+            {{ riskGoal ? t('goals.riskBody', { title: riskGoal.title }) : t('goals.riskBodyNone') }}
+          </h3>
+
+          <div class="goals__pattern-actions">
+            <AppButton variant="default" class="goals__pattern-btn--invert" @click="riskGoal && openEdit(riskGoal)">
+              {{ t('goals.riskActionPrimary') }}
+            </AppButton>
+
+            <AppButton variant="ghost" class="goals__pattern-btn--ghost-accent" @click="riskGoal && openEdit(riskGoal)">
+              {{ t('goals.riskActionSecondary') }}
+            </AppButton>
+          </div>
+        </div>
+
+        <!-- Suggested goal card -->
+        <div class="goals__pattern">
+          <div class="goals__pattern-eyebrow">
+            {{ t('goals.suggestedEyebrow') }}
+          </div>
+
+          <p class="goals__pattern-suggest">
+            {{ t('goals.suggestedBody') }}
+          </p>
+
+          <div class="goals__pattern-actions">
+            <AppButton variant="primary" @click="openCreate">
+              {{ t('goals.suggestedCreate') }}
+            </AppButton>
+
+            <AppButton variant="ghost">
+              {{ t('goals.suggestedNotNow') }}
+            </AppButton>
           </div>
         </div>
       </div>
@@ -239,6 +286,16 @@ export default {
     const store = useGoalsStore()
     const goals = computed(() => store.goals)
     const loading = computed(() => store.loading)
+    // Featured "most active" goal + the remaining goals, derived in the store
+    // so the selection logic is unit-tested and shared.
+    const featured = computed(() => store.mostActive)
+    const rest = computed(() => store.otherGoals)
+
+    // Surface a still-in-motion goal Wren can flag as "at risk" so the
+    // pattern-read panel reflects real data rather than a hardcoded title.
+    const riskGoal = computed(
+      () => goals.value.find(g => g.status === 'risk') ?? null
+    )
 
     const showCreate = ref(false)
     const editingGoal = ref(null)
@@ -251,6 +308,9 @@ export default {
       t,
       goals,
       loading,
+      featured,
+      rest,
+      riskGoal,
       showCreate,
       editingGoal,
       removingGoal,
@@ -425,6 +485,52 @@ export default {
     @apply mb-1 font-serif italic;
     color: var(--ink-2);
     font-size: 18px;
+  }
+
+  // Wren pattern-read cards. The risk card uses the accent fill (white text);
+  // the suggested card is a plain paper-2 card.
+  &__pattern {
+    @apply flex flex-col gap-3 rounded-[16px] p-5 shadow-sm;
+    background: var(--paper-2);
+
+    &--accent {
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+  }
+  &__pattern-eyebrow {
+    @apply font-mono uppercase text-muted;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+
+    &--accent {
+      color: color-mix(in oklab, var(--accent-ink) 85%, transparent);
+    }
+  }
+  &__pattern-h {
+    @apply m-0 font-serif italic;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+  &__pattern-suggest {
+    @apply m-0 font-serif italic;
+    color: var(--ink-2);
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  &__pattern-actions {
+    @apply mt-1 flex flex-wrap gap-2;
+  }
+  // Within the accent card, invert the default button to read on the fill and
+  // make the ghost button border/text light.
+  &__pattern-btn--invert :deep(.button) {
+    background: var(--paper);
+    color: var(--ink);
+    border-color: var(--paper);
+  }
+  &__pattern-btn--ghost-accent :deep(.button) {
+    color: var(--accent-ink);
+    border-color: color-mix(in oklab, var(--accent-ink) 50%, transparent);
   }
 }
 </style>

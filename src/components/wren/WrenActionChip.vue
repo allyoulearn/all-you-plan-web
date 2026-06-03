@@ -158,6 +158,6 @@ export default {
 }
 .wren-action-chip__resolution {
   font-size: 0.75rem;
-  color: var(--ink-3, #888);
+  color: var(--muted, #888);
 }
 </style>

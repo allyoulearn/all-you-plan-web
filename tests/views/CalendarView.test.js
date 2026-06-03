@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
 import { createI18n } from 'vue-i18n'
@@ -46,6 +46,19 @@ function mountCalendar(storeState = {}) {
 }
 
 describe('CalendarView', () => {
+  // CalendarView defaults to the real current month, but the fixtures and
+  // index math below assume May 2026 (1st is a Friday; demo "today" is the
+  // 21st). Pin only Date — leaving real timers intact — so these assertions
+  // are deterministic regardless of the wall-clock date the suite runs on.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-21T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   describe('loading and error states', () => {
     it('shows loading indicator while loading', () => {
       const wrapper = mountCalendar({ loading: true })

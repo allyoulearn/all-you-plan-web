@@ -197,6 +197,10 @@ export default {
     /**
      * Spin up a new blank conversation and clear the draft so the user can
      * start typing without leftover state.
+     *
+     * TODO(multi-conversation): the underlying store call depends on the
+     * `wrenConversations` API surface that is not implemented yet. Product
+     * call pending — see audit-2026-05-27/all-you-plan-FIX-NOTES.md.
      */
     function onCreateConversation() {
       store.createConversation()
@@ -207,6 +211,10 @@ export default {
     /**
      * Switch the active conversation, then pin to the bottom of the new
      * history so the user sees the most recent turn first.
+     *
+     * TODO(multi-conversation): depends on `wrenConversationMessages` query
+     * that the API does not implement yet. Product call pending — see
+     * audit-2026-05-27/all-you-plan-FIX-NOTES.md.
      */
     async function onSelectConversation(id) {
       await store.switchConversation(id)

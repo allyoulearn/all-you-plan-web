@@ -205,7 +205,7 @@ export default {
 <style lang="scss" scoped>
 .billing-success {
   &__card {
-    @apply rounded-2xl border border-paper-3 bg-paper-1 p-6 sm:p-8 dark:border-ink/20 dark:bg-ink/5;
+    @apply rounded-2xl border border-rule-soft bg-paper-2 p-6 sm:p-8;
   }
   &__status {
     @apply text-[15px] leading-relaxed text-muted;
@@ -223,7 +223,7 @@ export default {
     @apply ml-1 inline-block h-4 w-4;
   }
   &__code {
-    @apply rounded bg-paper-3 px-1 py-0.5 font-mono text-[12px] dark:bg-ink/20;
+    @apply rounded bg-paper-3 px-1 py-0.5 font-mono text-[12px];
   }
 }
 </style>

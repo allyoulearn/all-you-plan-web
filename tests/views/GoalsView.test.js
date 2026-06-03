@@ -204,4 +204,37 @@ describe('GoalsView', () => {
     await flushPromises()
     expect(store.archive).toHaveBeenCalledWith('g1')
   })
+
+  it("renders Wren's pattern-read cards when goals exist", async () => {
+    const wrapper = mountGoals({ goals: [FAKE_GOAL, RISK_GOAL] })
+    await flushPromises()
+    const patternCards = wrapper.findAll('.goals__pattern')
+    // Risk card (accent) + suggested-goal card.
+    expect(patternCards.length).toBe(2)
+    expect(wrapper.find('.goals__pattern--accent').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Suggested goal')
+  })
+
+  it('reflects the at-risk goal title in the risk card eyebrow', async () => {
+    const wrapper = mountGoals({ goals: [FAKE_GOAL, RISK_GOAL] })
+    await flushPromises()
+    // RISK_GOAL.title is "Marathon" — the eyebrow interpolates it.
+    expect(wrapper.find('.goals__pattern--accent').text()).toContain('Marathon')
+  })
+
+  it('does not render the hero or pattern-read cards in the empty state', async () => {
+    const wrapper = mountGoals()
+    await flushPromises()
+    expect(wrapper.find('.goals__empty').exists()).toBe(true)
+    expect(wrapper.find('.goals__hero').exists()).toBe(false)
+    expect(wrapper.find('.goals__pattern').exists()).toBe(false)
+  })
+
+  it('features the highest-progress non-done goal in the hero', async () => {
+    const lowProgress = { ...FAKE_GOAL, id: 'g1', title: 'Low', progress: 0.1 }
+    const highProgress = { ...FAKE_GOAL, id: 'g2', title: 'High', progress: 0.9 }
+    const wrapper = mountGoals({ goals: [lowProgress, highProgress] })
+    await flushPromises()
+    expect(wrapper.find('.goals__hero-title').text()).toBe('High')
+  })
 })

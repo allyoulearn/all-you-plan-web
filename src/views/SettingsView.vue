@@ -190,6 +190,20 @@
     <AppSectionHeader :label="t('settings.sectionMore')" />
 
     <div class="settings-view__section-card">
+      <RouterLink :to="{ name: 'household' }" class="settings-view__link-row">
+        <div class="settings-view__link-text">
+          <span class="settings-view__link-label">
+            {{ t('settings.moreHouseholdLabel') }}
+          </span>
+
+          <span class="settings-view__link-desc">
+            {{ t('settings.moreHouseholdDesc') }}
+          </span>
+        </div>
+
+        <ChevronRightIcon class="settings-view__link-arrow" aria-hidden="true" />
+      </RouterLink>
+
       <RouterLink :to="{ name: 'notifications' }" class="settings-view__link-row">
         <div class="settings-view__link-text">
           <span class="settings-view__link-label">

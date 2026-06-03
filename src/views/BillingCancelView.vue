@@ -73,7 +73,7 @@ export default {
 <style lang="scss" scoped>
 .billing-cancel {
   &__card {
-    @apply rounded-2xl border border-paper-3 bg-paper-1 p-6 sm:p-8 dark:border-ink/20 dark:bg-ink/5;
+    @apply rounded-2xl border border-rule-soft bg-paper-2 p-6 sm:p-8;
   }
   &__lede {
     @apply text-[16px] leading-relaxed text-ink;

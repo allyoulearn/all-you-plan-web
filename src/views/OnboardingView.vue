@@ -514,10 +514,9 @@ export default {
   letter-spacing: 0.14em;
 }
 .onb__input {
-  @apply w-full rounded-xl border border-rule-soft px-4 py-3 text-[16px];
+  @apply w-full rounded-xl border border-rule-soft px-4 py-3 font-sans text-[16px];
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--sans);
 
   &:focus { outline: none; border-color: var(--muted); }
 }

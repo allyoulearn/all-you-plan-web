@@ -12,6 +12,24 @@
   --ok: #2f7a3f;
   --warn: #c3a200;
   --bad: #b7351a;
+
+  /* Tasks workspace — urgency heat scale aliased onto the core palette so it
+     theme-swaps for free (critical=red, high=accent, medium=amber, low=grey).
+     Mirrors the design's tasks.css. */
+  --u-critical: var(--bad);
+  --u-high: var(--accent);
+  --u-medium: var(--warn);
+  --u-low: var(--muted);
+
+  /* Due-badge tiers: a soft tint of the urgency color over the card surface,
+     with a darker ink for legible mono text. overdue / due-now / due-soon
+     map to the design's due-over / due-now / due-soon. */
+  --due-over-bg: color-mix(in oklab, var(--bad) 16%, var(--paper-2));
+  --due-over-text: color-mix(in oklab, var(--bad) 88%, var(--ink));
+  --due-now-bg: color-mix(in oklab, var(--accent) 18%, var(--paper-2));
+  --due-now-text: color-mix(in oklab, var(--accent) 90%, var(--ink));
+  --due-soon-bg: color-mix(in oklab, var(--warn) 20%, var(--paper-2));
+  --due-soon-text: color-mix(in oklab, var(--warn) 92%, var(--ink));
 }
 
 /* Bare dark-mode fallback — matches when data-theme is absent or unrecognised.

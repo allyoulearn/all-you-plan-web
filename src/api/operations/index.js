@@ -13,6 +13,8 @@ export * from './chores.js'
 
 export * from './projects.js'
 
+export * from './tasks.js'
+
 export * from './wren.js'
 
 export * from './review.js'
@@ -29,6 +31,8 @@ export * from './briefing.js'
 
 export * from './goals.js'
 
+export * from './household.js'
+
 export * from './notifications.js'
 
 export * from './search.js'
@@ -40,3 +44,7 @@ export * from './sessions.js'
 export * from './account.js'
 
 export * from './billing.js'
+
+export * from './gdpr.js'
+
+export * from './imports.js'

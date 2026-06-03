@@ -318,6 +318,10 @@ export default {
     /**
      * Spawn a fresh conversation, clear the draft, and close the popover so the
      * user lands on a clean input.
+     *
+     * TODO(multi-conversation): the underlying store call depends on the
+     * `wrenConversations` API surface that is not implemented yet. Product
+     * call pending — see audit-2026-05-27/all-you-plan-FIX-NOTES.md.
      */
     function onCreateConversation() {
       store.createConversation()
@@ -329,6 +333,10 @@ export default {
     /**
      * Switch to another conversation and close the popover. Scroll the new
      * history into view at the bottom so the most recent turn is visible.
+     *
+     * TODO(multi-conversation): depends on `wrenConversationMessages` query
+     * that the API does not implement yet. Product call pending — see
+     * audit-2026-05-27/all-you-plan-FIX-NOTES.md.
      */
     async function onSelectConversation(id) {
       conversationsOpen.value = false

@@ -234,7 +234,7 @@ export default {
   padding: 0.375rem 0.5rem;
   border: 1px solid var(--paper-3, #d8d6cf);
   border-radius: 0.25rem;
-  background: var(--paper-1, #fff);
+  background: var(--paper-2, #fff);
   font-size: 0.875rem;
 }
 .wren-settings__checkbox {
@@ -246,12 +246,12 @@ export default {
 }
 .wren-settings__error {
   margin-top: 0.5rem;
-  color: var(--red-6, #b00020);
+  color: var(--bad, #b00020);
   font-size: 0.875rem;
 }
 .wren-settings__saved {
   margin-top: 0.5rem;
-  color: var(--green-6, #1a7a3a);
+  color: var(--ok, #1a7a3a);
   font-size: 0.875rem;
 }
 </style>

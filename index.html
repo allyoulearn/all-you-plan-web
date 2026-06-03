@@ -4,7 +4,64 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>All You Plan</title>
+    <title>All You Plan — a calm planner that thinks with you</title>
+    <!--
+      Phase 4 Item E — basic SEO. Plan is product-driven (most users sign
+      in directly), so the marketing surface area is small: the `/` route
+      is the only one indexed by search engines. These tags are baked into
+      the static index.html so SSR isn't needed; per-route titles are
+      handled in src/router via document.title updates.
+    -->
+    <meta
+      name="description"
+      content="All You Plan is a calm, AI-assisted daily planner that turns scattered to-dos into a focused day. Tasks, calendar, journal, and a coaching assistant in one place."
+    />
+    <link rel="canonical" href="https://plan.allyou.app/" />
+
+    <!-- Open Graph (Facebook, LinkedIn, Slack preview, etc.) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="All You Plan" />
+    <meta property="og:title" content="All You Plan — a calm planner that thinks with you" />
+    <meta
+      property="og:description"
+      content="Tasks, calendar, journal, and an AI coach in one calm daily view. Built for people who want to be planned, not overwhelmed."
+    />
+    <meta property="og:url" content="https://plan.allyou.app/" />
+    <meta property="og:image" content="https://plan.allyou.app/og.png" />
+
+    <!-- Twitter / X cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="All You Plan — a calm planner that thinks with you" />
+    <meta
+      name="twitter:description"
+      content="A focused daily planner with an AI coaching assistant. Tasks, calendar, and journal in one place."
+    />
+    <meta name="twitter:image" content="https://plan.allyou.app/og.png" />
+
+    <!--
+      Schema.org JSON-LD — SoftwareApplication so Google's rich-results
+      surface can show the price + category in a knowledge-panel card.
+      Update `softwareVersion` on each major release. The aggregateRating
+      block is intentionally omitted until real review data is wired in;
+      Google penalises invented rating values.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "All You Plan",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "Web, iOS, Android",
+        "url": "https://plan.allyou.app/",
+        "description": "A calm AI-assisted daily planner that combines tasks, calendar, journal, and a coaching assistant.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "category": "Freemium"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

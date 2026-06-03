@@ -16,12 +16,17 @@ import { registry as review } from './fixtures/review.js'
 import { registry as wren } from './fixtures/wren.js'
 import { registry as briefing } from './fixtures/briefing.js'
 import { registry as goals } from './fixtures/goals.js'
+import { registry as household } from './fixtures/household.js'
 import { registry as notifications } from './fixtures/notifications.js'
 import { registry as search } from './fixtures/search.js'
 import { registry as onboarding } from './fixtures/onboarding.js'
 import { registry as sessions } from './fixtures/sessions.js'
 import { registry as account } from './fixtures/account.js'
 import { registry as billing } from './fixtures/billing.js'
+// Imported last so its unified task mutations (createTask / completeTask /
+// updateTask / deleteTask) supersede the Today/Projects handlers while still
+// keeping those surfaces coherent — see fixtures/tasks.js.
+import { registry as tasks } from './fixtures/tasks.js'
 
 export const mockRegistry = {
   ...auth,
@@ -37,10 +42,12 @@ export const mockRegistry = {
   ...wren,
   ...briefing,
   ...goals,
+  ...household,
   ...notifications,
   ...search,
   ...onboarding,
   ...sessions,
   ...account,
-  ...billing
+  ...billing,
+  ...tasks
 }

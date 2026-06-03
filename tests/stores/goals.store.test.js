@@ -90,6 +90,90 @@ describe('goals.store', () => {
     })
   })
 
+  describe('mostActive getter', () => {
+    it('is null when there are no goals', () => {
+      const store = useGoalsStore()
+      expect(store.mostActive).toBeNull()
+    })
+
+    it('returns the highest-progress non-done goal', () => {
+      const store = useGoalsStore()
+
+      store.goals = [
+        { id: 'a', status: 'ok', progress: 0.3, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', status: 'ok', progress: 0.8, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'c', status: 'risk', progress: 0.5, updatedAt: '2026-01-01T00:00:00Z' }
+      ]
+
+      expect(store.mostActive.id).toBe('b')
+    })
+
+    it('skips done goals even when they have higher progress', () => {
+      const store = useGoalsStore()
+
+      store.goals = [
+        { id: 'a', status: 'done', progress: 1, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', status: 'ok', progress: 0.4, updatedAt: '2026-01-01T00:00:00Z' }
+      ]
+
+      expect(store.mostActive.id).toBe('b')
+    })
+
+    it('breaks ties by most-recent update', () => {
+      const store = useGoalsStore()
+
+      store.goals = [
+        { id: 'a', status: 'ok', progress: 0.5, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', status: 'ok', progress: 0.5, updatedAt: '2026-05-01T00:00:00Z' }
+      ]
+
+      expect(store.mostActive.id).toBe('b')
+    })
+
+    it('falls back to the highest-progress goal when every goal is done', () => {
+      const store = useGoalsStore()
+
+      store.goals = [
+        { id: 'a', status: 'done', progress: 0.6, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', status: 'done', progress: 0.9, updatedAt: '2026-01-01T00:00:00Z' }
+      ]
+
+      expect(store.mostActive.id).toBe('b')
+    })
+
+    it('does not mutate the underlying goals array order', () => {
+      const store = useGoalsStore()
+
+      store.goals = [
+        { id: 'a', status: 'ok', progress: 0.2, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', status: 'ok', progress: 0.9, updatedAt: '2026-01-01T00:00:00Z' }
+      ]
+
+      void store.mostActive
+      expect(store.goals.map(g => g.id)).toEqual(['a', 'b'])
+    })
+  })
+
+  describe('otherGoals getter', () => {
+    it('returns every goal except the featured one', () => {
+      const store = useGoalsStore()
+
+      store.goals = [
+        { id: 'a', status: 'ok', progress: 0.2, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'b', status: 'ok', progress: 0.9, updatedAt: '2026-01-01T00:00:00Z' },
+        { id: 'c', status: 'risk', progress: 0.5, updatedAt: '2026-01-01T00:00:00Z' }
+      ]
+
+      // b is featured (highest progress); a + c remain in server order.
+      expect(store.otherGoals.map(g => g.id)).toEqual(['a', 'c'])
+    })
+
+    it('is empty when there are no goals', () => {
+      const store = useGoalsStore()
+      expect(store.otherGoals).toEqual([])
+    })
+  })
+
   describe('create()', () => {
     it('appends the new goal on success', async () => {
       const newGoal = {

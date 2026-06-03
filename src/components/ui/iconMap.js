@@ -12,6 +12,7 @@ import * as Solid from '@heroicons/vue/24/solid'
 
 const names = {
   today: 'HomeIcon',
+  tasks: 'ClipboardDocumentListIcon',
   chores: 'ArrowPathIcon',
   projects: 'Squares2X2Icon',
   more: 'EllipsisHorizontalIcon',
@@ -50,7 +51,14 @@ const names = {
   menu: 'Bars3Icon',
   'map-pin': 'MapPinIcon',
   fire: 'FireIcon',
-  grip: 'Bars3Icon'
+  grip: 'Bars3Icon',
+  // Household surface (invite by email, members, leave, sharing scope).
+  envelope: 'EnvelopeIcon',
+  'paper-airplane': 'PaperAirplaneIcon',
+  'user-group': 'UserGroupIcon',
+  'user-minus': 'UserMinusIcon',
+  'user-plus': 'UserPlusIcon',
+  lock: 'LockClosedIcon'
 }
 
 // Dev-only sanity check: every value in `names` must resolve to

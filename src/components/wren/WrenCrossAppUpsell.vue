@@ -121,7 +121,7 @@ export default {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--ink-mute, #777);
+  color: var(--muted, #777);
 }
 
 .wren-cross-upsell__title {
@@ -135,7 +135,7 @@ export default {
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.45;
-  color: var(--ink-mute, #555);
+  color: var(--muted, #555);
 }
 
 .wren-cross-upsell__cta-row {
@@ -169,7 +169,7 @@ export default {
   font-size: 0.85rem;
   background: none;
   border: 0;
-  color: var(--ink-mute, #777);
+  color: var(--muted, #777);
   cursor: pointer;
 
   &:hover { color: var(--ink, #222); }

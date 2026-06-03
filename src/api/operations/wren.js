@@ -59,6 +59,12 @@ export const WREN_CONVERSATION_QUERY = gql`
   }
 `
 
+// TODO(multi-conversation): The two queries below target schema fields
+// (`wrenConversations`, `wrenConversationMessages`) that the API does not
+// implement yet. Calls currently fail silently inside wren.store.js, and the
+// rail shows a single conversation. Product decision pending — ship the API
+// resolvers or sunset the multi-conversation rail. See
+// audit-2026-05-27/all-you-plan-FIX-NOTES.md for the full impact list.
 export const WREN_CONVERSATIONS_QUERY = gql`
   query WrenConversations {
     wrenConversations {

@@ -153,6 +153,12 @@ export const useWrenStore = defineStore('wren', () => {
 
       // Best-effort load of the conversation rail. Cache the active
       // conversation's messages so a switch-back-and-forth is instant.
+      // TODO(multi-conversation): wrenConversations / wrenConversationMessages
+      // queries are NOT implemented on the API yet — this catch swallows the
+      // schema error and the rail shows a single conversation. Product call
+      // pending: ship multi-conversation (add API resolvers) or sunset the
+      // rail. See audit-2026-05-27/all-you-plan-FIX-NOTES.md for the full
+      // list of files affected.
       loadConversations().catch(err => {
         console.warn('[wren] conversations list unavailable', err?.message)
       })
@@ -174,6 +180,11 @@ export const useWrenStore = defineStore('wren', () => {
    * Load the list of conversations for the rail. Best-effort: the API may not
    * yet implement multi-conversation; on failure we leave the rail empty and
    * the WrenView falls back to a single-conversation experience.
+   *
+   * TODO(multi-conversation): WREN_CONVERSATIONS_QUERY targets a
+   * `wrenConversations` field that does not exist in the API schema yet.
+   * Currently fails silently via the catch in `load()`. Product decision
+   * pending — see audit-2026-05-27/all-you-plan-FIX-NOTES.md.
    */
   async function loadConversations() {
     try {
@@ -210,6 +221,11 @@ export const useWrenStore = defineStore('wren', () => {
    * back into the per-conversation cache (so unsent in-flight UI state stays
    * coherent on switch-back) and then either restores the target's cached
    * messages or fetches them.
+   *
+   * TODO(multi-conversation): WREN_CONVERSATION_MESSAGES_QUERY targets a
+   * `wrenConversationMessages` field that does not exist in the API schema
+   * yet. Pending product decision on multi-conversation — see
+   * audit-2026-05-27/all-you-plan-FIX-NOTES.md.
    */
   async function switchConversation(id) {
     if (!id || id === activeConversationId.value) return

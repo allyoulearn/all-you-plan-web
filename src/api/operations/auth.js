@@ -39,6 +39,11 @@ const USER_FRAGMENT = gql`
       currentPeriodEnd
       status
     }
+    pendingDeletion {
+      requestedAt
+      purgeAt
+      reason
+    }
   }
 `
 

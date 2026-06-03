@@ -25,3 +25,20 @@ export const CREATE_CUSTOMER_PORTAL_SESSION = gql`
     }
   }
 `
+
+/**
+ * Swap an active subscription to a different plan (Phase 4 Item A).
+ * Server uses Stripe prorations so the user is credited the unused portion
+ * of the current cycle. The User doc updates asynchronously via the
+ * subscription.updated webhook — the returned snapshot may briefly lag.
+ */
+export const CHANGE_SUBSCRIPTION_TIER = gql`
+  mutation ChangeSubscriptionTier($planId: BillingPlanId!) {
+    changeSubscriptionTier(planId: $planId) {
+      tier
+      stripeSubscriptionId
+      currentPeriodEnd
+      status
+    }
+  }
+`

@@ -2,7 +2,7 @@
  * Goals store. CRUD + rollup metadata for top-level goals.
  */
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { apolloClient } from '@/api/apollo.js'
 import { GOALS_QUERY, CREATE_GOAL, UPDATE_GOAL, ARCHIVE_GOAL } from '@/api/operations/index.js'
 import { useErrorToast } from '@/composables/useErrorToast.js'
@@ -11,6 +11,40 @@ export const useGoalsStore = defineStore('goals', () => {
   const goals = ref([])
   const loading = ref(false)
   const error = ref('')
+
+  /**
+   * The "most active" goal to feature at the top of the screen: the
+   * highest-progress goal that is not yet done, breaking ties by the most
+   * recent update. Falls back to the highest-progress goal overall when every
+   * goal is done, and to null when there are none.
+   * @returns {object|null}
+   */
+  const mostActive = computed(() => {
+    if (!goals.value.length) return null
+
+    // Prefer goals still in motion; only fall back to done ones if that's all
+    // there is, so the featured slot never highlights a finished goal while an
+    // active one exists.
+    const inMotion = goals.value.filter(g => g.status !== 'done')
+    const pool = inMotion.length ? inMotion : goals.value
+
+    return [...pool].sort((a, b) => {
+      const byProgress = (b.progress ?? 0) - (a.progress ?? 0)
+      if (byProgress !== 0) return byProgress
+      return new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime()
+    })[0]
+  })
+
+  /**
+   * Every goal except the featured `mostActive` one, preserving the server
+   * order. Drives the "All goals" grid.
+   * @returns {object[]}
+   */
+  const otherGoals = computed(() => {
+    const featured = mostActive.value
+    if (!featured) return []
+    return goals.value.filter(g => g.id !== featured.id)
+  })
 
   /** Fetch all goals from the API and replace the local list. */
   async function load() {
@@ -88,5 +122,5 @@ export const useGoalsStore = defineStore('goals', () => {
     }
   }
 
-  return { goals, loading, error, load, create, update, archive }
+  return { goals, loading, error, mostActive, otherGoals, load, create, update, archive }
 })
