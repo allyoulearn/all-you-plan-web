@@ -42,6 +42,22 @@ const routes = [
       }
     ]
   },
+  // Public legal documents (gate G-05). Registered outside AppShell so they
+  // carry no auth chrome, and marked public + allowAuthenticated so the guard
+  // below redirects neither signed-out store reviewers/crawlers nor signed-in
+  // users away. They render their own page; no layout wrapper needed.
+  {
+    path: '/legal/privacy',
+    name: 'legal-privacy',
+    component: () => import('@/views/legal/PrivacyPolicyView.vue'),
+    meta: { title: 'Privacy Policy', public: true, allowAuthenticated: true }
+  },
+  {
+    path: '/legal/terms',
+    name: 'legal-terms',
+    component: () => import('@/views/legal/TermsView.vue'),
+    meta: { title: 'Terms of Service', public: true, allowAuthenticated: true }
+  },
   {
     path: '/onboarding',
     name: 'onboarding',

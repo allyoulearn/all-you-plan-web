@@ -17,6 +17,12 @@ vi.mock('@/api/operations', () => ({
   RESTART_ONBOARDING: 'RESTART_ONBOARDING'
 }))
 
+const toastError = vi.fn()
+
+vi.mock('@/composables/useErrorToast', () => ({
+  useErrorToast: () => ({ toastError, toastSuccess: vi.fn(), resolveErrorMessage: vi.fn() })
+}))
+
 import { apolloClient } from '@/api/apollo'
 
 const fakeState = {
@@ -79,11 +85,24 @@ describe('onboarding.store', () => {
       expect(store.loading).toBe(false)
     })
 
-    it('resets loading even on rejection', async () => {
+    it('captures error inline and resets loading on rejection (no throw)', async () => {
       apolloClient.query.mockRejectedValueOnce(new Error('boom'))
       const store = useOnboardingStore()
-      await expect(store.load()).rejects.toThrow('boom')
+      await expect(store.load()).resolves.toBeUndefined()
+      expect(store.error).toBe('boom')
       expect(store.loading).toBe(false)
+    })
+
+    it('clears a prior error on a subsequent successful load', async () => {
+      const store = useOnboardingStore()
+      apolloClient.query.mockRejectedValueOnce(new Error('boom'))
+      await store.load()
+      expect(store.error).toBe('boom')
+
+      apolloClient.query.mockResolvedValueOnce({ data: { onboardingState: fakeState } })
+      await store.load()
+      expect(store.error).toBe('')
+      expect(store.state).toEqual(fakeState)
     })
   })
 
@@ -99,6 +118,14 @@ describe('onboarding.store', () => {
         expect.objectContaining({ variables: { input: { step: 3 } } })
       )
     })
+
+    it('toasts and re-throws on failure, resetting loading', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('save failed'))
+      const store = useOnboardingStore()
+      await expect(store.update({ step: 3 })).rejects.toThrow('save failed')
+      expect(toastError).toHaveBeenCalled()
+      expect(store.loading).toBe(false)
+    })
   })
 
   describe('complete()', () => {
@@ -109,6 +136,14 @@ describe('onboarding.store', () => {
       await store.complete()
       expect(store.state).toEqual(done)
       expect(store.done).toBe(true)
+    })
+
+    it('toasts and re-throws on failure, resetting loading', async () => {
+      apolloClient.mutate.mockRejectedValueOnce(new Error('finish failed'))
+      const store = useOnboardingStore()
+      await expect(store.complete()).rejects.toThrow('finish failed')
+      expect(toastError).toHaveBeenCalled()
+      expect(store.loading).toBe(false)
     })
   })
 

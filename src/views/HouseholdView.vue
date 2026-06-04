@@ -18,7 +18,18 @@
 
     <!-- Inline error banner (passive load failures) -->
     <div v-if="error" class="house__error" role="alert">
-      {{ error }}
+      <span class="house__error-text">
+        {{ error }}
+      </span>
+
+      <AppButton
+        size="sm"
+        variant="ghost"
+        class="house__error-retry"
+        @click="retry"
+      >
+        {{ t('common.retry') }}
+      </AppButton>
     </div>
 
     <!-- Loading state -->
@@ -452,6 +463,7 @@ export default {
       reinviting,
       removingMember,
       showLeave,
+      retry,
       isYouActor,
       inviterName,
       inviterInitial,
@@ -470,6 +482,11 @@ export default {
     }
 
     // -- Function definitions --
+
+    /** Re-issue the household load after a failed passive fetch. */
+    function retry() {
+      store.load()
+    }
 
     /** True when an activity row's actor is the current user. */
     function isYouActor(item) {
@@ -606,10 +623,18 @@ export default {
   &__status { @apply text-[13px] text-muted; }
 
   &__error {
-    @apply mb-4 rounded-[14px] border p-3.5 text-[13px];
+    @apply mb-4 flex items-center gap-3 rounded-[14px] border p-3.5 text-[13px];
     background: color-mix(in oklab, var(--bad) 8%, var(--paper-2));
     border-color: color-mix(in oklab, var(--bad) 40%, var(--rule-soft));
     color: var(--bad);
+  }
+
+  &__error-text {
+    @apply min-w-0 flex-1;
+  }
+
+  &__error-retry {
+    @apply shrink-0;
   }
 
   &__privacy-note {

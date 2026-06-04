@@ -259,27 +259,19 @@ describe('LoginView', () => {
 
   // ── Dev sign-in button (DEV only) ──────────────────────────────────────────
 
-  it('calls authStore.devLogin and pushes "/" when dev button is clicked', async () => {
-    // Render with isDev=true by mounting with devLogin available
-    const mockPush = vi.fn()
+  it('calls authStore.devLogin when the dev sign-in button is clicked', async () => {
+    // The dev quick-login is no longer an exposed setup method; it is a
+    // render-function component (`DevSignIn`) built inside a DIRECT
+    // `import.meta.env.DEV` branch and rendered via `<component :is="DevSignIn" />`.
+    // vitest runs in DEV, so the button renders — exercise it by clicking the
+    // real control (class `login-view__dev`) rather than reaching for an
+    // internal handler that the source intentionally keeps off the instance.
+    const { wrapper, store } = mountLogin()
 
-    vi.doMock('vue-router', () => ({
-      useRouter: () => ({ push: mockPush }),
-      useRoute: () => ({ query: {} })
-    }))
+    const devButton = wrapper.find('.login-view__dev')
+    expect(devButton.exists()).toBe(true)
 
-    const wrapper = mount(LoginView, {
-      global: {
-        stubs: globalStubs,
-        plugins: [createTestingPinia({ createSpy: vi.fn }), i18n]
-      }
-    })
-
-    const store = useAuthStore()
-
-    // Call handleDevLogin directly (the button may not render in test env if isDev=false)
-    // Access via wrapper's exposed methods to ensure handleDevLogin is covered
-    wrapper.vm.handleDevLogin()
+    await devButton.trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(store.devLogin).toHaveBeenCalledTimes(1)

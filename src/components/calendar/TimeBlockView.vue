@@ -14,8 +14,23 @@
           draggable="true"
           @dragstart="onDragStart($event, task)"
         >
-          <div class="tb__task-t">
-            {{ task.title }}
+          <div class="tb__task-row">
+            <div class="tb__task-t">
+              {{ task.title }}
+            </div>
+
+            <!-- Keyboard alternative to dragging the task onto the grid: the
+                 grid drop is pointer-only, so this schedules the task into the
+                 next free slot today via the same store action the drop uses. -->
+            <button
+              type="button"
+              class="tb__task-schedule"
+              :aria-label="t('calendar.scheduleTaskAria', { title: task.title })"
+              :title="t('calendar.scheduleTask')"
+              @click="onScheduleTask(task)"
+            >
+              <CalendarDaysIcon class="tb__task-schedule-icon" aria-hidden="true" />
+            </button>
           </div>
 
           <div class="tb__task-m">
@@ -79,9 +94,17 @@
       <!-- Time-slot grid body — the ONLY scroll surface inside the calendar.
            The page itself stays fixed at the viewport. -->
       <div ref="bodyRef" class="tb__body-scroll">
-        <div class="tb__body" :style="{ '--row-h': rowH + 'px' }">
+        <div
+          class="tb__body"
+          :style="{ '--row-h': rowH + 'px' }"
+          role="grid"
+          :aria-label="t('calendar.weekGridAriaLabel')"
+        >
           <template v-for="r in rowsCount" :key="r">
-            <div :class="['tb__row-lbl', { 'tb__row-lbl--half': (r - 1) % 2 === 1 }]">
+            <div
+              :class="['tb__row-lbl', { 'tb__row-lbl--half': (r - 1) % 2 === 1 }]"
+              role="rowheader"
+            >
               {{ (r - 1) % 2 === 0 ? formatHourLabel(START_HOUR + Math.floor((r - 1) / 2)) : '' }}
             </div>
 
@@ -92,6 +115,8 @@
                 'tb__cell',
                 { 'tb__cell--today': c - 1 === todayCol }
               ]"
+              role="gridcell"
+              :aria-label="cellAriaLabel(c - 1, r - 1)"
               @dragover.prevent
               @drop.prevent="onDrop($event, c - 1, r - 1)"
             />
@@ -153,6 +178,7 @@
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { CalendarDaysIcon } from '@heroicons/vue/24/outline'
 import { useTodayStore } from '@/stores/today.store.js'
 import { useCalendarStore } from '@/stores/calendar.store.js'
 import { toLocalISODate, formatTime } from '@/utils/date.js'
@@ -199,6 +225,7 @@ function formatHourLabel(hour) {
 
 export default {
   name: 'TimeBlockView',
+  components: { CalendarDaysIcon },
   emits: ['edit-event', 'edit-task'],
   setup(_props, { emit }) {
     const { t } = useI18n()
@@ -346,6 +373,7 @@ export default {
     const mergedBlocks = computed(() => [...blocks.value, ...optimisticBlocks.value])
 
     return {
+      t,
       START_HOUR,
       unscheduled,
       recurringChores,
@@ -358,8 +386,10 @@ export default {
       nowVisible,
       formatHourLabel,
       blockStyle,
+      cellAriaLabel,
       onDragStart,
       onDrop,
+      onScheduleTask,
       onBlockClick,
       bodyRef
     }
@@ -397,6 +427,54 @@ export default {
     function onDragStart(e, task) {
       e.dataTransfer.effectAllowed = 'move'
       e.dataTransfer.setData('application/json', JSON.stringify(task))
+    }
+
+    /**
+     * Accessible name for a time-grid cell: the weekday/date of the column and
+     * the clock time of the row. Gives screen-reader users orientation inside
+     * the otherwise-presentational grid.
+     */
+    function cellAriaLabel(col, row) {
+      const day = days.value[col]
+      const minutes = row * 30 + START_HOUR * 60
+      const hh = String(Math.floor(minutes / 60)).padStart(2, '0')
+      const mm = String(minutes % 60).padStart(2, '0')
+      const dayLabel = day ? `${day.dow} ${day.dnum}` : ''
+      return t('calendar.weekCellAria', { day: dayLabel, time: `${hh}:${mm}` })
+    }
+
+    /**
+     * Keyboard alternative to dragging a rail task onto the grid. Schedules the
+     * task into the next half-hour slot today via the SAME store action the
+     * drop uses (`moveTaskToTimeSlot`), then reloads today so the block shows.
+     */
+    async function onScheduleTask(task) {
+      if (!task?.id) return
+
+      // Target column: today when visible, else the first day of the week.
+      const col = todayCol.value >= 0 ? todayCol.value : 0
+      const scheduledDate = days.value[col]?.iso ?? toLocalISODate(new Date())
+
+      // Round "now" up to the next half hour as a sensible default slot.
+      const base = now.value
+      let minutes = base.getHours() * 60 + base.getMinutes()
+      minutes = Math.ceil(minutes / 30) * 30
+      const hour = Math.min(23, Math.floor(minutes / 60))
+      const minute = minutes % 60
+      const scheduledTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+
+      try {
+        await calendarStore.moveTaskToTimeSlot(
+          task.id,
+          scheduledDate,
+          scheduledTime,
+          task.effortMinutes ?? 30
+        )
+
+        await todayStore.load()
+      } catch {
+        /* server reject — toast surfaced by the store */
+      }
     }
 
     function onBlockClick(block) {
@@ -486,7 +564,21 @@ export default {
     &:hover { border-color: var(--muted); }
   }
 
-  &__task-t { @apply text-[13px] font-medium; }
+  &__task-row {
+    @apply flex items-start justify-between gap-2;
+  }
+
+  &__task-t { @apply min-w-0 flex-1 text-[13px] font-medium; }
+
+  &__task-schedule {
+    @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted transition-colors;
+    @apply hover:bg-paper-3 hover:text-ink;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+
+  &__task-schedule-icon {
+    @apply h-4 w-4;
+  }
 
   &__task-m {
     @apply flex items-center gap-2 text-[11px];

@@ -6,13 +6,19 @@
       :emphasis="t('inbox.headingEmphasis')"
     />
 
-    <div v-if="store.loading" class="inbox-view__status">
-      {{ t('common.loading') }}
-    </div>
+    <AppSkeleton
+      v-if="store.loading"
+      :rows="4"
+      :aria-label="t('common.loading')"
+    />
 
-    <div v-else-if="store.error" class="inbox-view__status inbox-view__status--error">
-      {{ store.error }}
-    </div>
+    <AppErrorState
+      v-else-if="store.error"
+      :message="store.error || t('common.loadError')"
+      :retry-label="t('common.retry')"
+      class="inbox-view__status--error"
+      @retry="store.load()"
+    />
 
     <!-- Capture bar — single horizontal strip. Dropped the AppCard wrapper
          and the redundant "Capture" label (the button right next to the
@@ -105,9 +111,11 @@
       </AppButton>
     </div>
 
-    <div v-if="store.items.length === 0 && !store.loading" class="inbox-view__status">
-      {{ t('inbox.emptyState') }}
-    </div>
+    <AppEmptyState
+      v-if="store.items.length === 0 && !store.loading"
+      icon="inbox"
+      :title="t('inbox.emptyState')"
+    />
 
     <div v-else class="inbox-view__list">
       <header v-if="store.items.length" class="inbox-view__list-header">
@@ -163,7 +171,7 @@
           class="inbox-view__triage-btn"
           :title="t('inbox.triageCta')"
           :aria-label="t('inbox.triageCta')"
-          @click="store.triage(item.id)"
+          @click="onTriage(item.id)"
         >
           <AppIcon name="archive" :size="14" aria-hidden="true" />
 
@@ -192,12 +200,25 @@ import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import WrenOriginBadge from '@/components/wren/WrenOriginBadge.vue'
+import { captureException } from '@/utils/sentry.js'
 import { localISOToday } from '@/utils/date.js'
 
 export default {
   name: 'InboxView',
-  components: { AppScreenHeading, AppSectionHeader, AppButton, AppIcon, WrenOriginBadge },
+  components: {
+    AppScreenHeading,
+    AppSectionHeader,
+    AppButton,
+    AppIcon,
+    AppSkeleton,
+    AppErrorState,
+    AppEmptyState,
+    WrenOriginBadge
+  },
   setup() {
     const { t } = useI18n()
     const store = useInboxStore()
@@ -252,10 +273,22 @@ export default {
       bulkSendToProject,
       bulkScheduleToday,
       capture,
+      onTriage,
       relativeTime
     }
 
     // -- Function definitions --
+
+    /**
+     * Triage a single inbox row. The store toasts + re-throws on failure;
+     * catch the rejection so the click handler can't leak an unhandled
+     * promise, and report it to Sentry.
+     * @param {string} id
+     */
+    function onTriage(id) {
+      // Promise.resolve tolerates a non-promise return (e.g. a test spy).
+      Promise.resolve(store.triage(id)).catch(captureException)
+    }
 
     /**
      * Toggle selection for a single inbox item id.
@@ -336,6 +369,9 @@ export default {
       try {
         await store.capture(captureText.value.trim())
         captureText.value = ''
+      } catch (e) {
+        // Toasted by the store; report and keep the draft for retry.
+        captureException(e)
       } finally {
         capturing.value = false
       }

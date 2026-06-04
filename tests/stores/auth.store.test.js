@@ -755,17 +755,26 @@ describe('auth.store', () => {
   })
 
   describe('devLogin()', () => {
-    it('is a no-op when DEV is false', () => {
+    it('is not exposed on the store when built outside DEV (stripped from prod)', () => {
+      // devLogin now lives in a dev-only `devActions` object that is only
+      // populated inside a DIRECT `import.meta.env.DEV` branch and spread into
+      // the store. Vite folds that guard to `false` in a prod build so Rollup
+      // strips the action entirely — there is no longer a runtime
+      // `if (!DEV) return` guard inside the function. When the store factory
+      // runs with DEV false, the action is simply absent.
       vi.stubEnv('DEV', false)
       vi.stubEnv('VITE_USE_MOCKS', 'true')
       const store = useAuthStore()
-      store.devLogin()
+      expect(store.devLogin).toBeUndefined()
       expect(store.isAuthenticated).toBe(false)
       expect(setAccessToken).not.toHaveBeenCalled()
       vi.unstubAllEnvs()
     })
 
     it('is a no-op when DEV is true but VITE_USE_MOCKS is not "true" (WEB-W1-22)', () => {
+      // The DEV guard now gates whether the action exists at all; the retained
+      // VITE_USE_MOCKS guard keeps it a no-op in a dev build that isn't running
+      // against the mock backend.
       vi.stubEnv('DEV', true)
       vi.stubEnv('VITE_USE_MOCKS', 'false')
       const store = useAuthStore()

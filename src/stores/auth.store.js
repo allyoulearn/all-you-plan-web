@@ -401,30 +401,40 @@ export const useAuthStore = defineStore('auth', () => {
    * The mock user mirrors the shape of the LOGIN payload's UserFields fragment
    * (timezone, streak, full default settings) so any view that reads them sees
    * realistic values rather than undefined.
+   *
+   * Defined inside a DIRECT `import.meta.env.DEV` branch (no optional chaining)
+   * so Vite replaces the guard with the literal `false` in a production build;
+   * Rollup then strips the whole function body AND its return-object key, so
+   * neither the `devLogin` identifier nor the mock-user payload ever reach the
+   * prod bundle (the prod-bundle test asserts the `devLogin` string is absent).
    */
-  function devLogin() {
-    if (!import.meta.env.DEV || import.meta.env.VITE_USE_MOCKS !== 'true') return
-    const timezone = localTimezone('UTC')
+  const devActions = {}
 
-    setAuth({
-      accessToken: 'dev-mock-token',
-      user: {
-        id: 'dev-user',
-        name: 'Dev Tester',
-        email: 'dev@allyouplan.test',
-        timezone,
-        streak: { current: 0, best: 0, lastCompletionDate: null },
-        settings: {
-          theme: 'default',
-          mode: 'auto',
-          density: 'comfortable',
-          coachPersonality: 'gentle',
-          checkIns: ['morning'],
-          stalledNudgeDays: 7,
-          journalVisibility: 'private'
+  if (import.meta.env.DEV) {
+    devActions.devLogin = function devLogin() {
+      if (import.meta.env.VITE_USE_MOCKS !== 'true') return
+      const timezone = localTimezone('UTC')
+
+      setAuth({
+        accessToken: 'dev-mock-token',
+        user: {
+          id: 'dev-user',
+          name: 'Dev Tester',
+          email: 'dev@allyouplan.test',
+          timezone,
+          streak: { current: 0, best: 0, lastCompletionDate: null },
+          settings: {
+            theme: 'default',
+            mode: 'auto',
+            density: 'comfortable',
+            coachPersonality: 'gentle',
+            checkIns: ['morning'],
+            stalledNudgeDays: 7,
+            journalVisibility: 'private'
+          }
         }
-      }
-    })
+      })
+    }
   }
 
   return {
@@ -447,6 +457,6 @@ export const useAuthStore = defineStore('auth', () => {
     changePassword,
     deleteAccount,
     refreshMe,
-    devLogin
+    ...devActions
   }
 })

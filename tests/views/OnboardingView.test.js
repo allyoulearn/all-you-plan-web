@@ -33,7 +33,11 @@ vi.mock('vue-router', () => ({
 
 const globalStubs = { AppIcon: true }
 
-function mountOnboarding(initialStep = 1, authUser = { name: 'Ada', timezone: 'Europe/Helsinki' }) {
+function mountOnboarding(
+  initialStep = 1,
+  authUser = { name: 'Ada', timezone: 'Europe/Helsinki' },
+  onboardingOverrides = {}
+) {
   return mount(OnboardingView, {
     global: {
       stubs: globalStubs,
@@ -43,7 +47,9 @@ function mountOnboarding(initialStep = 1, authUser = { name: 'Ada', timezone: 'E
           initialState: {
             onboarding: {
               state: { step: initialStep, onboardedAt: null, tone: 'warm', mode: 'solo' },
-              loading: false
+              loading: false,
+              error: '',
+              ...onboardingOverrides
             },
             auth: { user: authUser }
           }
@@ -212,5 +218,113 @@ describe('OnboardingView', () => {
     await flushPromises()
     const done = wrapper.findAll('.onb__dot--done')
     expect(done.length).toBe(3)
+  })
+
+  // -- Gate fixes (G-22) --
+
+  it('re-hydrates form.mode from the store so the persisted mode is highlighted', async () => {
+    const wrapper = mountOnboarding(
+      4,
+      { name: 'Ada' },
+      {
+        state: { step: 4, onboardedAt: null, tone: 'warm', mode: 'habits' }
+      }
+    )
+
+    await flushPromises()
+    const cards = wrapper.findAll('.onb__mode')
+    // modes order: solo, partner, habits → habits is index 2
+    expect(cards[2].classes()).toContain('onb__mode--active')
+    expect(cards[0].classes()).not.toContain('onb__mode--active')
+  })
+
+  it('re-hydrated mode is sent in the step-4 advance payload', async () => {
+    const wrapper = mountOnboarding(
+      4,
+      { name: 'Ada' },
+      {
+        state: { step: 4, onboardedAt: null, tone: 'warm', mode: 'habits' }
+      }
+    )
+
+    await flushPromises()
+    const store = useOnboardingStore()
+    store.update.mockResolvedValue(undefined)
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+    expect(store.update).toHaveBeenCalledWith(expect.objectContaining({ step: 5, mode: 'habits' }))
+  })
+
+  it('does not advance/redirect when complete() rejects on step 6', async () => {
+    const wrapper = mountOnboarding(6)
+    await flushPromises()
+    const onboarding = useOnboardingStore()
+    onboarding.complete.mockRejectedValue(new Error('network'))
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+    expect(onboarding.complete).toHaveBeenCalledTimes(1)
+    expect(pushSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not double-submit while a step advance is in flight', async () => {
+    const wrapper = mountOnboarding(2)
+    await flushPromises()
+    const store = useOnboardingStore()
+    let resolve
+
+    store.update.mockReturnValue(
+      new Promise(r => {
+        resolve = r
+      })
+    )
+
+    const btn = wrapper.find('button.onb__btn-primary')
+    await btn.trigger('click')
+    await btn.trigger('click')
+    expect(store.update).toHaveBeenCalledTimes(1)
+    resolve()
+    await flushPromises()
+  })
+
+  it('disables the primary CTA while a mutation is in flight', async () => {
+    const wrapper = mountOnboarding(2)
+    await flushPromises()
+    const store = useOnboardingStore()
+    let resolve
+
+    store.update.mockReturnValue(
+      new Promise(r => {
+        resolve = r
+      })
+    )
+
+    const btn = wrapper.find('button.onb__btn-primary')
+    await btn.trigger('click')
+    expect(btn.attributes('disabled')).toBeDefined()
+    resolve()
+    await flushPromises()
+  })
+
+  it('shows the initial-load skeleton before the first state resolves', () => {
+    // No flushPromises: store.load() (a stub) has not resolved yet, so the
+    // wizard is still in its initialLoading state.
+    const wrapper = mountOnboarding(1)
+    expect(wrapper.find('.app-skeleton').exists()).toBe(true)
+    expect(wrapper.find('.onb__foot').exists()).toBe(false)
+  })
+
+  it('shows a retryable error card when the initial load failed', async () => {
+    const wrapper = mountOnboarding(1, { name: 'Ada' }, { error: 'Network down' })
+    await flushPromises()
+    const store = useOnboardingStore()
+    expect(wrapper.find('.app-error-state').exists()).toBe(true)
+    await wrapper.find('.app-error-state button').trigger('click')
+    expect(store.load).toHaveBeenCalled()
+  })
+
+  it('no longer renders the dead per-seed Edit button on step 5', async () => {
+    const wrapper = mountOnboarding(5)
+    await flushPromises()
+    expect(wrapper.find('.onb__seeded-row .onb__btn-ghost').exists()).toBe(false)
   })
 })

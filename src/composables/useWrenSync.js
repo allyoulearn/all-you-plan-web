@@ -19,6 +19,18 @@ import { useChoresStore } from '@/stores/chores.store.js'
 import { useCalendarStore } from '@/stores/calendar.store.js'
 import { useJournalStore } from '@/stores/journal.store.js'
 import { useInboxStore } from '@/stores/inbox.store.js'
+import { captureException } from '@/utils/sentry.js'
+
+/**
+ * Report a failed post-action refresh to Sentry without surfacing a toast.
+ * These reloads are passive (fired after a Wren write applies), so the store's
+ * own `error.value` covers the inline case when the user opens that view; here
+ * we only need to make sure the failure is no longer silently swallowed.
+ * @param {unknown} e
+ */
+function onSyncFail(e) {
+  captureException(e, { scope: 'wren-sync-reload' })
+}
 
 /**
  * Subscribe to wren store action events and refresh affected domain stores.
@@ -40,24 +52,24 @@ export function useWrenSync() {
 
       switch (action.refType) {
         case 'task':
-          if (today.view) today.load(today.view.date).catch(() => {})
-          if (projects.board) projects.loadBoard(projects.board.project.id).catch(() => {})
+          if (today.view) today.load(today.view.date).catch(onSyncFail)
+          if (projects.board) projects.loadBoard(projects.board.project.id).catch(onSyncFail)
           break
         case 'project':
-          if (projects.projects.length) projects.loadProjects().catch(() => {})
-          if (projects.board) projects.loadBoard(projects.board.project.id).catch(() => {})
+          if (projects.projects.length) projects.loadProjects().catch(onSyncFail)
+          if (projects.board) projects.loadBoard(projects.board.project.id).catch(onSyncFail)
           break
         case 'chore':
-          if (chores.chores.length || chores.loading) chores.load().catch(() => {})
+          if (chores.chores.length || chores.loading) chores.load().catch(onSyncFail)
           break
         case 'calendar_event':
-          if (calendar.events.length || calendar.loading) calendar.load().catch(() => {})
+          if (calendar.events.length || calendar.loading) calendar.load().catch(onSyncFail)
           break
         case 'journal_entry':
-          if (journal.entries.length || journal.loading) journal.load().catch(() => {})
+          if (journal.entries.length || journal.loading) journal.load().catch(onSyncFail)
           break
         case 'inbox_item':
-          if (inbox.items.length || inbox.loading) inbox.load().catch(() => {})
+          if (inbox.items.length || inbox.loading) inbox.load().catch(onSyncFail)
           break
       }
     }

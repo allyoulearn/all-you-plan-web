@@ -1,7 +1,18 @@
 <template>
   <!-- User bubble: right-aligned on paper-3 -->
-  <div v-if="message.sender === 'user'" class="wren-bubble wren-bubble--user">
+  <div
+    v-if="message.sender === 'user'"
+    class="wren-bubble wren-bubble--user"
+    role="article"
+    :aria-label="bubbleAriaLabel"
+  >
     <div class="wren-bubble__inner">
+      <!-- Visually-hidden speaker prefix so the live-region announcement names
+           who is speaking even though the visible bubble relies on alignment. -->
+      <span class="sr-only">
+        {{ t('wren.senderUser') }}:
+      </span>
+
       <p class="wren-bubble__timestamp wren-bubble__timestamp--right">
         {{ formatWhen(message.createdAt) }}
       </p>
@@ -13,8 +24,17 @@
   </div>
 
   <!-- Coach bubble: left-aligned, accent when actions present -->
-  <div v-else class="wren-bubble wren-bubble--coach">
+  <div
+    v-else
+    class="wren-bubble wren-bubble--coach"
+    role="article"
+    :aria-label="bubbleAriaLabel"
+  >
     <div class="wren-bubble__inner">
+      <span class="sr-only">
+        {{ t('wren.senderCoach') }}:
+      </span>
+
       <p class="wren-bubble__timestamp">
         {{ formatWhen(message.createdAt) }}
       </p>
@@ -35,6 +55,7 @@
         <span
           v-else-if="message.status === 'interrupted'"
           class="wren-bubble__interrupted"
+          role="status"
         >
           {{ t('wren.bubbleInterrupted') }}
         </span>
@@ -145,10 +166,23 @@ export default {
     /** True when the bubble has at least one renderable action chip. */
     const hasActions = computed(() => normalizedActions.value.length > 0)
 
+    /**
+     * Accessible name for the whole bubble — names the speaker and the time so
+     * a screen reader landing on the article knows who said it and when,
+     * without the visual left/right alignment cue.
+     */
+    const bubbleAriaLabel = computed(() => {
+      const time = formatWhen(props.message.createdAt)
+      return props.message.sender === 'user'
+        ? t('wren.bubbleUserAria', { time })
+        : t('wren.bubbleCoachAria', { time })
+    })
+
     return {
       t,
       normalizedActions,
       hasActions,
+      bubbleAriaLabel,
       formatWhen,
     }
 

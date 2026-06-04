@@ -11,6 +11,11 @@
       >
         <RouterView />
       </div>
+
+      <!-- Global legal links (gate G-05). Hidden on full-width routes
+           (board, calendar week, wren chat) so it doesn't intrude on the
+           edge-to-edge surfaces that manage their own internal scroll. -->
+      <AppFooter v-if="!$route.meta.fullWidth" />
     </main>
 
     <WrenPanel />
@@ -65,6 +70,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterView } from 'vue-router'
 import AppSidebar from './AppSidebar.vue'
 import AppTopBar from './AppTopBar.vue'
+import AppFooter from './AppFooter.vue'
 import WrenPanel from './WrenPanel.vue'
 import SearchOverlay from '@/components/overlays/SearchOverlay.vue'
 import CaptureOverlay from '@/components/overlays/CaptureOverlay.vue'
@@ -80,6 +86,7 @@ export default {
     RouterView,
     AppSidebar,
     AppTopBar,
+    AppFooter,
     WrenPanel,
     SearchOverlay,
     CaptureOverlay,

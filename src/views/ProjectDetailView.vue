@@ -5,13 +5,21 @@
       {{ t('projects.backToProjectsText') }}
     </RouterLink>
 
-    <div v-if="store.loadingBoard" class="project-detail-view__status project-detail-view__status--mt">
-      {{ t('common.loading') }}
-    </div>
+    <AppSkeleton
+      v-if="store.loadingBoard"
+      variant="card"
+      :rows="5"
+      :aria-label="t('common.loading')"
+      class="project-detail-view__status--mt"
+    />
 
-    <div v-else-if="store.errorBoard" class="project-detail-view__status project-detail-view__status--mt project-detail-view__status--error">
-      {{ store.errorBoard }}
-    </div>
+    <AppErrorState
+      v-else-if="store.errorBoard"
+      :message="store.errorBoard || t('common.loadError')"
+      :retry-label="t('common.retry')"
+      class="project-detail-view__status--mt project-detail-view__status--error"
+      @retry="store.loadBoard(route.params.id)"
+    />
 
     <template v-else-if="project">
       <AppScreenHeading :title="project.name" :emphasis="project.tag" />
@@ -73,7 +81,7 @@
           >
             <AppCheckbox
               :model-value="task.done"
-              @update:model-value="store.completeTask(task.id)"
+              @update:model-value="onComplete(task.id)"
             />
 
             <span
@@ -159,6 +167,9 @@ import AppCheckbox from '@/components/ui/AppCheckbox.vue'
 import AppProgressBar from '@/components/ui/AppProgressBar.vue'
 import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import { captureException } from '@/utils/sentry.js'
 import CreateProjectTaskModal from '@/components/projects/CreateProjectTaskModal.vue'
 
 export default {
@@ -174,6 +185,8 @@ export default {
     AppProgressBar,
     AppConfirmDialog,
     AppIcon,
+    AppSkeleton,
+    AppErrorState,
     CreateProjectTaskModal
   },
   setup() {
@@ -233,10 +246,22 @@ export default {
       showCreateTask,
       showArchive,
       archiving,
+      onComplete,
       handleArchive
     }
 
     // -- Function definitions --
+
+    /**
+     * Toggle a task's completion. The store toasts + re-throws on failure;
+     * catch the rejection so the unguarded checkbox handler can't leak an
+     * unhandled promise, and report it to Sentry.
+     * @param {string} id
+     */
+    function onComplete(id) {
+      // Promise.resolve tolerates a non-promise return (e.g. a test spy).
+      Promise.resolve(store.completeTask(id)).catch(captureException)
+    }
 
     async function handleArchive() {
       if (archiving.value) return

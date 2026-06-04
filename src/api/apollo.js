@@ -38,6 +38,8 @@ import { createClient } from 'graphql-ws'
 import { REFRESH_TOKEN } from '@/api/operations/index.js'
 import { createMockLink } from '@/mocks/mockLink.js'
 import { mockRegistry } from '@/mocks/index.js'
+import { GRAPHQL_URL, WS_URL, resolveGraphqlUrl } from '@/config/env.js'
+import { captureException } from '@/utils/sentry.js'
 
 /**
  * Single source of truth for the mock-mode predicate. The DEV
@@ -79,7 +81,7 @@ export function getAccessToken() {
 }
 
 const httpLink = createHttpLink({
-  uri: import.meta.env.VITE_GRAPHQL_URL || '/graphql',
+  uri: GRAPHQL_URL,
   credentials: 'include',
   headers: {
     get Authorization() {
@@ -88,10 +90,8 @@ const httpLink = createHttpLink({
   }
 })
 
-const wsUrl = import.meta.env.VITE_WS_URL || `wss://${window.location.host}/graphql`
-
 const wsClient = createClient({
-  url: wsUrl,
+  url: WS_URL,
   connectionParams: () => ({
     Authorization: accessToken ? `Bearer ${accessToken}` : ''
   }),
@@ -132,6 +132,18 @@ const splitLink = split(
 const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
   if (graphQLErrors) {
     for (const err of graphQLErrors) {
+      if (err.extensions?.code !== 'UNAUTHENTICATED') {
+        // Forward genuine server/GraphQL errors to Sentry. UNAUTHENTICATED is
+        // an expected, self-healing case (token refresh below) so we skip it
+        // to avoid noise. captureException no-ops until Sentry is initialised
+        // (DSN set + analytics consent), so this is a safe call in all modes.
+        captureException(err, {
+          scope: 'apollo.graphql',
+          operation: operation.operationName,
+          code: err.extensions?.code
+        })
+      }
+
       if (err.extensions?.code === 'UNAUTHENTICATED') {
         // Gate all concurrent UNAUTHENTICATED errors behind a single refresh.
         if (!refreshing) {
@@ -166,6 +178,11 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
 
   if (networkError) {
     console.error('[Network error]:', networkError)
+
+    captureException(networkError, {
+      scope: 'apollo.network',
+      operation: operation.operationName
+    })
   }
 })
 
@@ -205,7 +222,7 @@ export async function refreshAccessToken() {
     return payload
   }
 
-  const res = await fetch(import.meta.env.VITE_GRAPHQL_URL || '/graphql', {
+  const res = await fetch(resolveGraphqlUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

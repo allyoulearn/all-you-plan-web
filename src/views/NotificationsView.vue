@@ -21,6 +21,14 @@
       {{ t('notifications.loading') }}
     </div>
 
+    <!-- Error state — surfaces a failed settings load with a retry. -->
+    <AppErrorState
+      v-else-if="store.error"
+      :message="store.error || t('common.loadError')"
+      :retry-label="t('common.retry')"
+      @retry="store.load()"
+    />
+
     <!-- Settings content -->
     <template v-else-if="settings">
       <!-- Permission denied banner -->
@@ -291,10 +299,12 @@ import { useI18n } from 'vue-i18n'
 import { useNotificationsStore } from '@/stores/notifications.store.js'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { useRelativeTime } from '@/composables/useRelativeTime.js'
+import { captureException } from '@/utils/sentry.js'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
 
 const ROW_IDS = [
   { id: 'tasks.due', labelKey: 'notifications.rowTasksDueLabel', descKey: 'notifications.rowTasksDueDesc' },
@@ -308,7 +318,7 @@ const ROW_IDS = [
 
 export default {
   name: 'NotificationsView',
-  components: { AppScreenHeading, AppSectionHeader, AppButton, AppIcon, RouterLink },
+  components: { AppScreenHeading, AppSectionHeader, AppButton, AppIcon, AppErrorState, RouterLink },
   setup() {
     const { t } = useI18n()
     const store = useNotificationsStore()
@@ -333,7 +343,7 @@ export default {
       return t(key, { count })
     })
 
-    return { t, settings, devices, loading, rows, userEmail, pushMetaLabel, pref, setPref, setChannel, revoke, relativeTime }
+    return { t, store, settings, devices, loading, rows, userEmail, pushMetaLabel, pref, setPref, setChannel, revoke, relativeTime }
 
     // -- Function definitions --
 
@@ -359,7 +369,9 @@ export default {
      * @param {boolean} value
      */
     function setPref(categoryId, channel, value) {
-      store.updatePreference(categoryId, { [channel]: value })
+      // The store toasts + re-throws on failure; catch the rejection so it
+      // doesn't surface as an unhandled promise, and report it to Sentry.
+      swallow(store.updatePreference(categoryId, { [channel]: value }))
     }
 
     /**
@@ -368,7 +380,8 @@ export default {
      * @param {boolean|string} value
      */
     function setChannel(key, value) {
-      store.updateSettings({ [key]: value })
+      // Toasted + re-thrown by the store; swallow the rejection and report.
+      swallow(store.updateSettings({ [key]: value }))
     }
 
     /**
@@ -376,10 +389,21 @@ export default {
      * @param {string} id
      */
     function revoke(id) {
-      store.revokeDevice(id)
+      // Toasted + re-thrown by the store; swallow the rejection and report.
+      swallow(store.revokeDevice(id))
     }
-
   }
+}
+
+/**
+ * Attach a Sentry-reporting catch to a fire-and-forget store mutation. The
+ * store already toasts the failure; this just keeps the rejection from
+ * surfacing as an unhandled promise. `Promise.resolve` tolerates stores or
+ * test spies that return a non-promise.
+ * @param {unknown} maybePromise
+ */
+function swallow(maybePromise) {
+  Promise.resolve(maybePromise).catch(captureException)
 }
 </script>
 

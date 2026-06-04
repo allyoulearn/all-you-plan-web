@@ -42,6 +42,12 @@ describe('AppShell', () => {
           RouterView: true,
           AppSidebar: true,
           AppTopBar: true,
+          // AppFooter holds a <RouterLink> to the legal pages; without a router
+          // installed it throws at setup (router.resolve is undefined). It's
+          // exercised by its own/route tests, so stub it here — mirroring how
+          // AuthLayout.test.js stubs AppFooter — to keep these layout smoke
+          // tests free of vue-router.
+          AppFooter: true,
           WrenPanel: true,
           CaptureOverlay: true,
           SearchOverlay: true,

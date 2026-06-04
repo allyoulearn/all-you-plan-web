@@ -33,13 +33,20 @@
     <!-- Month view -->
     <div v-if="viewMode === 'month'" class="calendar-view__doc-pane">
       <!-- Loading / error states -->
-      <div v-if="store.loading" class="calendar-view__status">
-        {{ t('common.loading') }}
-      </div>
+      <AppSkeleton
+        v-if="store.loading"
+        :rows="3"
+        :aria-label="t('common.loading')"
+        class="calendar-view__skeleton"
+      />
 
-      <div v-else-if="store.error" class="calendar-view__status calendar-view__status--error">
-        {{ store.error }}
-      </div>
+      <AppErrorState
+        v-else-if="store.error"
+        :message="store.error || t('common.loadError')"
+        :retry-label="t('common.retry')"
+        class="calendar-view__status--error"
+        @retry="reloadMonth"
+      />
 
       <!-- Period navigation -->
       <div class="calendar-view__nav">
@@ -75,54 +82,77 @@
 
       <!-- Calendar grid -->
       <AppCard v-if="!store.error" class="calendar-view__grid-card">
-        <!-- Weekday headers -->
-        <div class="calendar-view__weekday-row">
+        <div
+          class="calendar-view__grid"
+          role="grid"
+          :aria-label="t('calendar.gridAriaLabel', { month: monthLong(currentMonth), year: currentYear })"
+        >
+          <!-- Weekday headers -->
+          <div class="calendar-view__weekday-row" role="row">
+            <div
+              v-for="h in dayHeaders"
+              :key="h"
+              class="calendar-view__weekday-header"
+              role="columnheader"
+            >
+              {{ h }}
+            </div>
+          </div>
+
+          <!-- Day cells, chunked into week rows so the grid exposes row /
+               gridcell structure. The flat document order across all rows is
+               unchanged, so each of the 42 cells stays individually findable. -->
           <div
-            v-for="h in dayHeaders"
-            :key="h"
-            class="calendar-view__weekday-header"
+            v-for="(week, wIdx) in calendarWeeks"
+            :key="wIdx"
+            class="calendar-view__day-grid"
+            role="row"
           >
-            {{ h }}
+            <button
+              v-for="cell in week"
+              :key="cell.idx"
+              class="calendar-view__day-cell"
+              role="gridcell"
+              :class="{
+                'calendar-view__day-cell--adjacent': cell.adjacent,
+                'calendar-view__day-cell--today': isToday(cell) && !isSelected(cell),
+                'calendar-view__day-cell--selected': isSelected(cell),
+                'calendar-view__day-cell--default': !cell.adjacent && !isToday(cell) && !isSelected(cell),
+                'calendar-view__day-cell--drop': dropTargetDate === cellDateStr(cell) && !cell.adjacent,
+              }"
+              :disabled="cell.adjacent"
+              :tabindex="rovingTabindex(cell)"
+              :data-cell-idx="cell.idx"
+              :aria-label="cellAriaLabel(cell)"
+              :aria-current="isToday(cell) ? 'date' : undefined"
+              :aria-pressed="!cell.adjacent && isSelected(cell) ? 'true' : undefined"
+              @click="selectDay(cell)"
+              @keydown="onDayCellKeydown($event, cell)"
+              @dragover.prevent="onDayDragOver($event, cell)"
+              @dragleave="onDayDragLeave(cell)"
+              @drop.prevent="onDayDrop($event, cell)"
+            >
+              <span class="calendar-view__day-num">
+                {{ cell.day }}
+              </span>
+
+              <div class="calendar-view__dots">
+                <span
+                  v-for="ev in eventsForDay(cell.day, cell.adjacent)"
+                  :key="ev.id"
+                  class="calendar-view__dot"
+                  :class="ev.accent ? 'calendar-view__dot--accent' : 'calendar-view__dot--muted'"
+                />
+              </div>
+            </button>
           </div>
         </div>
-
-        <!-- Day cells (6 rows x 7 cols) -->
-        <div class="calendar-view__day-grid">
-          <button
-            v-for="(cell, idx) in calendarDays"
-            :key="idx"
-            class="calendar-view__day-cell"
-            :class="{
-              'calendar-view__day-cell--adjacent': cell.adjacent,
-              'calendar-view__day-cell--today': isToday(cell) && !isSelected(cell),
-              'calendar-view__day-cell--selected': isSelected(cell),
-              'calendar-view__day-cell--default': !cell.adjacent && !isToday(cell) && !isSelected(cell),
-              'calendar-view__day-cell--drop': dropTargetDate === cellDateStr(cell) && !cell.adjacent,
-            }"
-            :disabled="cell.adjacent"
-            :aria-label="cellAriaLabel(cell)"
-            :aria-current="isToday(cell) ? 'date' : undefined"
-            :aria-pressed="!cell.adjacent && isSelected(cell) ? 'true' : undefined"
-            @click="selectDay(cell)"
-            @dragover.prevent="onDayDragOver($event, cell)"
-            @dragleave="onDayDragLeave(cell)"
-            @drop.prevent="onDayDrop($event, cell)"
-          >
-            <span class="calendar-view__day-num">
-              {{ cell.day }}
-            </span>
-
-            <div class="calendar-view__dots">
-              <span
-                v-for="ev in eventsForDay(cell.day, cell.adjacent)"
-                :key="ev.id"
-                class="calendar-view__dot"
-                :class="ev.accent ? 'calendar-view__dot--accent' : 'calendar-view__dot--muted'"
-              />
-            </div>
-          </button>
-        </div>
       </AppCard>
+
+      <!-- Assertive announcer for keyboard reschedule + move-mode prompts. -->
+      <span class="sr-only" role="status" aria-live="assertive">
+        {{ calendarAnnouncement }}
+      </span>
 
       <!-- Agenda -->
       <template v-if="selectedDay">
@@ -152,10 +182,16 @@
             class="calendar-view__agenda-item"
             :class="[
               ev.accent ? 'calendar-view__agenda-item--accent' : 'calendar-view__agenda-item--default',
-              { 'calendar-view__agenda-item--dragging': draggingId === ev.id }
+              {
+                'calendar-view__agenda-item--dragging': draggingId === ev.id,
+                'calendar-view__agenda-item--moving': movingEventId === ev.id
+              }
             ]"
             draggable="true"
+            :aria-keyshortcuts="'M'"
+            :title="t('calendar.rescheduleHint')"
             @click="openEditSheet(ev)"
+            @keydown="onAgendaItemKeydown($event, ev)"
             @dragstart="onAgendaDragStart($event, ev)"
             @dragend="onAgendaDragEnd"
           >
@@ -229,9 +265,10 @@
           :key="m"
           type="button"
           class="calendar-view__year-month"
+          :aria-label="yearMonthAria(m - 1)"
           @click="openMonthFromYear(m - 1)"
         >
-          <header class="calendar-view__year-month-header">
+          <header class="calendar-view__year-month-header" aria-hidden="true">
             <span class="calendar-view__year-month-title">
               {{ monthLong(m - 1) }}
             </span>
@@ -241,7 +278,7 @@
             </span>
           </header>
 
-          <div class="calendar-view__year-weekday-row">
+          <div class="calendar-view__year-weekday-row" aria-hidden="true">
             <span
               v-for="(h, hi) in dayHeadersNarrow"
               :key="hi"
@@ -251,7 +288,7 @@
             </span>
           </div>
 
-          <div class="calendar-view__year-day-grid">
+          <div class="calendar-view__year-day-grid" aria-hidden="true">
             <span
               v-for="(cell, ci) in calendarDaysFor(currentYear, m - 1)"
               :key="ci"
@@ -303,7 +340,7 @@
  * between month / week / year. Year view uses the calendar store's `loadYear`
  * action which fans out 12 month fetches and merges the results.
  */
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCalendarStore } from '@/stores/calendar.store.js'
 import { useTodayStore } from '@/stores/today.store.js'
@@ -313,6 +350,9 @@ import AppIconButton from '@/components/ui/AppIconButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppSegmentedControl from '@/components/ui/AppSegmentedControl.vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import { captureException } from '@/utils/sentry.js'
 import TimeBlockView from '@/components/calendar/TimeBlockView.vue'
 import CalendarEventSheet from '@/components/calendar/CalendarEventSheet.vue'
 import TaskDetailModal from '@/components/tasks/TaskDetailModal.vue'
@@ -328,6 +368,8 @@ export default {
     AppCard,
     AppButton,
     AppSegmentedControl,
+    AppSkeleton,
+    AppErrorState,
     TimeBlockView,
     CalendarEventSheet,
     TaskDetailModal,
@@ -373,6 +415,14 @@ export default {
     const draggingId = ref(null)
     const dropTargetDate = ref(null)
 
+    // Keyboard reschedule: id of the event armed for a "move to another day"
+    // gesture (entered by pressing M on a focused agenda item). While armed,
+    // Enter on a focused day cell reschedules the event to that day. Escape or
+    // a successful move disarms.
+    const movingEventId = ref(null)
+    // Assertive screen-reader status for keyboard reschedule + move prompts.
+    const calendarAnnouncement = ref('')
+
     // -- Computed --
 
     const { weekdayHeaders: dayHeaders } = useWeekdayHeaders()
@@ -402,6 +452,20 @@ export default {
     /** 6×7 cell grid for the displayed month — with leading/trailing
      *  adjacent-month days kept around so the grid is always full. */
     const calendarDays = computed(() => buildMonthCells(currentYear.value, currentMonth.value))
+
+    /** `calendarDays` chunked into weeks of 7, each cell tagged with its flat
+     *  index so the grid can render row/gridcell structure while keeping the
+     *  cells in their original document order. */
+    const calendarWeeks = computed(() => {
+      const cells = calendarDays.value.map((cell, idx) => ({ ...cell, idx }))
+      const weeks = []
+
+      for (let i = 0; i < cells.length; i += 7) {
+        weeks.push(cells.slice(i, i + 7))
+      }
+
+      return weeks
+    })
 
     /** Pre-computed map of YYYY-MM-DD → Event[] for the current month's events. */
     const eventsByDay = computed(() => {
@@ -482,6 +546,13 @@ export default {
       currentMonth,
       selectedDay,
       calendarDays,
+      calendarWeeks,
+      movingEventId,
+      calendarAnnouncement,
+      rovingTabindex,
+      onDayCellKeydown,
+      onAgendaItemKeydown,
+      yearMonthAria,
       eventsByDay,
       agendaEvents,
       agendaLabel,
@@ -489,6 +560,7 @@ export default {
       headingTitle,
       headingEmphasis,
       isCurrentMonth,
+      reloadMonth,
       prevMonth,
       nextMonth,
       prevYear,
@@ -584,17 +656,20 @@ export default {
 
     function onAddSubtask({ text }) {
       if (!activeTaskId.value) return
-      projectsStore.addSubtask(activeTaskId.value, text).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      projectsStore.addSubtask(activeTaskId.value, text).catch(captureException)
     }
 
     function onUpdateSubtask({ subtaskId, ...patch }) {
       if (!activeTaskId.value) return
-      projectsStore.updateSubtask(activeTaskId.value, subtaskId, patch).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      projectsStore.updateSubtask(activeTaskId.value, subtaskId, patch).catch(captureException)
     }
 
     function onDeleteSubtask({ subtaskId }) {
       if (!activeTaskId.value) return
-      projectsStore.deleteSubtask(activeTaskId.value, subtaskId).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      projectsStore.deleteSubtask(activeTaskId.value, subtaskId).catch(captureException)
     }
 
     function formatDate(day, year, month) {
@@ -605,6 +680,11 @@ export default {
     function monthLong(month) {
       const date = new Date(2024, month, 1)
       return new Intl.DateTimeFormat(undefined, { month: 'long' }).format(date)
+    }
+
+    /** Re-issue the load for the currently displayed month (error-state retry). */
+    function reloadMonth() {
+      store.load(monthKey(currentYear.value, currentMonth.value))
     }
 
     function prevMonth() {
@@ -693,6 +773,182 @@ export default {
     function cellDateStr(cell) {
       if (cell.adjacent) return null
       return toLocalISODate(new Date(currentYear.value, currentMonth.value, cell.day))
+    }
+
+    // -- Keyboard grid navigation + reschedule --
+
+    /**
+     * Roving tabindex: exactly one day cell is in the tab order at a time so
+     * Tab reaches the grid once and Arrow keys roam inside it. The selected
+     * day wins; otherwise today; otherwise the first non-adjacent day.
+     */
+    function rovingTabindex(cell) {
+      if (cell.adjacent) return -1
+      const sel = selectedDay.value
+      if (sel) return cell.day === sel ? 0 : -1
+      if (isToday(cell)) return 0
+      // No selection and not the today month → first day of the month is the
+      // single tab stop.
+      return cell.day === 1 ? 0 : -1
+    }
+
+    /** Focus the day cell with the given 1-based day number after a re-render. */
+    function focusDayCell(day) {
+      nextTick(() => {
+        const cells = document.querySelectorAll('button.calendar-view__day-cell')
+
+        for (const el of cells) {
+          if (
+            el instanceof HTMLElement &&
+            !el.hasAttribute('disabled') &&
+            el.querySelector('.calendar-view__day-num')?.textContent?.trim() === String(day)
+          ) {
+            el.focus()
+            return
+          }
+        }
+      })
+    }
+
+    /**
+     * Grid keyboard model on the month day cells:
+     *   - Arrow keys move by 1 day / 1 week and roam into adjacent months.
+     *   - Home / End jump to the first / last day of the month.
+     *   - PageUp / PageDown change month.
+     *   - Enter / Space select — OR, when an event is armed for move (the user
+     *     pressed M on an agenda item), reschedule the armed event to this day.
+     *   - Escape cancels an armed move.
+     */
+    function onDayCellKeydown(e, cell) {
+      // Resolve an armed reschedule first.
+      if (movingEventId.value && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+        e.preventDefault()
+        confirmKeyboardReschedule(cell)
+        return
+      }
+
+      if (e.key === 'Escape' && movingEventId.value) {
+        movingEventId.value = null
+        calendarAnnouncement.value = ''
+        return
+      }
+
+      const day = cell.day
+      let nextDay = null
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          nextDay = day - 1
+          break
+        case 'ArrowRight':
+          nextDay = day + 1
+          break
+        case 'ArrowUp':
+          nextDay = day - 7
+          break
+        case 'ArrowDown':
+          nextDay = day + 7
+          break
+        case 'Home':
+          nextDay = 1
+          break
+        case 'End':
+          nextDay = new Date(currentYear.value, currentMonth.value + 1, 0).getDate()
+          break
+        case 'PageUp':
+          e.preventDefault()
+          prevMonth()
+          return
+        case 'PageDown':
+          e.preventDefault()
+          nextMonth()
+          return
+        case 'Enter':
+        case ' ':
+        case 'Spacebar':
+          // Plain selection (no armed move) — let the click handler logic run
+          // by selecting here and preventing the default scroll on Space.
+          e.preventDefault()
+          if (!cell.adjacent) selectDay(cell)
+          return
+        default:
+          return
+      }
+
+      e.preventDefault()
+      const daysInMonth = new Date(currentYear.value, currentMonth.value + 1, 0).getDate()
+
+      // Roam across the month boundary when stepping past either edge.
+      if (nextDay < 1) {
+        prevMonth()
+
+        nextTick(() => {
+          const prevDays = new Date(currentYear.value, currentMonth.value + 1, 0).getDate()
+          selectedDay.value = prevDays
+          focusDayCell(prevDays)
+        })
+
+        return
+      }
+
+      if (nextDay > daysInMonth) {
+        nextMonth()
+
+        nextTick(() => {
+          selectedDay.value = 1
+          focusDayCell(1)
+        })
+
+        return
+      }
+
+      selectedDay.value = nextDay
+      focusDayCell(nextDay)
+    }
+
+    /**
+     * Agenda item keyboard handler: M arms the event for a keyboard move. The
+     * user then arrows across the day grid and presses Enter on the target day
+     * to reschedule. We focus the currently-selected day cell so the grid is
+     * ready for arrow navigation.
+     */
+    function onAgendaItemKeydown(e, ev) {
+      if (e.key !== 'm' && e.key !== 'M') return
+      e.preventDefault()
+      movingEventId.value = ev.id
+      calendarAnnouncement.value = t('calendar.moveEventAria', { title: ev.title })
+      focusDayCell(selectedDay.value ?? today.getDate())
+    }
+
+    /**
+     * Commit an armed keyboard reschedule onto `cell`. Mirrors the drop path:
+     * routes through the existing `store.rescheduleEvent` action, then selects
+     * and announces the new day. No-op for adjacent cells or same-day targets.
+     */
+    async function confirmKeyboardReschedule(cell) {
+      const id = movingEventId.value
+      if (!id || cell.adjacent) return
+      const dateStr = cellDateStr(cell)
+      const existing = store.events.find(e => e.id === id)
+      movingEventId.value = null
+      if (!existing || existing.date === dateStr) return
+
+      try {
+        await store.rescheduleEvent(id, dateStr)
+        selectedDay.value = cell.day
+
+        calendarAnnouncement.value = t('calendar.rescheduledAnnouncement', {
+          title: existing.title,
+          date: cellAriaLabel(cell)
+        })
+      } catch {
+        /* toast in store */
+      }
+    }
+
+    /** Accessible name for a year-view mini-month button (month + event count). */
+    function yearMonthAria(month) {
+      return t('calendar.yearMonthAria', { month: monthLong(month), count: yearMonthCount(month) })
     }
 
     // -- Drag and drop --
@@ -878,6 +1134,10 @@ export default {
     @apply p-3;
   }
 
+  &__grid {
+    @apply flex flex-col;
+  }
+
   &__weekday-row {
     @apply grid grid-cols-7 gap-0.5 pb-1.5;
   }
@@ -974,6 +1234,12 @@ export default {
 
     &--dragging {
       @apply opacity-40;
+    }
+
+    // Armed for a keyboard "move to another day" gesture — a visible ring so
+    // sighted keyboard users see which event is being moved.
+    &--moving {
+      @apply ring-2 ring-accent ring-offset-1;
     }
   }
 

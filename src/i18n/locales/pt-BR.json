@@ -47,7 +47,10 @@
     "forgotHeadingPrefix": "Esqueceu a",
     "forgotHeadingEmphasis": "senha?",
     "resetHeadingPrefix": "Redefina sua",
-    "resetHeadingEmphasis": "senha."
+    "resetHeadingEmphasis": "senha.",
+    "legalConsentPrefix": "Ao criar uma conta, você concorda com nossos",
+    "legalConsentAnd": "e a",
+    "legalConsentSuffix": "."
   },
   "tasks": {
     "title": "Título",
@@ -253,7 +256,16 @@
     "filterTagLabel": "Tag",
     "filterHideDone": "Ocultar prontas",
     "filterClear": "Limpar",
-    "filterEmptyMatch": "Nenhuma tarefa corresponde ao filtro atual."
+    "filterEmptyMatch": "Nenhuma tarefa corresponde ao filtro atual.",
+    "boardRegionAriaLabel": "Quadro {project}",
+    "columnGroupAria": "Coluna {label}, {count} tarefas",
+    "taskListAria": "Tarefas de {label}",
+    "filterPriorityChipAria": "Filtrar por prioridade {priority}",
+    "cardKeyboardHint": "Ctrl mais as setas move esta tarefa entre colunas; Alt mais as setas a reordena dentro da coluna.",
+    "reorderColumnAria": "Coluna {label}. Ctrl mais seta esquerda ou direita reordena esta coluna.",
+    "moveAnnouncement": "{title} movida para {column}, posição {position}.",
+    "columnReorderAnnouncement": "Coluna {label} movida para a posição {position}.",
+    "keyboardLegend": "Dica: foque um cartão e pressione Ctrl mais as setas para movê-lo; Alt mais as setas o reordena dentro de uma coluna."
   },
   "calendar": {
     "prevMonth": "Mês anterior",
@@ -274,6 +286,17 @@
     "viewYear": "Ano",
     "newEvent": "+ Novo evento",
     "newEventCta": "Novo evento",
+    "gridAriaLabel": "Calendário de {month} {year}",
+    "weekGridAriaLabel": "Grade de horários da semana",
+    "weekCellAria": "{day} às {time}",
+    "yearMonthAria": "{month}, {count} eventos",
+    "moveToDay": "Mover para o dia",
+    "moveEventAria": "Mover {title}. Pressione uma seta e Enter para escolher um novo dia.",
+    "rescheduleHint": "Pressione M para mover este evento para outro dia.",
+    "rescheduledAnnouncement": "{title} reagendado para {date}.",
+    "scheduleTask": "Agendar tarefa",
+    "scheduleTaskAria": "Agendar {title} no próximo horário livre de hoje.",
+    "scheduledAnnouncement": "{title} agendado para {date} às {time}.",
     "eventSheet": {
       "editTitle": "Editar evento",
       "createTitle": "Novo evento",
@@ -380,7 +403,15 @@
     "confirmAccept": "Confirmar",
     "confirmResolved": "Confirmado",
     "cancelResolved": "Cancelado",
-    "bubbleInterrupted": "· fluxo interrompido"
+    "bubbleInterrupted": "· fluxo interrompido",
+    "messagesRegionAriaLabel": "Conversa com a Wren",
+    "bubbleUserAria": "Você disse, às {time}",
+    "bubbleCoachAria": "A Wren disse, às {time}",
+    "senderUser": "Você",
+    "senderCoach": "Wren",
+    "quickPromptsAriaLabel": "Sugestões rápidas",
+    "replyReadyAnnouncement": "A Wren respondeu.",
+    "streamInterruptedAnnouncement": "A resposta da Wren foi interrompida."
   },
   "review": {
     "saving": "Salvando…",
@@ -524,6 +555,8 @@
     "closeWren": "Fechar Wren",
     "breadcrumb": "Caminho",
     "errorGeneric": "Ocorreu um erro inesperado",
+    "loadError": "Não foi possível carregar. Tente novamente.",
+    "emptyGeneric": "Nada aqui ainda",
     "dateToday": "Hoje",
     "dateYesterday": "Ontem",
     "confirm": "Confirmar"
@@ -581,7 +614,7 @@
     "step1HeadingPrefix": "O espaço entre",
     "step1HeadingEmphasis": "a ideia e o feito.",
     "step1Lede": "O all you plan organiza suas tarefas, rotinas, projetos e uma coach que acompanha em silêncio o que funciona. Sem sequências para cumprir. Sem medalhas. Só o próximo passo real.",
-    "step2Eyebrow": "Passo 02 de 05 — sobre você",
+    "step2Eyebrow": "Passo 02 de 06 — sobre você",
     "step2HeadingPrefix": "Quem está",
     "step2HeadingEmphasis": "planejando?",
     "step2NameLabel": "Nome",
@@ -591,7 +624,7 @@
     "themeInk": "Tinta",
     "themeBlueprint": "Planta",
     "themeRose": "Rosa",
-    "step3Eyebrow": "Passo 03 de 05 — sua coach",
+    "step3Eyebrow": "Passo 03 de 06 — sua coach",
     "step3HeadingPrefix": "Conheça a",
     "step3HeadingEmphasis": "Wren.",
     "step3Lede": "Escolha um tom — é só como ela soa. Você pode trocar quando quiser.",
@@ -607,7 +640,7 @@
     "toneGentleName": "Suave",
     "toneGentleTag": "Calma · cuidadosa",
     "toneGentleSample": "Vai devagar hoje. Um capítulo — se não chegar lá, também é informação.",
-    "step4Eyebrow": "Passo 04 de 05 — o que te traz aqui",
+    "step4Eyebrow": "Passo 04 de 06 — o que te traz aqui",
     "step4HeadingPrefix": "O que",
     "step4HeadingMiddle": "você",
     "step4HeadingEmphasis": "está planejando?",
@@ -617,7 +650,7 @@
     "modePartnerDesc": "Rotinas compartilhadas e um calendário da casa.",
     "modeHabitsTitle": "Foco em hábitos",
     "modeHabitsDesc": "Atento a sequências e pequenas vitórias diárias.",
-    "step5Eyebrow": "Passo 05 de 05 — sua largada",
+    "step5Eyebrow": "Passo 05 de 06 — sua largada",
     "step5HeadingPrefix": "Três",
     "step5HeadingEmphasis": "sementes.",
     "step5Lede": "A Wren escolheu estas para começar. Renomeie, apague ou mantenha.",
@@ -881,5 +914,15 @@
     "relMinutesAgo": "há {count} min",
     "relHoursAgo": "há {count} h",
     "relDaysAgo": "há {count} d"
+  },
+  "legal": {
+    "privacyTitle": "Política de Privacidade",
+    "termsTitle": "Termos de Serviço",
+    "draftNotice": "RASCUNHO — aguardando revisão jurídica. Este texto é um espaço reservado e não tem valor legal.",
+    "lastUpdated": "Última atualização: {date}",
+    "seeAlsoPrivacy": "Veja também nossa",
+    "seeAlsoTerms": "Veja também nossos",
+    "footerAria": "Jurídico",
+    "footerCopyright": "© {year} all you plan"
   }
 }

@@ -16,6 +16,15 @@
       {{ t('goals.loading') }}
     </div>
 
+    <!-- Error state — sits before the empty branch so a failed load doesn't
+         masquerade as "no goals yet". -->
+    <AppErrorState
+      v-else-if="store.error"
+      :message="store.error || t('common.loadError')"
+      :retry-label="t('common.retry')"
+      @retry="store.load()"
+    />
+
     <!-- Empty state -->
     <div v-else-if="!goals.length" class="goals__empty">
       <div class="goals__empty-eyebrow">
@@ -265,6 +274,7 @@ import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
 import CreateGoalModal from '@/components/goals/CreateGoalModal.vue'
 import EditGoalModal from '@/components/goals/EditGoalModal.vue'
 import GoalCardMenu from '@/components/goals/GoalCardMenu.vue'
@@ -277,6 +287,7 @@ export default {
     AppButton,
     AppIcon,
     AppConfirmDialog,
+    AppErrorState,
     CreateGoalModal,
     EditGoalModal,
     GoalCardMenu
@@ -306,6 +317,7 @@ export default {
 
     return {
       t,
+      store,
       goals,
       loading,
       featured,

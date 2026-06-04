@@ -47,6 +47,19 @@
         {{ loading ? t('common.loading') : t('auth.registerCta') }}
       </AppButton>
 
+      <!-- Terms / Privacy click-wrap (gate G-05). Creating an account is the
+           consent action; the two policy links open the public legal routes. -->
+      <p class="register-view__legal">
+        {{ t('auth.legalConsentPrefix') }}
+        <router-link to="/legal/terms" class="register-view__legal-link">
+          {{ t('legal.termsTitle') }}
+        </router-link>
+        {{ t('auth.legalConsentAnd') }}
+        <router-link to="/legal/privacy" class="register-view__legal-link">
+          {{ t('legal.privacyTitle') }}
+        </router-link>{{ t('auth.legalConsentSuffix') }}
+      </p>
+
       <!-- Login link -->
       <p class="register-view__footer">
         {{ t('auth.hasAccount') }}
@@ -133,6 +146,14 @@ export default {
 
   &__submit {
     @apply w-full justify-center;
+  }
+
+  &__legal {
+    @apply text-center text-xs leading-relaxed text-muted;
+  }
+
+  &__legal-link {
+    @apply text-accent hover:underline;
   }
 
   &__footer {

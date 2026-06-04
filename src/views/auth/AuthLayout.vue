@@ -12,6 +12,10 @@
       <div class="auth-layout__card">
         <RouterView />
       </div>
+
+      <!-- Public legal links so signed-out users can reach the policy and
+           terms (gate G-05). -->
+      <AppFooter class="auth-layout__footer" />
     </div>
   </div>
 </template>
@@ -19,10 +23,11 @@
 <script>
 /** AuthLayout — centered card shell wrapping all authentication screens. */
 import { RouterView } from 'vue-router'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 export default {
   name: 'AuthLayout',
-  components: { RouterView }
+  components: { RouterView, AppFooter }
 }
 </script>
 
@@ -40,6 +45,14 @@ export default {
 
   &__card {
     @apply rounded-md border border-rule-soft bg-paper-2 p-8 shadow-sm;
+  }
+
+  &__footer {
+    // The auth screens are a centered card, not a full-height app frame, so
+    // drop the top rule and tighten the spacing — the links read as a quiet
+    // caption under the card rather than a page-spanning footer bar.
+    @apply mt-6;
+    border-top: 0;
   }
 }
 </style>

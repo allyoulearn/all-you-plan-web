@@ -24,7 +24,15 @@
                group. As the user scrolls, the next day's divider naturally
                pushes the previous one out of the sticky slot (CSS-only, no
                scroll listener needed). -->
-          <div ref="bodyRef" class="wren-view__messages">
+          <div
+            ref="bodyRef"
+            class="wren-view__messages"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-atomic="false"
+            :aria-label="t('wren.messagesRegionAriaLabel')"
+          >
             <!--
               Gate loading/empty/messages so the empty-state copy never flashes
               before the first store.load() resolves. Until `loaded`
@@ -59,6 +67,16 @@
               </section>
             </template>
 
+            <!-- Error state — placed before the empty branch so a failed
+                 history load doesn't read as a genuinely empty thread. -->
+            <div v-else-if="store.error" class="wren-view__error">
+              <AppErrorState
+                :message="store.error || t('common.loadError')"
+                :retry-label="t('common.retry')"
+                @retry="store.load()"
+              />
+            </div>
+
             <div v-else class="wren-view__empty">
               <p class="wren-view__empty-text">
                 {{ t('wren.emptyState') }}
@@ -69,8 +87,19 @@
           <!-- Composer: chips + input live inside the same encased frame so the
                whole conversation reads as one continuous surface. -->
           <div class="wren-view__composer">
+            <!-- Assertive announcer: completion of a streamed reply (and the
+                 interrupted case) are announced here so a screen reader hears
+                 it even when the polite message log coalesces token updates. -->
+            <span class="sr-only" role="status" aria-live="assertive">
+              {{ announce }}
+            </span>
+
             <!-- Quick-prompt chips -->
-            <div class="wren-view__chips">
+            <div
+              class="wren-view__chips"
+              role="group"
+              :aria-label="t('wren.quickPromptsAriaLabel')"
+            >
               <button
                 v-for="prompt in QUICK_PROMPTS"
                 :key="prompt"
@@ -118,6 +147,7 @@
 import { onMounted, ref, watch, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
 import WrenBubble from '@/components/wren/WrenBubble.vue'
 import WrenConversationRail from '@/components/wren/WrenConversationRail.vue'
 import { useWrenChat, QUICK_PROMPTS } from '@/composables/useWrenChat.js'
@@ -125,12 +155,22 @@ import { groupMessagesByDay } from '@/utils/date.js'
 
 export default {
   name: 'WrenView',
-  components: { AppScreenHeading, WrenBubble, WrenConversationRail },
+  components: { AppScreenHeading, AppErrorState, WrenBubble, WrenConversationRail },
   setup() {
     // -- State --
     const { t } = useI18n()
     const bodyRef = ref(null)
-    const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+
+    const {
+      store,
+      draft,
+      sendMessage,
+      handleKeydown,
+      fillFromChip,
+      // `announce` may be undefined under the test mock of useWrenChat; fall
+      // back to an inert ref so the template binding stays safe.
+      announce = ref('')
+    } = useWrenChat(bodyRef)
 
     // Tracks whether the initial load has resolved so we don't briefly
     // render the empty state before useWrenChat's onMounted load completes
@@ -171,6 +211,7 @@ export default {
       bodyRef,
       store,
       draft,
+      announce,
       sendMessage,
       handleKeydown,
       fillFromChip,
@@ -313,6 +354,10 @@ export default {
 
   &__empty {
     @apply flex flex-1 items-center justify-center text-center;
+  }
+
+  &__error {
+    @apply flex flex-1 items-center justify-center;
   }
 
   &__empty-text {

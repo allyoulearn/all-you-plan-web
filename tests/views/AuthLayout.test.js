@@ -6,7 +6,9 @@ describe('AuthLayout', () => {
   function mountLayout() {
     return mount(AuthLayout, {
       global: {
-        stubs: { RouterView: true }
+        // AppFooter is exercised by its own/route tests; stub it here so this
+        // layout test doesn't need an i18n plugin or a RouterLink stub.
+        stubs: { RouterView: true, AppFooter: true }
       }
     })
   }

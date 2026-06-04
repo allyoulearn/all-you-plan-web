@@ -4,6 +4,7 @@
  * Handles draft state, auto-scroll, send, keydown, and quick-prompt chips.
  */
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useWrenStore } from '@/stores/wren.store.js'
 
 // -- Constants --
@@ -30,7 +31,21 @@ export const QUICK_PROMPTS = [
  */
 export function useWrenChat(bodyRef) {
   const store = useWrenStore()
+  const { t } = useI18n()
   const draft = ref('')
+
+  // Assertive screen-reader announcement string. The view renders this into a
+  // dedicated visually-hidden `role="status"` node near the composer. We set
+  // it when a coach reply finalises (or is interrupted) so completion is
+  // announced even though the message log uses polite `aria-live` that may
+  // coalesce rapid streaming token updates. Purely additive — this only reads
+  // message status, it does not touch the streaming pipeline.
+  const announce = ref('')
+
+  // Per-message status we last announced, so we only fire on a genuine
+  // streaming → finalized transition and never re-announce on unrelated
+  // re-renders.
+  const announcedStatusById = new Map()
 
   onMounted(() => {
     store.load().catch(err => {
@@ -63,6 +78,33 @@ export function useWrenChat(bodyRef) {
   // (optimistic-replace patterns that leave the array length unchanged)
   //.
   watch(() => store.messages, scrollToBottom, { deep: true })
+
+  // Watch coach message statuses and announce when a streaming reply settles.
+  // Reads only — the store still owns the streaming lifecycle.
+  watch(
+    () => store.messages,
+    messages => {
+      if (!Array.isArray(messages)) return
+
+      for (const m of messages) {
+        if (!m || m.sender !== 'coach') continue
+        const prev = announcedStatusById.get(m.id)
+        if (prev === m.status) continue
+        announcedStatusById.set(m.id, m.status)
+
+        // Only announce the terminal states, and only once we've already seen
+        // this message (so a fully-formed history load doesn't fire a burst).
+        if (prev === undefined) continue
+
+        if (m.status === 'complete') {
+          announce.value = t('wren.replyReadyAnnouncement')
+        } else if (m.status === 'interrupted') {
+          announce.value = t('wren.streamInterruptedAnnouncement')
+        }
+      }
+    },
+    { deep: true }
+  )
 
   // -- Actions --
 
@@ -102,5 +144,5 @@ export function useWrenChat(bodyRef) {
     draft.value = prompt
   }
 
-  return { store, draft, sendMessage, handleKeydown, fillFromChip }
+  return { store, draft, announce, sendMessage, handleKeydown, fillFromChip }
 }

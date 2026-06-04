@@ -50,6 +50,7 @@
 import { computed } from 'vue'
 import { SparklesIcon, ArrowUpRightIcon } from '@heroicons/vue/24/outline'
 import AppCard from '@/components/ui/AppCard.vue'
+import { WREN_URL } from '@/config/env.js'
 
 /**
  * WrenCrossAppUpsell — small cross-product CTA inside Plan that points at
@@ -66,8 +67,10 @@ import AppCard from '@/components/ui/AppCard.vue'
  *       the suggested Wren plan to pre-select. Default is multi.
  *
  * Env:
- *   - VITE_WREN_URL — base URL of the Wren product. Defaults to localhost:5180
- *     so dev runs without the env still produce a clickable link.
+ *   - VITE_WREN_URL — base URL of the Wren product, resolved via
+ *     src/config/env.js. Required in production builds (fail-fast); falls back
+ *     to a dev-only localhost default so dev runs without the env still
+ *     produce a clickable link.
  */
 export default {
   name: 'WrenCrossAppUpsell',
@@ -89,8 +92,7 @@ export default {
   setup(props) {
     /** Destination URL for the Try Wren CTA, with the suggested plan pre-selected. */
     const wrenUrl = computed(() => {
-      const base = import.meta.env.VITE_WREN_URL || 'http://localhost:5180'
-      return `${base.replace(/\/$/, '')}/?upgrade=${encodeURIComponent(props.plan)}`
+      return `${WREN_URL.replace(/\/$/, '')}/?upgrade=${encodeURIComponent(props.plan)}`
     })
 
     return { wrenUrl }

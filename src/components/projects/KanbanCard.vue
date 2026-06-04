@@ -1,11 +1,15 @@
 <template>
   <div
     class="kanban-card"
+    :data-task-id="task.id"
     role="button"
     tabindex="0"
+    :aria-keyshortcuts="'Control+ArrowLeft Control+ArrowRight Control+ArrowUp Control+ArrowDown Alt+ArrowUp Alt+ArrowDown'"
+    :title="t('kanban.cardKeyboardHint')"
     @click="$emit('open', task)"
     @keydown.enter.prevent="$emit('open', task)"
     @keydown.space.prevent="$emit('open', task)"
+    @keydown="onKeydown"
   >
     <!-- Title row -->
     <div class="kanban-card__head">
@@ -79,8 +83,8 @@ export default {
     /** The task object to display */
     task: { type: Object, required: true }
   },
-  emits: ['complete', 'open'],
-  setup(props) {
+  emits: ['complete', 'open', 'move'],
+  setup(props, { emit }) {
     // -- State --
     const { t } = useI18n()
 
@@ -99,7 +103,36 @@ export default {
       return t('kanban.subtaskAriaLabel', { done, total: list.length })
     })
 
-    return { subtaskProgress, subtaskAriaLabel }
+    return { t, subtaskProgress, subtaskAriaLabel, onKeydown }
+
+    // -- Function definitions --
+
+    /**
+     * Keyboard move handler — the keyboard-operable alternative to the
+     * pointer-only SortableJS drag. SortableJS has no keyboard path, so we
+     * emit a semantic `move` event the board translates into the same store
+     * mutations a drag would trigger:
+     *   - Ctrl/Cmd + Left/Right  → move across columns
+     *   - Ctrl/Cmd + Up/Down     → move across columns (vertical mental model)
+     *   - Alt + Up/Down          → reorder within the current column
+     * Enter/Space (open detail) are handled by their own dedicated listeners.
+     */
+    function onKeydown(e) {
+      const horical = e.ctrlKey || e.metaKey
+      const within = e.altKey && !horical
+
+      let direction = null
+      if (horical && e.key === 'ArrowLeft') direction = 'prev-column'
+      else if (horical && e.key === 'ArrowRight') direction = 'next-column'
+      else if (horical && e.key === 'ArrowUp') direction = 'prev-column'
+      else if (horical && e.key === 'ArrowDown') direction = 'next-column'
+      else if (within && e.key === 'ArrowUp') direction = 'up'
+      else if (within && e.key === 'ArrowDown') direction = 'down'
+
+      if (!direction) return
+      e.preventDefault()
+      emit('move', { taskId: props.task.id, direction })
+    }
   }
 }
 </script>

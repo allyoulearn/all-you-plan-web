@@ -109,6 +109,7 @@
 import { onMounted, computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTasksStore } from '@/stores/tasks.store.js'
+import { captureException } from '@/utils/sentry.js'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -203,7 +204,8 @@ export default {
 
     /** Complete (toggle) a task; the store toasts + reloads on its own. */
     function onComplete(id) {
-      store.completeTask(id).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      store.completeTask(id).catch(captureException)
     }
   }
 }

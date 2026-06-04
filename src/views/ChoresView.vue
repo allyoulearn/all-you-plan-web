@@ -171,6 +171,7 @@ import { onMounted, computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
 import { useChoresStore } from '@/stores/chores.store.js'
+import { captureException } from '@/utils/sentry.js'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -305,12 +306,14 @@ export default {
     })
 
     const rowHandlers = {
-      complete: id => store.completeChore(id).catch(() => {}),
-      uncomplete: id => store.uncompleteChore(id).catch(() => {}),
+      // Each mutation is toasted by the store; catch the rejection cleanly and
+      // report it to Sentry rather than swallowing it silently.
+      complete: id => store.completeChore(id).catch(captureException),
+      uncomplete: id => store.uncompleteChore(id).catch(captureException),
       snooze: onSnooze,
       'snooze-until': onSnoozeUntilRequest,
-      'skip-next': id => store.skipNextChore(id).catch(() => {}),
-      resume: id => store.resumeChore(id).catch(() => {}),
+      'skip-next': id => store.skipNextChore(id).catch(captureException),
+      resume: id => store.resumeChore(id).catch(captureException),
       edit: onEdit,
       delete: onDeleteRequest,
       'move-up': id => onMove(id, -1),
@@ -407,7 +410,8 @@ export default {
     }
 
     function onSnooze({ id, until }) {
-      store.snoozeChore(id, until).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      store.snoozeChore(id, until).catch(captureException)
     }
 
     // Reserved hook for opening an inline SnoozeUntilPopover from the row.

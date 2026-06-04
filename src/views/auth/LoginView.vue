@@ -63,21 +63,22 @@
       </p>
     </form>
 
-    <!-- Dev-only quick login: skips the backend, dev builds only -->
-    <AppButton
-      v-if="isDev"
-      variant="ghost"
-      class="login-view__dev"
-      @click="handleDevLogin"
-    >
-      Dev sign-in (skip backend)
-    </AppButton>
+    <!--
+      Dev-only quick login: skips the backend, dev builds only. Rendered via
+      the <DevSignIn> component below — NOT inline markup — because a template
+      literal placed here would be hoisted by the Vue compiler as a static
+      string constant that survives `v-if="import.meta.env.DEV"`. Building the
+      vnode inside a DIRECT `import.meta.env.DEV` branch in <script> lets Vite
+      fold the guard to `false` and Rollup strip the button text + handler from
+      the prod bundle entirely.
+    -->
+    <component :is="DevSignIn" />
   </div>
 </template>
 
 <script>
 /** LoginView — email/password sign-in form with redirect-on-success behaviour. */
-import { ref } from 'vue'
+import { ref, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth.store.js'
@@ -100,17 +101,49 @@ export default {
     const password = ref('')
     const error = ref('')
     const loading = ref(false)
-    const isDev = import.meta.env.DEV
+
+    // Dev-only quick-login control. Built as a render-function component inside
+    // a DIRECT `import.meta.env.DEV` branch (no optional chaining) so Vite
+    // replaces the guard with the literal `false` in a production build and
+    // Rollup strips the whole branch — including the "Dev sign-in" button text,
+    // its click handler, and the `authStore.devLogin` reference. In prod this
+    // is `null`, so `<component :is="DevSignIn" />` renders nothing. Keeping the
+    // markup AND the handler inside this branch (not in <template>, not as a
+    // hoisted setup-level function) avoids the Vue compiler hoisting the button
+    // text as a static string constant, and keeps `authStore.devLogin` from
+    // surviving as an unreferenced function body after the branch is removed.
+    let DevSignIn = null
+
+    if (import.meta.env.DEV) {
+      const handleDevLogin = () => {
+        authStore.devLogin()
+        router.push('/')
+      }
+
+      DevSignIn = {
+        name: 'DevSignIn',
+        render() {
+          return h(
+            AppButton,
+            {
+              variant: 'ghost',
+              class: 'login-view__dev',
+              onClick: handleDevLogin,
+            },
+            () => 'Dev sign-in (skip backend)'
+          )
+        },
+      }
+    }
 
     return {
       t,
-      isDev,
+      DevSignIn,
       email,
       password,
       error,
       loading,
       handleLogin,
-      handleDevLogin,
     }
 
     // -- Function definitions --
@@ -139,16 +172,6 @@ export default {
       } finally {
         loading.value = false
       }
-    }
-
-    /**
-     * Development-only sign-in. Establishes a mock session via the auth
-     * store, then navigates into the app. The triggering button renders
-     * only in dev builds.
-     */
-    function handleDevLogin() {
-      authStore.devLogin()
-      router.push('/')
     }
   },
 }

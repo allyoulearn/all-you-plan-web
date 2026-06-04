@@ -1,17 +1,21 @@
 <template>
   <div class="kanban-view">
     <!-- Loading state -->
-    <div v-if="store.loadingBoard" class="kanban-view__status kanban-view__status--mt">
-      {{ t('common.loading') }}
-    </div>
+    <AppSkeleton
+      v-if="store.loadingBoard"
+      :rows="4"
+      :aria-label="t('common.loading')"
+      class="kanban-view__status--mt"
+    />
 
     <!-- Error state -->
-    <div
+    <AppErrorState
       v-else-if="store.errorBoard"
-      class="kanban-view__status kanban-view__status--mt kanban-view__status--error"
-    >
-      {{ store.errorBoard }}
-    </div>
+      :message="store.errorBoard || t('common.loadError')"
+      :retry-label="t('common.retry')"
+      class="kanban-view__status--mt kanban-view__status--error"
+      @retry="store.loadBoard(route.params.id)"
+    />
 
     <!-- Board content -->
     <template v-else-if="project && localBoard">
@@ -29,11 +33,12 @@
             v-model="filters.search"
             type="search"
             :placeholder="t('kanban.filterSearchPlaceholder')"
+            :aria-label="t('kanban.filterSearchPlaceholder')"
             class="kanban-view__filter-input"
           />
         </label>
 
-        <span class="kanban-view__filter-label">
+        <span id="kanban-priority-label" class="kanban-view__filter-label">
           {{ t('kanban.filterPriorityLabel') }}
         </span>
 
@@ -46,13 +51,23 @@
             `kanban-view__filter-chip--${p}`,
             { 'kanban-view__filter-chip--active': filters.priorities.includes(p) }
           ]"
+          :aria-pressed="filters.priorities.includes(p)"
+          :aria-label="
+            t('kanban.filterPriorityChipAria', {
+              priority: t(`tasks.priority${p.charAt(0).toUpperCase() + p.slice(1)}`)
+            })
+          "
           @click="togglePriorityFilter(p)"
         >
           {{ t(`tasks.priority${p.charAt(0).toUpperCase() + p.slice(1)}`) }}
         </button>
 
         <label class="kanban-view__filter-toggle">
-          <input v-model="filters.hideDone" type="checkbox" />
+          <input
+            v-model="filters.hideDone"
+            type="checkbox"
+            :aria-label="t('kanban.filterHideDone')"
+          />
           {{ t('kanban.filterHideDone') }}
         </label>
 
@@ -66,11 +81,28 @@
         </button>
       </div>
 
+      <!-- Keyboard-move legend: the board's drag-and-drop is pointer-only
+           (SortableJS), so this documents the keyboard alternative that routes
+           into the same store mutations. -->
+      <p class="kanban-view__kbd-legend">
+        {{ t('kanban.keyboardLegend') }}
+      </p>
+
+      <!-- Assertive announcer for keyboard moves so a screen reader confirms
+           the card landed and where. -->
+      <span class="sr-only" role="status" aria-live="assertive">
+        {{ moveAnnouncement }}
+      </span>
+
       <!-- Bordered frame around the scrollable board so the right-edge cut-off
            reads as "viewport into a wider canvas" rather than a faded shadow.
            The frame clips overflow; the inner draggable handles horizontal
            scroll. -->
-      <div class="kanban-view__board-frame">
+      <div
+        class="kanban-view__board-frame"
+        role="region"
+        :aria-label="t('kanban.boardRegionAriaLabel', { project: project.name })"
+      >
         <draggable
           v-model="localBoard.columns"
           item-key="id"
@@ -80,13 +112,30 @@
           @end="onColumnDragEnd"
         >
           <template #item="{ element: col }">
-            <div class="kanban-view__column" :data-column-id="col.id">
-              <header class="kanban-view__column-header">
+            <div
+              class="kanban-view__column"
+              :data-column-id="col.id"
+              role="group"
+              :aria-label="
+                t('kanban.columnGroupAria', {
+                  label: col.label,
+                  count: displayedTasksFor(col.id).length
+                })
+              "
+            >
+              <header
+                class="kanban-view__column-header"
+                role="button"
+                tabindex="0"
+                :aria-label="t('kanban.reorderColumnAria', { label: col.label })"
+                :aria-keyshortcuts="'Control+ArrowLeft Control+ArrowRight'"
+                @keydown="onColumnHeaderKeydown($event, col)"
+              >
                 <span class="kanban-view__column-label" :title="t('kanban.dragHandleHint')">
                   {{ col.label }}
                 </span>
 
-                <span class="kanban-view__column-count">
+                <span class="kanban-view__column-count" aria-hidden="true">
                   [{{ displayedTasksFor(col.id).length }}]
                 </span>
 
@@ -103,15 +152,19 @@
                 :animation="180"
                 class="kanban-view__column-tasks"
                 :data-column-id="col.id"
+                role="list"
+                :aria-label="t('kanban.taskListAria', { label: col.label })"
                 @end="onTaskDragEnd"
               >
                 <template #item="{ element: task }">
-                  <KanbanCard
-                    v-show="taskMatchesFilter(task)"
-                    :task="task"
-                    @complete="store.completeTask"
-                    @open="openTaskDetail"
-                  />
+                  <div v-show="taskMatchesFilter(task)" role="listitem" class="kanban-view__task-item">
+                    <KanbanCard
+                      :task="task"
+                      @complete="store.completeTask"
+                      @open="openTaskDetail"
+                      @move="onCardMove"
+                    />
+                  </div>
                 </template>
               </draggable>
 
@@ -177,13 +230,16 @@
  * themselves. Completion is decoupled from columns: clicking a card's
  * checkbox toggles done in place without moving the card.
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import draggable from 'vuedraggable'
 import { useProjectsStore } from '@/stores/projects.store.js'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import { captureException } from '@/utils/sentry.js'
 import KanbanCard from '@/components/projects/KanbanCard.vue'
 import ColumnHeaderMenu from '@/components/projects/ColumnHeaderMenu.vue'
 import RenameColumnModal from '@/components/projects/RenameColumnModal.vue'
@@ -214,6 +270,8 @@ export default {
     RouterLink,
     AppScreenHeading,
     AppIcon,
+    AppSkeleton,
+    AppErrorState,
     KanbanCard,
     draggable,
     ColumnHeaderMenu,
@@ -238,6 +296,10 @@ export default {
       priorities: [],
       hideDone: false
     })
+
+    // Assertive screen-reader status for keyboard moves (the board's pointer
+    // DnD has no SR feedback). Set after a successful keyboard move.
+    const moveAnnouncement = ref('')
 
     // Local clone of the board state that vuedraggable can mutate freely.
     // Synced from the store only on structural changes — full loads, column
@@ -320,6 +382,9 @@ export default {
       getTasksRef,
       onColumnDragEnd,
       onTaskDragEnd,
+      onCardMove,
+      onColumnHeaderKeydown,
+      moveAnnouncement,
       renameOpen,
       renameTarget,
       openRenameFor,
@@ -485,6 +550,154 @@ export default {
     }
 
     /**
+     * Keyboard-move handler for a card (the keyboard alternative to pointer
+     * drag). Routes into the SAME store mutations vuedraggable uses
+     * (`reorderTasksInColumn` for in-column, `moveTask` for cross-column) by
+     * first applying the move to the local board, then persisting. Restores
+     * focus to the moved card and announces the result.
+     *
+     * @param {{ taskId: string, direction: 'up'|'down'|'prev-column'|'next-column' }} payload
+     */
+    function onCardMove({ taskId, direction }) {
+      if (!localBoard.value) return
+      const columns = localBoard.value.columns
+      const byCol = localBoard.value.tasksByColumn
+
+      // Locate the task's current column + index.
+      let fromColIdx = -1
+      let fromTaskIdx = -1
+
+      for (let i = 0; i < byCol.length; i++) {
+        const idx = byCol[i].tasks.findIndex(t => t.id === taskId)
+
+        if (idx !== -1) {
+          fromColIdx = i
+          fromTaskIdx = idx
+          break
+        }
+      }
+
+      if (fromColIdx === -1) return
+      const fromEntry = byCol[fromColIdx]
+      const fromColumnId = fromEntry.columnId
+
+      if (direction === 'up' || direction === 'down') {
+        const target = direction === 'up' ? fromTaskIdx - 1 : fromTaskIdx + 1
+        if (target < 0 || target >= fromEntry.tasks.length) return
+
+        // Swap the two neighbours, then persist the new in-column order.
+        const tasks = fromEntry.tasks.slice()
+        const [moved] = tasks.splice(fromTaskIdx, 1)
+        tasks.splice(target, 0, moved)
+        fromEntry.tasks = tasks
+
+        store
+          .reorderTasksInColumn(
+            fromColumnId,
+            tasks.map(t => t.id),
+            byCol
+          )
+          .then(() => announceMove(moved.title, fromEntry, target))
+          .catch(() => {
+            localBoard.value = cloneBoard(store.board)
+          })
+
+        restoreCardFocus(taskId)
+        return
+      }
+
+      // Cross-column move. Find the adjacent column index by board order.
+      const toColIdx = direction === 'prev-column' ? fromColIdx - 1 : fromColIdx + 1
+      if (toColIdx < 0 || toColIdx >= columns.length) return
+      const toColumnId = columns[toColIdx].id
+      const toEntry = byCol.find(t => t.columnId === toColumnId)
+      if (!toEntry) return
+
+      // Pull the task out of its source column and append to the target,
+      // mirroring the post-drag arrays the store mutation expects.
+      const srcTasks = fromEntry.tasks.slice()
+      const [moved] = srcTasks.splice(fromTaskIdx, 1)
+      fromEntry.tasks = srcTasks
+
+      const toIndex = toEntry.tasks.length
+      toEntry.tasks = [...toEntry.tasks, moved]
+
+      store
+        .moveTask(moved.id, fromColumnId, toColumnId, toIndex, byCol)
+        .then(() => announceMove(moved.title, toEntry, toIndex))
+        .catch(() => {
+          localBoard.value = cloneBoard(store.board)
+        })
+
+      restoreCardFocus(taskId)
+    }
+
+    /**
+     * Keyboard column reorder from the focused column header. Ctrl/Cmd plus
+     * Left/Right swaps the column with its neighbour and persists through the
+     * same `reorderColumns` action the column drag uses.
+     */
+    function onColumnHeaderKeydown(e, col) {
+      const horical = e.ctrlKey || e.metaKey
+      if (!horical || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+      if (!localBoard.value) return
+
+      const cols = localBoard.value.columns
+      const idx = cols.findIndex(c => c.id === col.id)
+      const target = e.key === 'ArrowLeft' ? idx - 1 : idx + 1
+      if (idx === -1 || target < 0 || target >= cols.length) return
+
+      e.preventDefault()
+      const next = cols.slice()
+      const [moved] = next.splice(idx, 1)
+      next.splice(target, 0, moved)
+      localBoard.value.columns = next
+
+      store.reorderColumns(project.value.id, next.map(c => c.id)).catch(() => {
+        localBoard.value = cloneBoard(store.board)
+      })
+
+      moveAnnouncement.value = t('kanban.columnReorderAnnouncement', {
+        label: col.label,
+        position: target + 1
+      })
+
+      // Keep focus on the moved header after the DOM settles.
+      nextTick(() => {
+        const header = document.querySelector(
+          `.kanban-view__column[data-column-id="${col.id}"] .kanban-view__column-header`
+        )
+
+        if (header instanceof HTMLElement) header.focus()
+      })
+    }
+
+    /**
+     * Build + set the assertive move announcement string for a card landing in
+     * `entry` at `index` (0-based; announced 1-based).
+     */
+    function announceMove(title, entry, index) {
+      const column = localBoard.value?.columns.find(c => c.id === entry.columnId)
+
+      moveAnnouncement.value = t('kanban.moveAnnouncement', {
+        title,
+        column: column?.label ?? '',
+        position: index + 1
+      })
+    }
+
+    /** Return keyboard focus to a card by id after a move re-renders the list. */
+    function restoreCardFocus(taskId) {
+      nextTick(() => {
+        const item = document.querySelector(
+          `.kanban-view__task-item [data-task-id="${taskId}"]`
+        )
+
+        if (item instanceof HTMLElement) item.focus()
+      })
+    }
+
+    /**
      * Open the rename-column modal targeting the given column.
      * @param {{ id: string, label: string }} col
      */
@@ -595,7 +808,8 @@ export default {
      */
     function onAddSubtask({ text }) {
       if (!detailTaskId.value) return
-      store.addSubtask(detailTaskId.value, text).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      store.addSubtask(detailTaskId.value, text).catch(captureException)
     }
 
     /**
@@ -604,7 +818,8 @@ export default {
      */
     function onUpdateSubtask({ subtaskId, ...patch }) {
       if (!detailTaskId.value) return
-      store.updateSubtask(detailTaskId.value, subtaskId, patch).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      store.updateSubtask(detailTaskId.value, subtaskId, patch).catch(captureException)
     }
 
     /**
@@ -613,7 +828,8 @@ export default {
      */
     function onDeleteSubtask({ subtaskId }) {
       if (!detailTaskId.value) return
-      store.deleteSubtask(detailTaskId.value, subtaskId).catch(() => {})
+      // Toasted by the store; swallow the rejection cleanly and report.
+      store.deleteSubtask(detailTaskId.value, subtaskId).catch(captureException)
     }
   }
 }
@@ -765,7 +981,8 @@ export default {
   }
 
   &__column-header {
-    @apply mb-1 flex cursor-grab items-baseline gap-2 select-none;
+    @apply mb-1 flex cursor-grab items-baseline gap-2 rounded-sm select-none;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
 
     &:active {
       @apply cursor-grabbing;
@@ -782,6 +999,16 @@ export default {
 
   &__column-tasks {
     @apply flex min-h-[40px] flex-col gap-2;
+  }
+
+  // Listitem wrapper around each card. Full width so the card fills it exactly
+  // as before — purely a semantics carrier for the role="list"/listitem pair.
+  &__task-item {
+    @apply w-full;
+  }
+
+  &__kbd-legend {
+    @apply mb-3 text-[11px] text-muted;
   }
 
   &__empty-col {

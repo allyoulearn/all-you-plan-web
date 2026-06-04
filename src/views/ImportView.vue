@@ -78,6 +78,7 @@
 import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { apolloClient } from '@/api/apollo.js'
+import { useErrorToast } from '@/composables/useErrorToast.js'
 import { BULK_IMPORT_FROM_SOURCE } from '@/api/operations/imports.js'
 import AppScreenHeading from '@/components/ui/AppScreenHeading.vue'
 import AppSectionHeader from '@/components/ui/AppSectionHeader.vue'
@@ -98,6 +99,7 @@ export default {
   name: 'ImportView',
   components: { AppScreenHeading, AppSectionHeader, AppButton },
   setup() {
+    const { toastError } = useErrorToast()
     const source = ref('todoist')
     const payload = ref('')
     const busy = ref(false)
@@ -125,7 +127,9 @@ export default {
           )
         }
       } catch (err) {
-        toast.error('Import failed', { description: err?.message })
+        // Route through useErrorToast so the message resolution matches the
+        // rest of the app (GraphQL → network → message → fallback).
+        toastError(err, 'Import failed')
       } finally {
         busy.value = false
       }

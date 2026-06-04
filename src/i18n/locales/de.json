@@ -47,7 +47,10 @@
     "forgotHeadingPrefix": "Passwort",
     "forgotHeadingEmphasis": "vergessen?",
     "resetHeadingPrefix": "Setze dein",
-    "resetHeadingEmphasis": "Passwort zurück."
+    "resetHeadingEmphasis": "Passwort zurück.",
+    "legalConsentPrefix": "Mit der Erstellung eines Kontos stimmst du unseren",
+    "legalConsentAnd": "und der",
+    "legalConsentSuffix": " zu."
   },
   "tasks": {
     "title": "Titel",
@@ -253,7 +256,16 @@
     "filterTagLabel": "Tag",
     "filterHideDone": "Erledigte ausblenden",
     "filterClear": "Zurücksetzen",
-    "filterEmptyMatch": "Keine Aufgaben passen zum aktuellen Filter."
+    "filterEmptyMatch": "Keine Aufgaben passen zum aktuellen Filter.",
+    "boardRegionAriaLabel": "{project}-Board",
+    "columnGroupAria": "Spalte {label}, {count} Aufgaben",
+    "taskListAria": "Aufgaben in {label}",
+    "filterPriorityChipAria": "Nach Priorität {priority} filtern",
+    "cardKeyboardHint": "Strg plus Pfeiltasten verschiebt diese Aufgabe zwischen Spalten, Alt plus Pfeiltasten ordnet sie innerhalb der Spalte um.",
+    "reorderColumnAria": "Spalte {label}. Strg plus Pfeil links oder rechts ordnet diese Spalte um.",
+    "moveAnnouncement": "{title} nach {column}, Position {position} verschoben.",
+    "columnReorderAnnouncement": "Spalte {label} an Position {position} verschoben.",
+    "keyboardLegend": "Tipp: Eine Karte fokussieren und Strg plus Pfeiltasten drücken, um sie zu verschieben; Alt plus Pfeiltasten ordnet innerhalb einer Spalte um."
   },
   "calendar": {
     "prevMonth": "Vorheriger Monat",
@@ -274,6 +286,17 @@
     "viewYear": "Jahr",
     "newEvent": "+ Neuer Termin",
     "newEventCta": "Neuer Termin",
+    "gridAriaLabel": "Kalender {month} {year}",
+    "weekGridAriaLabel": "Wochen-Zeitraster",
+    "weekCellAria": "{day} um {time}",
+    "yearMonthAria": "{month}, {count} Termine",
+    "moveToDay": "An Tag verschieben",
+    "moveEventAria": "{title} verschieben. Pfeiltaste drücken, dann Enter, um einen neuen Tag zu wählen.",
+    "rescheduleHint": "M drücken, um diesen Termin auf einen anderen Tag zu verschieben.",
+    "rescheduledAnnouncement": "{title} auf {date} verschoben.",
+    "scheduleTask": "Aufgabe planen",
+    "scheduleTaskAria": "{title} für den nächsten freien Slot heute planen.",
+    "scheduledAnnouncement": "{title} für {date} um {time} geplant.",
     "eventSheet": {
       "editTitle": "Termin bearbeiten",
       "createTitle": "Neuer Termin",
@@ -380,7 +403,15 @@
     "confirmAccept": "Bestätigen",
     "confirmResolved": "Bestätigt",
     "cancelResolved": "Abgebrochen",
-    "bubbleInterrupted": "· Stream unterbrochen"
+    "bubbleInterrupted": "· Stream unterbrochen",
+    "messagesRegionAriaLabel": "Unterhaltung mit Wren",
+    "bubbleUserAria": "Du sagtest, um {time}",
+    "bubbleCoachAria": "Wren sagte, um {time}",
+    "senderUser": "Du",
+    "senderCoach": "Wren",
+    "quickPromptsAriaLabel": "Schnellbefehle",
+    "replyReadyAnnouncement": "Wren hat geantwortet.",
+    "streamInterruptedAnnouncement": "Wrens Antwort wurde unterbrochen."
   },
   "review": {
     "saving": "Wird gespeichert…",
@@ -524,6 +555,8 @@
     "closeWren": "Wren schließen",
     "breadcrumb": "Pfad",
     "errorGeneric": "Ein unerwarteter Fehler ist aufgetreten",
+    "loadError": "Konnte nicht geladen werden. Bitte erneut versuchen.",
+    "emptyGeneric": "Hier ist noch nichts",
     "dateToday": "Heute",
     "dateYesterday": "Gestern",
     "confirm": "Bestätigen"
@@ -581,7 +614,7 @@
     "step1HeadingPrefix": "Der Raum zwischen",
     "step1HeadingEmphasis": "Gedanke und Erledigt.",
     "step1Lede": "all you plan hält deine Aufgaben, Routinen, Projekte und einen Coach zusammen, der leise verfolgt, was funktioniert. Keine Serien, die du jagen musst. Keine Abzeichen. Nur der nächste echte Schritt.",
-    "step2Eyebrow": "Schritt 02 von 05 — über dich",
+    "step2Eyebrow": "Schritt 02 von 06 — über dich",
     "step2HeadingPrefix": "Wer",
     "step2HeadingEmphasis": "plant?",
     "step2NameLabel": "Name",
@@ -591,7 +624,7 @@
     "themeInk": "Tinte",
     "themeBlueprint": "Blaupause",
     "themeRose": "Rosé",
-    "step3Eyebrow": "Schritt 03 von 05 — dein Coach",
+    "step3Eyebrow": "Schritt 03 von 06 — dein Coach",
     "step3HeadingPrefix": "Lerne",
     "step3HeadingEmphasis": "Wren kennen.",
     "step3Lede": "Wähle einen Ton — es ist nur, wie sie klingt. Du kannst ihn jederzeit ändern.",
@@ -607,7 +640,7 @@
     "toneGentleName": "Sanft",
     "toneGentleTag": "Langsam · sorgsam",
     "toneGentleSample": "Lass dir heute Zeit. Ein Kapitel — wenn du nicht hinkommst, ist das auch Information.",
-    "step4Eyebrow": "Schritt 04 von 05 — was dich herbringt",
+    "step4Eyebrow": "Schritt 04 von 06 — was dich herbringt",
     "step4HeadingPrefix": "Was",
     "step4HeadingMiddle": "planst",
     "step4HeadingEmphasis": "du?",
@@ -617,7 +650,7 @@
     "modePartnerDesc": "Geteilte Routinen und ein Haushaltskalender.",
     "modeHabitsTitle": "Gewohnheitsfokus",
     "modeHabitsDesc": "Fokus auf Serien und kleine tägliche Erfolge.",
-    "step5Eyebrow": "Schritt 05 von 05 — dein Startpunkt",
+    "step5Eyebrow": "Schritt 05 von 06 — dein Startpunkt",
     "step5HeadingPrefix": "Drei",
     "step5HeadingEmphasis": "Setzlinge.",
     "step5Lede": "Wren hat diese zum Start ausgewählt. Umbenennen, löschen oder behalten.",
@@ -881,5 +914,15 @@
     "relMinutesAgo": "vor {count} Min.",
     "relHoursAgo": "vor {count} Std.",
     "relDaysAgo": "vor {count} T."
+  },
+  "legal": {
+    "privacyTitle": "Datenschutzrichtlinie",
+    "termsTitle": "Nutzungsbedingungen",
+    "draftNotice": "ENTWURF — rechtliche Prüfung ausstehend. Dieser Text ist ein Platzhalter und rechtlich nicht bindend.",
+    "lastUpdated": "Zuletzt aktualisiert: {date}",
+    "seeAlsoPrivacy": "Siehe auch unsere",
+    "seeAlsoTerms": "Siehe auch unsere",
+    "footerAria": "Rechtliches",
+    "footerCopyright": "© {year} all you plan"
   }
 }

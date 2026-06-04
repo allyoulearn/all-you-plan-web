@@ -132,7 +132,15 @@
 
     <!-- Messages body: per-day buckets with a sticky date divider per group.
          Mirrors WrenView so both surfaces share the same scroll behavior. -->
-    <div ref="bodyRef" class="wren-panel__body">
+    <div
+      ref="bodyRef"
+      class="wren-panel__body"
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-atomic="false"
+      :aria-label="t('wren.messagesRegionAriaLabel')"
+    >
       <div v-if="store.loading" class="wren-panel__loading">
         {{ t('common.loading') }}
       </div>
@@ -171,7 +179,16 @@
     <!-- Composer: chips + input share the same encased block so they read as
          one continuous surface, matching the WrenView pattern. -->
     <div class="wren-panel__composer">
-      <div class="wren-panel__chips">
+      <!-- Assertive announcer for streamed-reply completion / interruption. -->
+      <span class="sr-only" role="status" aria-live="assertive">
+        {{ announce }}
+      </span>
+
+      <div
+        class="wren-panel__chips"
+        role="group"
+        :aria-label="t('wren.quickPromptsAriaLabel')"
+      >
         <button
           v-for="prompt in QUICK_PROMPTS"
           :key="prompt"
@@ -225,7 +242,18 @@ export default {
     const { t } = useI18n()
     const bodyRef = ref(null)
     const switcherRef = ref(null)
-    const { store, draft, sendMessage, handleKeydown, fillFromChip } = useWrenChat(bodyRef)
+
+    const {
+      store,
+      draft,
+      sendMessage,
+      handleKeydown,
+      fillFromChip,
+      // `announce` may be undefined under a test mock of useWrenChat; fall back
+      // to an inert ref so the template binding stays safe.
+      announce = ref('')
+    } = useWrenChat(bodyRef)
+
     const exporting = ref(false)
     const conversationsOpen = ref(false)
     const { wrenOpen, wrenCollapsed, toggleWren } = useLayout()
@@ -264,6 +292,7 @@ export default {
       switcherRef,
       store,
       draft,
+      announce,
       sendMessage,
       handleKeydown,
       fillFromChip,

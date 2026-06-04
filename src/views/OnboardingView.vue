@@ -23,15 +23,36 @@
       </div>
 
       <!-- Skip button -->
-      <button type="button" class="onb__skip" @click="next">
+      <button
+        type="button"
+        class="onb__skip"
+        :disabled="busy"
+        @click="next"
+      >
         {{ t('onboarding.skip') }}
       </button>
     </header>
 
     <!-- Step card -->
     <section class="onb__card" :class="{ 'onb__card--ready': step === 6 }">
+      <!-- Initial-load skeleton: shown only before the first state resolves -->
+      <AppSkeleton
+        v-if="initialLoading"
+        variant="card"
+        :rows="3"
+        :aria-label="t('common.loading')"
+      />
+
+      <!-- Initial-load failure: retryable error card -->
+      <AppErrorState
+        v-else-if="store.error"
+        :message="store.error || t('common.loadError')"
+        :retry-label="t('common.retry')"
+        @retry="store.load()"
+      />
+
       <!-- Step 1: welcome -->
-      <template v-if="step === 1">
+      <template v-else-if="step === 1">
         <div class="onb__num">
           {{ t('onboarding.step1Eyebrow') }}
         </div>
@@ -220,10 +241,6 @@
                 {{ s.sub }}
               </div>
             </div>
-
-            <button type="button" class="onb__btn-ghost">
-              {{ t('onboarding.editSeed') }}
-            </button>
           </div>
         </div>
       </template>
@@ -254,11 +271,12 @@
       </template>
 
       <!-- Footer nav -->
-      <div class="onb__foot">
+      <div v-if="!initialLoading && !store.error" class="onb__foot">
         <button
           v-if="step > 1"
           type="button"
           class="onb__btn-ghost"
+          :disabled="busy"
           @click="back"
         >
           {{ backLabel }}
@@ -266,8 +284,17 @@
 
         <span class="onb__spacer" />
 
-        <button type="button" class="onb__btn-primary" @click="next">
-          <template v-if="step === 6">
+        <button
+          type="button"
+          class="onb__btn-primary"
+          :disabled="busy"
+          @click="next"
+        >
+          <template v-if="busy">
+            {{ t('common.loading') }}
+          </template>
+
+          <template v-else-if="step === 6">
             {{ t('onboarding.ctaOpenToday') }}
           </template>
 
@@ -304,10 +331,12 @@ import { useOnboardingStore } from '@/stores/onboarding.store.js'
 import { useAuthStore } from '@/stores/auth.store.js'
 import { localTimezone } from '@/utils/date.js'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import AppSkeleton from '@/components/ui/AppSkeleton.vue'
 
 export default {
   name: 'OnboardingView',
-  components: { AppIcon },
+  components: { AppIcon, AppErrorState, AppSkeleton },
   setup() {
     const { t } = useI18n()
     const store = useOnboardingStore()
@@ -322,11 +351,26 @@ export default {
       mode: 'solo'
     })
 
+    // True until the first state fetch resolves, so the wizard shows a skeleton
+    // rather than a flash of default-step content on a cold load.
+    const initialLoading = ref(true)
+    // Guards the nav handlers against double-clicks while a mutation is in flight.
+    const busy = ref(false)
+
     onMounted(async () => {
-      await store.load()
+      try {
+        await store.load()
+      } finally {
+        initialLoading.value = false
+      }
+
       if (auth.user?.name) form.value.name = auth.user.name
       if (auth.user?.timezone) form.value.timezone = auth.user.timezone
       if (auth.user?.wrenTone) form.value.tone = auth.user.wrenTone
+      // Re-hydrate the persisted picks so the highlighted mode/tone (and the
+      // step-5 seed preview) match the server state after a mid-flow reload.
+      if (store.tone) form.value.tone = store.tone
+      if (store.mode) form.value.mode = store.mode
     })
 
     const step = computed(() => store.step)
@@ -381,7 +425,10 @@ export default {
     const readyGreeting = computed(() => readyByTone.value[form.value.tone] ?? readyByTone.value.warm)
     const backLabel = computed(() => `← ${t('common.back')}`)
 
-    return { t, step, form, themes, tones, modes, seededList, readyGreeting, backLabel, next, back }
+    return {
+      t, store, step, form, themes, tones, modes, seededList, readyGreeting,
+      backLabel, initialLoading, busy, next, back
+    }
 
     // -- Function definitions --
 
@@ -389,22 +436,35 @@ export default {
      * Advance to the next onboarding step, or complete and route to Today on
      * the final step. Theme is persisted to the user settings after completion
      * so the choice survives the redirect.
+     *
+     * A failed persist call throws (the store toasts the error); we catch it
+     * here so the wizard neither advances nor redirects on failure, leaving the
+     * user on the same step to retry instead of on a silently-dead button.
+     * `busy` guards against double-submits while a call is in flight.
      */
     async function next() {
+      if (busy.value) return
       const current = step.value
+      busy.value = true
 
-      if (current < 6) {
-        await store.update({ step: current + 1, ...buildPatch(current) })
-      } else {
-        await store.complete()
+      try {
+        if (current < 6) {
+          await store.update({ step: current + 1, ...buildPatch(current) })
+        } else {
+          await store.complete()
 
-        try {
-          await auth.updateSettings({ theme: form.value.theme })
-        } catch {
-          /* ignore */
+          try {
+            await auth.updateSettings({ theme: form.value.theme })
+          } catch {
+            /* theme re-save is best-effort; it was already persisted at step 2 */
+          }
+
+          router.push({ name: 'today' })
         }
-
-        router.push({ name: 'today' })
+      } catch {
+        /* store already surfaced the error toast; stay on the current step */
+      } finally {
+        busy.value = false
       }
     }
 
@@ -425,9 +485,22 @@ export default {
       return patch
     }
 
-    /** Step back one position in the onboarding flow. */
+    /**
+     * Step back one position in the onboarding flow. No collected field is lost
+     * (the API only $sets fields present in the input); a failed write toasts
+     * and keeps the user on the current step.
+     */
     async function back() {
-      if (step.value > 1) await store.update({ step: step.value - 1 })
+      if (busy.value || step.value <= 1) return
+      busy.value = true
+
+      try {
+        await store.update({ step: step.value - 1 })
+      } catch {
+        /* store already surfaced the error toast; stay put */
+      } finally {
+        busy.value = false
+      }
     }
   }
 }
