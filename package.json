@@ -54,7 +54,7 @@
     "globals": "^15.15.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^15.4.3",
+    "lint-staged": "^17.0.7",
     "postcss": "^8.4.49",
     "prettier": "^3.5.3",
     "sass": "^1.98.0",
