@@ -27,7 +27,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@heroicons/vue": "^2.2.0",
     "@sentry/vue": "^8.42.0",
-    "@vuepic/vue-datepicker": "^13.0.0",
+    "@vuepic/vue-datepicker": "^14.0.0",
     "graphql": "^16.10.0",
     "graphql-ws": "^5.16.0",
     "pinia": "^3.0.2",
