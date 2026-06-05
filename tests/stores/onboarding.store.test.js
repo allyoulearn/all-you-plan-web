@@ -126,6 +126,21 @@ describe('onboarding.store', () => {
       expect(toastError).toHaveBeenCalled()
       expect(store.loading).toBe(false)
     })
+
+    // The wizard now runs 8 steps (daily-review at 5, calendar-sync at 6 were
+    // added), so the store must forward the higher step transitions verbatim.
+    it.each([6, 7, 8])('forwards the step-%i transition verbatim', async target => {
+      const next = { ...fakeState, step: target }
+      apolloClient.mutate.mockResolvedValueOnce({ data: { updateOnboarding: next } })
+      const store = useOnboardingStore()
+      await store.update({ step: target })
+
+      expect(apolloClient.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { input: { step: target } } })
+      )
+
+      expect(store.step).toBe(target)
+    })
   })
 
   describe('complete()', () => {

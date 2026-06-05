@@ -218,12 +218,17 @@ describe('CalendarView', () => {
       // If no today cell (different month), we skip the assertion
     })
 
-    it('sets aria-pressed="true" on the selected cell', () => {
+    // The day cell carries role="gridcell". `aria-pressed` is NOT a supported
+    // attribute on gridcell (axe `aria-allowed-attr`, critical) — the selected
+    // state is conveyed with `aria-selected`, which IS allowed on gridcell.
+    it('sets aria-selected="true" on the selected cell', () => {
       const wrapper = mountCalendar()
       const selected = wrapper.findAll('button.calendar-view__day-cell--selected')
 
       if (selected.length > 0) {
-        expect(selected[0].attributes('aria-pressed')).toBe('true')
+        expect(selected[0].attributes('aria-selected')).toBe('true')
+        // And must NOT use aria-pressed, which is invalid on a gridcell.
+        expect(selected[0].attributes('aria-pressed')).toBeUndefined()
       }
     })
   })

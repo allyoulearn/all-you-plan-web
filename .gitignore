@@ -9,3 +9,7 @@ stats.html
 .superpowers/
 .claude/
 coverage/
+
+# Playwright artifacts
+test-results/
+playwright-report/

@@ -35,7 +35,7 @@ const globalStubs = { AppIcon: true }
 
 function mountOnboarding(
   initialStep = 1,
-  authUser = { name: 'Ada', timezone: 'Europe/Helsinki' },
+  authUser = { name: 'Ada', timezone: 'Europe/Helsinki', settings: { checkIns: ['morning'] } },
   onboardingOverrides = {}
 ) {
   return mount(OnboardingView, {
@@ -138,14 +138,14 @@ describe('OnboardingView', () => {
     expect(store.update).toHaveBeenCalled()
   })
 
-  it('renders the wren bubble on step 6', async () => {
-    const wrapper = mountOnboarding(6)
+  it('renders the wren bubble on the final step', async () => {
+    const wrapper = mountOnboarding(8)
     await flushPromises()
     expect(wrapper.find('.onb__bubble').exists()).toBe(true)
   })
 
-  it('step 6 next button calls complete and pushes to today', async () => {
-    const wrapper = mountOnboarding(6)
+  it('final step next button calls complete and pushes to today', async () => {
+    const wrapper = mountOnboarding(8)
     await flushPromises()
     const onboarding = useOnboardingStore()
     const auth = useAuthStore()
@@ -157,8 +157,8 @@ describe('OnboardingView', () => {
     expect(pushSpy).toHaveBeenCalledWith({ name: 'today' })
   })
 
-  it('step 6 swallows auth.updateSettings errors', async () => {
-    const wrapper = mountOnboarding(6)
+  it('final step swallows auth.updateSettings errors', async () => {
+    const wrapper = mountOnboarding(8)
     await flushPromises()
     const onboarding = useOnboardingStore()
     const auth = useAuthStore()
@@ -207,10 +207,10 @@ describe('OnboardingView', () => {
     expect(store.update).toHaveBeenCalledWith(expect.objectContaining({ step: 5, mode: 'solo' }))
   })
 
-  it('renders all six stepper dots', async () => {
+  it('renders all eight stepper dots', async () => {
     const wrapper = mountOnboarding(3)
     await flushPromises()
-    expect(wrapper.findAll('.onb__dot').length).toBe(6)
+    expect(wrapper.findAll('.onb__dot').length).toBe(8)
   })
 
   it('marks completed dots with done modifier', async () => {
@@ -255,8 +255,8 @@ describe('OnboardingView', () => {
     expect(store.update).toHaveBeenCalledWith(expect.objectContaining({ step: 5, mode: 'habits' }))
   })
 
-  it('does not advance/redirect when complete() rejects on step 6', async () => {
-    const wrapper = mountOnboarding(6)
+  it('does not advance/redirect when complete() rejects on the final step', async () => {
+    const wrapper = mountOnboarding(8)
     await flushPromises()
     const onboarding = useOnboardingStore()
     onboarding.complete.mockRejectedValue(new Error('network'))
@@ -322,9 +322,126 @@ describe('OnboardingView', () => {
     expect(store.load).toHaveBeenCalled()
   })
 
-  it('no longer renders the dead per-seed Edit button on step 5', async () => {
-    const wrapper = mountOnboarding(5)
+  it('no longer renders the dead per-seed Edit button on the seed-preview step', async () => {
+    const wrapper = mountOnboarding(7)
     await flushPromises()
     expect(wrapper.find('.onb__seeded-row .onb__btn-ghost').exists()).toBe(false)
+  })
+
+  // -- Daily-review step (step 5) --
+
+  it('renders the daily-review toggle and time slots on step 5', async () => {
+    const wrapper = mountOnboarding(5)
+    await flushPromises()
+    expect(wrapper.find('.onb__toggle').exists()).toBe(true)
+    // Enabled by default → time slots visible.
+    expect(wrapper.findAll('.onb__slot').length).toBe(3)
+  })
+
+  it('hides the time slots and shows a hint when the daily review is turned off', async () => {
+    const wrapper = mountOnboarding(5)
+    await flushPromises()
+    // Second toggle button is "Off".
+    await wrapper.findAll('.onb__toggle-btn')[1].trigger('click')
+    expect(wrapper.findAll('.onb__slot').length).toBe(0)
+    expect(wrapper.find('.onb__hint').exists()).toBe(true)
+  })
+
+  it('persists the chosen check-in slot via auth.updateSettings before advancing', async () => {
+    const wrapper = mountOnboarding(5)
+    await flushPromises()
+    const store = useOnboardingStore()
+    const auth = useAuthStore()
+    store.update.mockResolvedValue(undefined)
+    auth.updateSettings.mockResolvedValue(undefined)
+
+    // Pick the evening slot (third button).
+    await wrapper.findAll('.onb__slot')[2].trigger('click')
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+
+    expect(auth.updateSettings).toHaveBeenCalledWith({ checkIns: ['evening'] })
+    expect(store.update).toHaveBeenCalledWith(expect.objectContaining({ step: 6 }))
+  })
+
+  it('preserves a non-time-slot check-in (e.g. stuck) when saving the daily review', async () => {
+    const wrapper = mountOnboarding(5, {
+      name: 'Ada',
+      settings: { checkIns: ['morning', 'stuck'] }
+    })
+
+    await flushPromises()
+    const store = useOnboardingStore()
+    const auth = useAuthStore()
+    store.update.mockResolvedValue(undefined)
+    auth.updateSettings.mockResolvedValue(undefined)
+
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+
+    // 'stuck' is preserved; the re-hydrated 'morning' slot is re-sent.
+    expect(auth.updateSettings).toHaveBeenCalledWith({ checkIns: ['stuck', 'morning'] })
+  })
+
+  it('sends an empty (time-slot-free) check-in array when the daily review is off', async () => {
+    const wrapper = mountOnboarding(5, { name: 'Ada', settings: { checkIns: ['morning'] } })
+
+    await flushPromises()
+    const store = useOnboardingStore()
+    const auth = useAuthStore()
+    store.update.mockResolvedValue(undefined)
+    auth.updateSettings.mockResolvedValue(undefined)
+
+    await wrapper.findAll('.onb__toggle-btn')[1].trigger('click') // Off
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+
+    expect(auth.updateSettings).toHaveBeenCalledWith({ checkIns: [] })
+  })
+
+  it('does not advance past step 5 when the check-in save fails', async () => {
+    const wrapper = mountOnboarding(5)
+    await flushPromises()
+    const store = useOnboardingStore()
+    const auth = useAuthStore()
+    auth.updateSettings.mockRejectedValue(new Error('save failed'))
+
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+
+    expect(auth.updateSettings).toHaveBeenCalled()
+    expect(store.update).not.toHaveBeenCalled()
+  })
+
+  it('re-hydrates the daily-review toggle off when no time slot is set', async () => {
+    const wrapper = mountOnboarding(5, { name: 'Ada', settings: { checkIns: [] } })
+
+    await flushPromises()
+    // Off button (second) should be the active one.
+    const offBtn = wrapper.findAll('.onb__toggle-btn')[1]
+    expect(offBtn.classes()).toContain('onb__toggle-btn--active')
+    expect(wrapper.findAll('.onb__slot').length).toBe(0)
+  })
+
+  // -- Calendar-sync step (step 6) --
+
+  it('renders the informational calendar note on step 6 and does not connect', async () => {
+    const wrapper = mountOnboarding(6)
+    await flushPromises()
+    expect(wrapper.find('.onb__cal-note').exists()).toBe(true)
+  })
+
+  it('step 6 continue advances to the seed preview without persisting settings', async () => {
+    const wrapper = mountOnboarding(6)
+    await flushPromises()
+    const store = useOnboardingStore()
+    const auth = useAuthStore()
+    store.update.mockResolvedValue(undefined)
+
+    await wrapper.find('button.onb__btn-primary').trigger('click')
+    await flushPromises()
+
+    expect(store.update).toHaveBeenCalledWith(expect.objectContaining({ step: 7 }))
+    expect(auth.updateSettings).not.toHaveBeenCalled()
   })
 })

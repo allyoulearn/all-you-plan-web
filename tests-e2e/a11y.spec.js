@@ -25,13 +25,47 @@ function blocking(results) {
   return results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious')
 }
 
-/** Sign in through the dev mock control so protected routes are reachable. */
+/** Stable selector for the dev-only quick-login control on the login screen. */
+const DEV_SIGN_IN = '[data-testid="dev-sign-in"]'
+
+/**
+ * Authenticate so the protected routes the axe gate crawls are reachable.
+ *
+ * Two paths land us in the authenticated app, and this helper tolerates both:
+ *
+ *  1. The router's first-navigation guard (src/router/index.js) calls
+ *     `tryRestoreSession()`. In mock mode (VITE_USE_MOCKS=true) the
+ *     `refreshToken` fixture always returns a valid session, so the guard
+ *     authenticates us and bounces /auth/login straight to the app root. When
+ *     that happens the login screen — and its dev button — never render.
+ *  2. If that restore does NOT happen first, the login screen renders and we
+ *     click the dev-only "Dev sign-in (skip backend)" control, which calls
+ *     `authStore.devLogin()` and routes into the app.
+ *
+ * So we navigate to the login route, then wait for EITHER the dev button or an
+ * already-authenticated URL, and only click the button when it actually showed.
+ * The dev button carries a stable `data-testid` (and the `.login-view__dev`
+ * class) inside LoginView's DEV-only branch — see src/views/auth/LoginView.vue.
+ */
 async function devSignIn(page) {
   await page.goto('/auth/login')
-  const devButton = page.locator('.login-view__dev')
-  await devButton.waitFor({ state: 'visible' })
-  await devButton.click()
-  // Lands on the authenticated app root after devLogin.
+
+  const devButton = page.locator(DEV_SIGN_IN)
+  const onAuthRoute = () => new URL(page.url()).pathname.startsWith('/auth')
+
+  // Race the two outcomes: dev button visible vs. guard already redirected.
+  await Promise.race([
+    devButton.waitFor({ state: 'visible' }).catch(() => {}),
+    page.waitForURL(url => !url.pathname.startsWith('/auth')).catch(() => {})
+  ])
+
+  // If we are still on /auth/login, the login screen rendered — use the
+  // dev control to sign in and wait for it to route into the app.
+  if (onAuthRoute()) {
+    await devButton.waitFor({ state: 'visible' })
+    await devButton.click()
+  }
+
   await page.waitForURL(url => !url.pathname.startsWith('/auth'))
 }
 
@@ -41,6 +75,10 @@ async function runAxe(page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // The dev server boots on the first test and the axe crawl is heavy; give
+  // each test headroom beyond the 30s default so a cold-start dev server does
+  // not flake the sign-in step or the analyze() pass.
+  test.setTimeout(90_000)
   await devSignIn(page)
 })
 

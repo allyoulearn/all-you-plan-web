@@ -123,9 +123,18 @@
                 })
               "
             >
+              <!--
+                Focusable GROUP rather than role="button": the header nests an
+                interactive control (ColumnHeaderMenu's trigger), which a
+                role="button" container would flag under axe's
+                `nested-interactive` rule. As a group it keeps its place in the
+                tab order (tabindex="0") for the Ctrl+Arrow keyboard column
+                reorder while letting the menu button be a legitimate nested
+                control. It is named for the reorder affordance it provides.
+              -->
               <header
                 class="kanban-view__column-header"
-                role="button"
+                role="group"
                 tabindex="0"
                 :aria-label="t('kanban.reorderColumnAria', { label: col.label })"
                 :aria-keyshortcuts="'Control+ArrowLeft Control+ArrowRight'"

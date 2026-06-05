@@ -127,7 +127,16 @@ export default {
             AppButton,
             {
               variant: 'ghost',
+              // Stable hooks for the a11y e2e (tests-e2e/a11y.spec.js): the
+              // class drives the existing scoped style and `data-testid`
+              // gives the test a selector that survives class refactors. Both
+              // fall through to the underlying <button> (AppButton does not
+              // set inheritAttrs:false). They live inside this DIRECT
+              // `import.meta.env.DEV` branch, so Vite folds the guard to
+              // `false` for production and Rollup strips the whole control —
+              // the selector text never reaches the prod bundle.
               class: 'login-view__dev',
+              'data-testid': 'dev-sign-in',
               onClick: handleDevLogin,
             },
             () => 'Dev sign-in (skip backend)'

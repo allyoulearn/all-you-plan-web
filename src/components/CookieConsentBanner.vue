@@ -130,7 +130,11 @@ export default {
     }
 
     &--primary {
-      background: var(--accent);
+      // The raw accent (warm: #ff5a1f) against the light --paper label only
+      // reaches ~2.8:1, under the WCAG AA 4.5:1 floor the a11y gate enforces.
+      // Deepen the accent toward black so the label clears 4.5:1 while the
+      // button keeps its accent identity.
+      background: color-mix(in oklab, var(--accent), #000 30%);
       color: var(--paper);
 
       &:hover {

@@ -1,9 +1,20 @@
 <template>
+  <!--
+    The card is a focusable GROUP, not role="button": it holds its own
+    interactive controls (the completion checkbox, the Wren origin badge) and a
+    role="button" container nesting those would fail axe's `nested-interactive`
+    rule (interactive controls must not be nested). As a group it stays in the
+    tab order (tabindex="0") for the keyboard-move shortcuts and the
+    Enter/Space "open detail" affordance, while its children are announced as
+    the legitimately-nested controls they are. The group is named by the task
+    title so a screen reader landing on it knows which task it is.
+  -->
   <div
     class="kanban-card"
     :data-task-id="task.id"
-    role="button"
+    role="group"
     tabindex="0"
+    :aria-label="task.title"
     :aria-keyshortcuts="'Control+ArrowLeft Control+ArrowRight Control+ArrowUp Control+ArrowDown Alt+ArrowUp Alt+ArrowDown'"
     :title="t('kanban.cardKeyboardHint')"
     @click="$emit('open', task)"

@@ -97,30 +97,55 @@
         <div
           class="tb__body"
           :style="{ '--row-h': rowH + 'px' }"
-          role="grid"
-          :aria-label="t('calendar.weekGridAriaLabel')"
         >
-          <template v-for="r in rowsCount" :key="r">
+          <!--
+            The role="grid" wraps ONLY the cell matrix (rows of rowheader +
+            gridcells) — NOT the absolutely-positioned event blocks / now-line
+            below, which are an overlay and would violate the grid's
+            `aria-required-children` (only rows may be grid children). Both this
+            wrapper and the per-row wrappers use `display: contents`, so they
+            contribute the grid > row > gridcell ARIA nesting without producing
+            boxes: the cells still flow into `.tb__body`'s single CSS grid, and
+            the overlay still positions against `.tb__body`. The overlay sits as
+            a DOM sibling of this grid wrapper, so it is no longer a grid child.
+          -->
+          <div
+            class="tb__grid-matrix"
+            role="grid"
+            :aria-label="t('calendar.weekGridAriaLabel')"
+          >
+            <!--
+              Each half-hour row is wrapped in a role="row" so the rowheader +
+              gridcells have the ARIA parent the grid role requires (axe
+              `aria-required-parent`).
+            -->
             <div
-              :class="['tb__row-lbl', { 'tb__row-lbl--half': (r - 1) % 2 === 1 }]"
-              role="rowheader"
+              v-for="r in rowsCount"
+              :key="r"
+              class="tb__grid-row"
+              role="row"
             >
-              {{ (r - 1) % 2 === 0 ? formatHourLabel(START_HOUR + Math.floor((r - 1) / 2)) : '' }}
-            </div>
+              <div
+                :class="['tb__row-lbl', { 'tb__row-lbl--half': (r - 1) % 2 === 1 }]"
+                role="rowheader"
+              >
+                {{ (r - 1) % 2 === 0 ? formatHourLabel(START_HOUR + Math.floor((r - 1) / 2)) : '' }}
+              </div>
 
-            <div
-              v-for="c in 7"
-              :key="c"
-              :class="[
-                'tb__cell',
-                { 'tb__cell--today': c - 1 === todayCol }
-              ]"
-              role="gridcell"
-              :aria-label="cellAriaLabel(c - 1, r - 1)"
-              @dragover.prevent
-              @drop.prevent="onDrop($event, c - 1, r - 1)"
-            />
-          </template>
+              <div
+                v-for="c in 7"
+                :key="c"
+                :class="[
+                  'tb__cell',
+                  { 'tb__cell--today': c - 1 === todayCol }
+                ]"
+                role="gridcell"
+                :aria-label="cellAriaLabel(c - 1, r - 1)"
+                @dragover.prevent
+                @drop.prevent="onDrop($event, c - 1, r - 1)"
+              />
+            </div>
+          </div>
 
           <!-- Now indicator (only rendered when current time falls within
                the visible day range and today is in the visible week). -->
@@ -604,7 +629,9 @@ export default {
     @apply border-l border-rule-soft px-1.5 py-2 text-center text-xs;
 
     &:first-child { @apply border-l-0; }
-    &--today { color: var(--accent); }
+    // Deepened accent (see the dow/dnum rule below) so any accent-colored text
+    // in the today column clears the WCAG AA 4.5:1 floor on the white grid.
+    &--today { color: color-mix(in oklab, var(--accent), #000 30%); }
   }
 
   &__dow {
@@ -619,8 +646,16 @@ export default {
     font-size: 18px;
   }
 
+  // The "today" column's day-of-week + day-number read in the accent so today
+  // stands out. Raw accent (warm: #ff5a1f) on the white grid surface is only
+  // ~3.1:1, under the WCAG AA 4.5:1 floor the a11y gate enforces for this small
+  // text. Deepen the accent toward black for the text so it clears 4.5:1 while
+  // keeping the today column visibly accent-tinted (the column background tint
+  // and the now-line still use the full-strength accent).
   .tb__grid-col--today &__dow,
-  .tb__grid-col--today &__dnum { color: var(--accent); }
+  .tb__grid-col--today &__dnum {
+    color: color-mix(in oklab, var(--accent), #000 30%);
+  }
 
   // The hour grid scrolls internally so the heading/toolbar stay put. Only
   // this surface scrolls in the calendar view.
@@ -633,6 +668,18 @@ export default {
     @apply relative grid;
     grid-template-columns: 40px repeat(7, 1fr);
     grid-auto-rows: var(--row-h, 24px);
+  }
+
+  // ARIA grid wrapper (role="grid") + per-row wrappers (role="row") that must
+  // not affect layout: `display: contents` hoists their rowheader + gridcell
+  // descendants straight into `.tb__body`'s CSS grid, so the visual single-grid
+  // layout is unchanged while the accessibility tree gains the required
+  // grid > row > gridcell nesting. The matrix wrapping the cells (not the
+  // absolutely-positioned overlay) also keeps the event blocks / now-line out
+  // of the grid's child list, satisfying `aria-required-children`.
+  &__grid-matrix,
+  &__grid-row {
+    display: contents;
   }
 
   &__row-lbl {

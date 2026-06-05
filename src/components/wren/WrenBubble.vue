@@ -251,7 +251,13 @@ export default {
     }
 
     &--accent {
-      @apply rounded-br-xl rounded-bl-sm bg-accent text-accent-ink shadow-accent-glow;
+      @apply rounded-br-xl rounded-bl-sm text-accent-ink shadow-accent-glow;
+      // The raw accent (warm: #ff5a1f) only reaches ~3.1:1 against the white
+      // accent-ink at 14px, below the WCAG AA 4.5:1 floor the a11y gate
+      // enforces. Deepen the accent toward black so the white body text clears
+      // 4.5:1 while the bubble keeps its on-brand accent identity (the glow
+      // shadow still uses the full-strength accent).
+      background: color-mix(in oklab, var(--accent), #000 26%);
     }
   }
 

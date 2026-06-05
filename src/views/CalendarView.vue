@@ -125,7 +125,7 @@
               :data-cell-idx="cell.idx"
               :aria-label="cellAriaLabel(cell)"
               :aria-current="isToday(cell) ? 'date' : undefined"
-              :aria-pressed="!cell.adjacent && isSelected(cell) ? 'true' : undefined"
+              :aria-selected="!cell.adjacent && isSelected(cell) ? 'true' : undefined"
               @click="selectDay(cell)"
               @keydown="onDayCellKeydown($event, cell)"
               @dragover.prevent="onDayDragOver($event, cell)"

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/IBM/audit-ci/main/docs/schema.json",
+  "high": true,
+  "critical": true,
+  "report-type": "summary",
+  "package-manager": "npm",
+  "allowlist": [],
+  "_policy": "Repo-root allowlist for the CI 'security' job (.github/workflows/ci.yml). CI fails on any High or Critical advisory NOT listed below. To accept a known, currently-unfixable advisory, add its GHSA or npm advisory ID to 'allowlist' with a one-line justification and a review-by date in the matching '_notes' entry. Re-review every accepted entry at each launch; remove it once an upstream fix or override ships. Do not lower the threshold below High to silence noise.",
+  "_notes": {}
+}

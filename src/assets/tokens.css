@@ -57,7 +57,10 @@
   --paper-3: #efe9d8;
   --ink: #1a1814;
   --ink-2: #38332a;
-  --muted: #756f63;
+  /* Darkened from #756f63 (4.11:1 on --paper-3) to clear the WCAG AA 4.5:1
+     floor the a11y gate enforces for muted text over the paper-3 surface
+     (e.g. AppSegmentedControl's inactive option). Still reads as muted. */
+  --muted: #6e685c;
   --rule: #1a1814;
   --rule-soft: #e6dfca;
   --accent: #ff5a1f;

@@ -10,7 +10,7 @@
 
       <!-- Step indicator -->
       <div class="onb__stepper">
-        <template v-for="s in 6" :key="s">
+        <template v-for="s in STEP_COUNT" :key="s">
           <span
             :class="[
               'onb__dot',
@@ -18,7 +18,7 @@
             ]"
           />
 
-          <span v-if="s < 6" class="onb__line" />
+          <span v-if="s < STEP_COUNT" class="onb__line" />
         </template>
       </div>
 
@@ -34,7 +34,7 @@
     </header>
 
     <!-- Step card -->
-    <section class="onb__card" :class="{ 'onb__card--ready': step === 6 }">
+    <section class="onb__card" :class="{ 'onb__card--ready': step === STEP_COUNT }">
       <!-- Initial-load skeleton: shown only before the first state resolves -->
       <AppSkeleton
         v-if="initialLoading"
@@ -208,7 +208,7 @@
         </div>
       </template>
 
-      <!-- Step 5: seeded items preview -->
+      <!-- Step 5: daily-review check-in -->
       <template v-else-if="step === 5">
         <div class="onb__num">
           {{ t('onboarding.step5Eyebrow') }}
@@ -224,6 +224,105 @@
 
         <p class="onb__lede">
           {{ t('onboarding.step5Lede') }}
+        </p>
+
+        <div class="onb__field">
+          <span class="onb__label">
+            {{ t('onboarding.dailyReviewToggleLabel') }}
+          </span>
+
+          <div class="onb__toggle">
+            <button
+              type="button"
+              :class="['onb__toggle-btn', { 'onb__toggle-btn--active': form.dailyReviewEnabled }]"
+              @click="form.dailyReviewEnabled = true"
+            >
+              {{ t('onboarding.dailyReviewToggleOn') }}
+            </button>
+
+            <button
+              type="button"
+              :class="['onb__toggle-btn', { 'onb__toggle-btn--active': !form.dailyReviewEnabled }]"
+              @click="form.dailyReviewEnabled = false"
+            >
+              {{ t('onboarding.dailyReviewToggleOff') }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="form.dailyReviewEnabled" class="onb__field">
+          <span class="onb__label">
+            {{ t('onboarding.dailyReviewTimeLabel') }}
+          </span>
+
+          <div class="onb__slots">
+            <button
+              v-for="slot in reviewSlots"
+              :key="slot.id"
+              type="button"
+              :class="['onb__slot', { 'onb__slot--active': form.dailyReviewSlot === slot.id }]"
+              @click="form.dailyReviewSlot = slot.id"
+            >
+              <AppIcon name="clock" :size="14" />
+              {{ slot.name }}
+            </button>
+          </div>
+        </div>
+
+        <p v-else class="onb__hint">
+          {{ t('onboarding.dailyReviewOffHint') }}
+        </p>
+      </template>
+
+      <!-- Step 6: calendar sync (informational / skip-only) -->
+      <template v-else-if="step === 6">
+        <div class="onb__num">
+          {{ t('onboarding.step6Eyebrow') }}
+        </div>
+
+        <h2 class="onb__h">
+          {{ t('onboarding.step6CalHeadingPrefix') }}<br />
+
+          <em>
+            {{ t('onboarding.step6CalHeadingEmphasis') }}
+          </em>
+        </h2>
+
+        <p class="onb__lede">
+          {{ t('onboarding.step6CalLede') }}
+        </p>
+
+        <div class="onb__cal-note">
+          <AppIcon name="calendar" :size="18" />
+
+          <div class="onb__cal-note-body">
+            <div class="onb__cal-note-title">
+              {{ t('onboarding.calendarConnectComingSoon') }}
+            </div>
+
+            <div class="onb__cal-note-sub">
+              {{ t('onboarding.calendarConnectComingSoonDesc') }}
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Step 7: seeded items preview -->
+      <template v-else-if="step === 7">
+        <div class="onb__num">
+          {{ t('onboarding.step7Eyebrow') }}
+        </div>
+
+        <h2 class="onb__h">
+          {{ t('onboarding.step7HeadingPrefix') }}<br />
+
+          <em>
+            {{ t('onboarding.step7HeadingEmphasis') }}
+          </em>
+        </h2>
+
+        <p class="onb__lede">
+          {{ t('onboarding.step7Lede') }}
         </p>
 
         <div class="onb__seeded">
@@ -245,17 +344,17 @@
         </div>
       </template>
 
-      <!-- Step 6: ready greeting -->
+      <!-- Step 8: ready greeting -->
       <template v-else>
         <div class="onb__num">
-          {{ t('onboarding.step6Eyebrow') }}
+          {{ t('onboarding.step8Eyebrow') }}
         </div>
 
         <h2 class="onb__h">
-          {{ t('onboarding.step6HeadingPrefix') }}<br />
+          {{ t('onboarding.step8HeadingPrefix') }}<br />
 
           <em>
-            {{ t('onboarding.step6HeadingEmphasis') }}
+            {{ t('onboarding.step8HeadingEmphasis') }}
           </em>
         </h2>
 
@@ -294,12 +393,16 @@
             {{ t('common.loading') }}
           </template>
 
-          <template v-else-if="step === 6">
+          <template v-else-if="step === STEP_COUNT">
             {{ t('onboarding.ctaOpenToday') }}
           </template>
 
-          <template v-else-if="step === 5">
+          <template v-else-if="step === 7">
             {{ t('onboarding.ctaTakeMeIn') }}
+          </template>
+
+          <template v-else-if="step === 6">
+            {{ t('onboarding.calendarSkipCta') }}
           </template>
 
           <template v-else-if="step === 1">
@@ -319,10 +422,21 @@
 
 <script>
 /**
- * OnboardingView — six-step first-run wizard. Persists progress through the
+ * OnboardingView — eight-step first-run wizard. Persists progress through the
  * onboarding store so the user can resume mid-flow. completeOnboarding()
  * seeds one chore, one project, one inbox item, sets `onboardedAt`, and
  * routes to Today.
+ *
+ * Steps: 1 welcome · 2 profile (name/timezone/theme) · 3 tone · 4 mode ·
+ * 5 daily-review check-in · 6 calendar sync (informational/skip-only) ·
+ * 7 seed preview · 8 ready greeting.
+ *
+ * The daily-review step persists through the EXISTING user-settings
+ * `checkIns` array (auth.updateSettings) rather than the onboarding state —
+ * the same field the Settings screen edits — so the choice is a first-class
+ * server-side preference, not onboarding-only scratch data. The calendar step
+ * is purely informational: OAuth provider credentials are not configured
+ * (gate G-19), so no connect flow is invoked; the user is pointed to Settings.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -333,6 +447,17 @@ import { localTimezone } from '@/utils/date.js'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppErrorState from '@/components/ui/AppErrorState.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+
+// Total wizard steps. Bumped 6 -> 8 when the daily-review and calendar-sync
+// steps landed; the stepper, progress dots, and finish branch all key off this.
+const STEP_COUNT = 8
+
+// Settings `checkIns` slot used when the user enables the daily review without
+// picking another time. Mirrors the values the Settings screen persists.
+const DEFAULT_REVIEW_SLOT = 'morning'
+// The three time-of-day slots offered in onboarding. 'stuck' is a Settings-only
+// reactive nudge, intentionally excluded from the daily-review picker here.
+const REVIEW_SLOT_IDS = ['morning', 'midday', 'evening']
 
 export default {
   name: 'OnboardingView',
@@ -348,7 +473,10 @@ export default {
       timezone: localTimezone('Europe/Helsinki'),
       theme: 'warm',
       tone: 'warm',
-      mode: 'solo'
+      mode: 'solo',
+      // Daily-review preference, persisted to user settings `checkIns`.
+      dailyReviewEnabled: true,
+      dailyReviewSlot: DEFAULT_REVIEW_SLOT
     })
 
     // True until the first state fetch resolves, so the wizard shows a skeleton
@@ -368,9 +496,21 @@ export default {
       if (auth.user?.timezone) form.value.timezone = auth.user.timezone
       if (auth.user?.wrenTone) form.value.tone = auth.user.wrenTone
       // Re-hydrate the persisted picks so the highlighted mode/tone (and the
-      // step-5 seed preview) match the server state after a mid-flow reload.
+      // seed preview) match the server state after a mid-flow reload.
       if (store.tone) form.value.tone = store.tone
       if (store.mode) form.value.mode = store.mode
+
+      // Re-hydrate the daily-review pick from the existing user settings so a
+      // mid-flow reload (or a returning user who already set check-ins) keeps
+      // the toggle and slot in sync with the server. An empty `checkIns` means
+      // the user has opted out of proactive nudges.
+      const checkIns = auth.user?.settings?.checkIns
+
+      if (Array.isArray(checkIns)) {
+        const slot = REVIEW_SLOT_IDS.find((id) => checkIns.includes(id))
+        form.value.dailyReviewEnabled = !!slot
+        if (slot) form.value.dailyReviewSlot = slot
+      }
     })
 
     const step = computed(() => store.step)
@@ -393,6 +533,12 @@ export default {
       { id: 'solo', title: t('onboarding.modeSoloTitle'), desc: t('onboarding.modeSoloDesc'), tall: [1] },
       { id: 'partner', title: t('onboarding.modePartnerTitle'), desc: t('onboarding.modePartnerDesc'), tall: [0, 2] },
       { id: 'habits', title: t('onboarding.modeHabitsTitle'), desc: t('onboarding.modeHabitsDesc'), tall: [3] }
+    ])
+
+    const reviewSlots = computed(() => [
+      { id: 'morning', name: t('onboarding.dailyReviewMorning') },
+      { id: 'midday', name: t('onboarding.dailyReviewMidday') },
+      { id: 'evening', name: t('onboarding.dailyReviewEvening') }
     ])
 
     const seedsByMode = computed(() => ({
@@ -426,8 +572,8 @@ export default {
     const backLabel = computed(() => `← ${t('common.back')}`)
 
     return {
-      t, store, step, form, themes, tones, modes, seededList, readyGreeting,
-      backLabel, initialLoading, busy, next, back
+      t, store, step, form, themes, tones, modes, reviewSlots, seededList,
+      readyGreeting, backLabel, initialLoading, busy, next, back, STEP_COUNT
     }
 
     // -- Function definitions --
@@ -436,6 +582,14 @@ export default {
      * Advance to the next onboarding step, or complete and route to Today on
      * the final step. Theme is persisted to the user settings after completion
      * so the choice survives the redirect.
+     *
+     * Step 5 (daily review) is special: before advancing, the chosen check-in
+     * is persisted to the EXISTING user-settings `checkIns` array via
+     * auth.updateSettings — the same field the Settings screen edits — so the
+     * pick is a real server-side preference. updateSettings toasts and re-throws
+     * on failure, so a failed save keeps the user on step 5 to retry (the step
+     * advance below never runs). Step 6 (calendar) is informational/skip-only
+     * and persists nothing.
      *
      * A failed persist call throws (the store toasts the error); we catch it
      * here so the wizard neither advances nor redirects on failure, leaving the
@@ -448,7 +602,9 @@ export default {
       busy.value = true
 
       try {
-        if (current < 6) {
+        if (current === 5) await persistDailyReview()
+
+        if (current < STEP_COUNT) {
           await store.update({ step: current + 1, ...buildPatch(current) })
         } else {
           await store.complete()
@@ -466,6 +622,25 @@ export default {
       } finally {
         busy.value = false
       }
+    }
+
+    /**
+     * Persist the daily-review pick to the user-settings `checkIns` array.
+     * Preserves any non-time-of-day slots already set elsewhere (e.g. the
+     * Settings-only 'stuck' nudge), swaps in the chosen morning/midday/evening
+     * slot when enabled, and clears all time slots when disabled. Throws on
+     * failure (updateSettings toasts) so the caller does not advance the step.
+     */
+    async function persistDailyReview() {
+      const existing = auth.user?.settings?.checkIns ?? []
+      // Keep slots the onboarding picker doesn't manage (e.g. 'stuck').
+      const preserved = existing.filter((id) => !REVIEW_SLOT_IDS.includes(id))
+
+      const checkIns = form.value.dailyReviewEnabled
+        ? [...preserved, form.value.dailyReviewSlot]
+        : preserved
+
+      await auth.updateSettings({ checkIns })
     }
 
     /**
@@ -607,6 +782,52 @@ export default {
 .onb__swatch {
   @apply mr-1 h-3 w-3 rounded-full;
   background: var(--swatch);
+}
+
+.onb__hint {
+  @apply text-[13px];
+  color: var(--muted);
+  margin: 0;
+}
+
+.onb__toggle {
+  @apply inline-flex gap-1 rounded-full border border-rule-soft p-1;
+  background: var(--paper);
+  width: fit-content;
+}
+.onb__toggle-btn {
+  @apply rounded-full px-4 py-1.5 text-[13px];
+  color: var(--ink-2);
+
+  &--active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+}
+
+.onb__slots { @apply flex flex-wrap gap-2; }
+.onb__slot {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-rule-soft px-4 py-2 text-[13px];
+  background: var(--paper);
+  color: var(--ink);
+
+  &--active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+}
+
+.onb__cal-note {
+  @apply flex items-start gap-3 rounded-[14px] border border-rule-soft p-5;
+  background: var(--paper);
+  color: var(--ink);
+}
+.onb__cal-note-body { @apply flex-1; }
+.onb__cal-note-title { @apply text-[14px] font-medium; }
+.onb__cal-note-sub {
+  @apply mt-1 text-[13px] leading-snug;
+  color: var(--muted);
 }
 
 .onb__tones {
